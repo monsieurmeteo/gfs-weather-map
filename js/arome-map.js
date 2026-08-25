@@ -1972,63 +1972,60 @@
 
         var regionSelect = app.querySelector('[data-amfm-region-select]');
         if (regionSelect) {
-            // Configuration précise et calibrée de chaque région :
-            // centres réels et niveaux de zoom optimaux pour afficher
+            // Configuration identique au site AROME (domaine France) pour la
+            // France et les régions ; pays/Europe sur le domaine Europe.
             var REGION_CONFIG = {
-                europe: { latitude: 49.0, longitude: 8.0, scale: 1.0 },
-                france: { latitude: 46.4, longitude: 2.2, scale: 2.05 },
-                hdf: { latitude: 50.1, longitude: 2.9, scale: 4.8 },
-                normandie: { latitude: 49.1, longitude: 0.1, scale: 4.8 },
-                idf: { latitude: 48.75, longitude: 2.45, scale: 6.5 },
-                grandest: { latitude: 48.7, longitude: 5.9, scale: 4.2 },
-                bretagne: { latitude: 48.1, longitude: -2.8, scale: 4.8 },
-                pdl: { latitude: 47.4, longitude: -0.7, scale: 4.8 },
-                cvl: { latitude: 47.5, longitude: 1.7, scale: 4.8 },
-                bfc: { latitude: 47.1, longitude: 5.1, scale: 4.8 },
-                naq: { latitude: 44.9, longitude: -0.1, scale: 3.8 },
-                ara: { latitude: 45.4, longitude: 4.8, scale: 4.2 },
-                occitanie: { latitude: 43.6, longitude: 2.2, scale: 4.2 },
-                paca: { latitude: 43.8, longitude: 6.1, scale: 4.8 },
-                corse: { latitude: 42.1, longitude: 9.1, scale: 6.5 },
-                belgique: { latitude: 50.5, longitude: 4.5, scale: 5.2 },
-                uk: { latitude: 54.2, longitude: -2.8, scale: 2.8 },
-                allemagne: { latitude: 51.3, longitude: 10.5, scale: 2.8 },
-                espagne: { latitude: 40.2, longitude: -3.8, scale: 2.6 },
-                italie: { latitude: 42.6, longitude: 12.6, scale: 2.8 }
+                europe:     { model: 'gfs',        latitude: 49.0, longitude: 8.0, scale: 1.0 },
+                france:     { model: 'gfs_france', reset: true },
+                hdf:        { model: 'gfs_france', latitude: 49.85, longitude: 2.82, scale: 2.65 },
+                normandie:  { model: 'gfs_france', latitude: 48.95, longitude: -0.07, scale: 2.85 },
+                idf:        { model: 'gfs_france', latitude: 48.65, longitude: 2.50, scale: 4.20 },
+                grandest:   { model: 'gfs_france', latitude: 48.65, longitude: 5.80, scale: 2.25 },
+                bretagne:   { model: 'gfs_france', latitude: 48.00, longitude: -3.08, scale: 2.80 },
+                pdl:        { model: 'gfs_france', latitude: 47.30, longitude: -0.85, scale: 2.75 },
+                cvl:        { model: 'gfs_france', latitude: 47.45, longitude: 1.60, scale: 2.55 },
+                bfc:        { model: 'gfs_france', latitude: 47.10, longitude: 5.00, scale: 2.65 },
+                naq:        { model: 'gfs_france', latitude: 44.95, longitude: 0.40, scale: 1.85 },
+                ara:        { model: 'gfs_france', latitude: 45.30, longitude: 4.65, scale: 2.25 },
+                occitanie:  { model: 'gfs_france', latitude: 43.50, longitude: 2.25, scale: 2.25 },
+                paca:       { model: 'gfs_france', latitude: 43.85, longitude: 6.00, scale: 2.85 },
+                corse:      { model: 'gfs_france', latitude: 42.10, longitude: 9.05, scale: 4.20 },
+                belgique:   { model: 'gfs_france', latitude: 50.25, longitude: 4.40, scale: 3.10 },
+                uk:         { model: 'gfs',        latitude: 54.2, longitude: -2.8, scale: 2.8 },
+                allemagne:  { model: 'gfs',        latitude: 51.3, longitude: 10.5, scale: 2.8 },
+                espagne:    { model: 'gfs',        latitude: 40.2, longitude: -3.8, scale: 2.6 },
+                italie:     { model: 'gfs',        latitude: 42.6, longitude: 12.6, scale: 2.8 }
             };
 
             regionSelect.addEventListener('change', function (e) {
                 var val = e.target.value || 'europe';
-                if (val === 'europe') {
-                    if (currentModel !== 'gfs') {
-                        pendingFocus = { latitude: 49.0, longitude: 8.0, scale: 1.0 };
-                        switchModel('gfs');
-                    } else {
-                        resetView();
-                    }
-                    updateUrl();
-                    return;
-                }
                 var cfg = REGION_CONFIG[val];
-                if (!cfg || cfg.latitude === undefined) {
+                if (!cfg) {
                     resetView();
                     updateUrl();
                     return;
                 }
-                // Les régions françaises affichent le domaine France (gfs_france),
-                // les pays/Europe le domaine Europe (gfs) — cadrages toujours justes.
-                var FRENCH = { france: 1, hdf: 1, normandie: 1, idf: 1, grandest: 1,
-                               bretagne: 1, pdl: 1, cvl: 1, bfc: 1, naq: 1, ara: 1,
-                               occitanie: 1, paca: 1, corse: 1 };
-                var targetModel = FRENCH[val] ? 'gfs_france' : 'gfs';
-                var focus = {
-                    latitude: cfg.latitude,
-                    longitude: cfg.longitude,
-                    scale: cfg.scale
-                };
+                var targetModel = cfg.model || 'gfs';
+                var focus = null;
+                if (cfg.reset) {
+                    focus = { latitude: 46.4, longitude: 2.2, scale: 1.0 };
+                } else if (cfg.latitude !== undefined) {
+                    focus = {
+                        latitude: cfg.latitude,
+                        longitude: cfg.longitude,
+                        scale: cfg.scale
+                    };
+                }
+                if (!focus) {
+                    resetView();
+                    updateUrl();
+                    return;
+                }
                 if (currentModel !== targetModel) {
                     pendingFocus = focus;
                     switchModel(targetModel);
+                } else if (cfg.reset) {
+                    resetView();
                 } else {
                     focusLocation(focus);
                 }

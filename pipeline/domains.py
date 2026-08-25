@@ -8,11 +8,13 @@ fonds utilisent ces domaines. Un seul endroit à modifier.
 """
 import numpy as np
 
-# Domaine Europe : synoptique Météociel (Groenland, Islande, Europe, Maghreb)
-# Domaine France : métropole + Corse (comme AROME / Météo-Climat Pro)
+# Domaine Europe : synoptique large style Météociel GFS/ARPEGE Europe
+# (Islande, Scandinavie, Maghreb, mer Noire) — cadrage élargi.
+# Domaine France : identique au site AROME (métropole + Corse + pays voisins),
+# pour des cadrages France/régions PARFAITEMENT identiques au site AROME.
 DOMAINS = {
     "europe": {
-        "south": 30.0, "west": -30.0, "north": 68.0, "east": 35.0,
+        "south": 25.0, "west": -32.0, "north": 72.0, "east": 42.0,
         "width": 2200, "height": 1640,
         "label": "Europe",
     },
