@@ -1,0 +1,65 @@
+{
+  "model": "gfs",
+  "model_name": "GFS 0.25 Europe et France",
+  "provider": "NOAA Etats-Unis",
+  "resolution": "0.25 (13 km)",
+  "run_time": "2026-08-25T12:00:00+00:00",
+  "generated_at": "2026-08-25T14:42:01.724796+00:00",
+  "bounds": {
+    "south": 32.0,
+    "west": -18.0,
+    "north": 65.0,
+    "east": 32.0
+  },
+  "width": 2200,
+  "height": 1640,
+  "steps": [
+    {
+      "lead_hour": 0,
+      "valid_time": "2026-08-25T12:00:00+00:00",
+      "files": {}
+    },
+    {
+      "lead_hour": 6,
+      "valid_time": "2026-08-25T18:00:00+00:00",
+      "files": {}
+    },
+    {
+      "lead_hour": 12,
+      "valid_time": "2026-08-26T00:00:00+00:00",
+      "files": {}
+    },
+    {
+      "lead_hour": 18,
+      "valid_time": "2026-08-26T06:00:00+00:00",
+      "files": {}
+    },
+    {
+      "lead_hour": 24,
+      "valid_time": "2026-08-26T12:00:00+00:00",
+      "files": {}
+    }
+  ],
+  "layers": {
+    "geopotentiel_500": {
+      "label": "Geop. Z500 et pression au sol",
+      "unit": "dam"
+    },
+    "temperature": {
+      "label": "Temperature a 2 m",
+      "unit": "degC"
+    },
+    "pluie_1h": {
+      "label": "Precipitations 3h",
+      "unit": "mm"
+    },
+    "rafales": {
+      "label": "Rafales maximales",
+      "unit": "km/h"
+    },
+    "pression": {
+      "label": "Pression niveau mer",
+      "unit": "hPa"
+    }
+  }
+}
