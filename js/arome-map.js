@@ -2253,10 +2253,6 @@
                 ' if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){\n' +
                 '  gl_FragColor=vec4(frame,1.0);return;\n' +
                 ' }\n' +
-                // Masquage net du coin hors-domaine AROME (sud-est Adriatique / Balkans)
-                ' if(uv.x>0.94 && uv.y>0.63 && (uv.x + 0.096*uv.y >= 1.052)){\n' +
-                '  gl_FragColor=vec4(frame,1.0);return;\n' +
-                ' }\n' +
                 // Fond : carte des pays (fond.webp) si dispo, sinon gris neutre
                 ' vec3 base=vec3(0.6471,0.6510,0.6902);\n' +
                 ' if(uHasFond>0.5){\n' +
@@ -2564,10 +2560,20 @@
         // ────────────────────────────────────────────────────────────────────
         function computeMapRect(width, height, t) {
             t = t || transform;
-            // Échelle de base UNIQUE : cover du viewport par le raster 2200×1640.
-            // Tous les calculs (pan, zoom roue, pinch, focusLocation) utilisent
-            // cette même valeur pour rester cohérents.
             var s = Math.max(width / 2200.0, height / 1640.0);
+            var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (model === 'gfs');
+            
+            if (isEurope) {
+                // Vue synoptique Europe Entière & France : affichage plein cadre sans recadrage restreint
+                var scale = s * t.scale;
+                return {
+                    x: width / 2 + t.x - 1100.0 * scale,
+                    y: height / 2 + t.y - 820.0 * scale,
+                    w: 2200.0 * scale,
+                    h: 1640.0 * scale
+                };
+            }
+
             if (t.scale <= 1.15) {
                 // Vue France entière : englobe TOUTE la France métropolitaine ET la Corse
                 // avec marge de respiration en haut (header) et en bas (timeline d'échéances)
