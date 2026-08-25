@@ -826,25 +826,8 @@
                 vScale = (mapRect.h / 1640.0) * ratio;
                 offX = mapRect.x * ratio;
                 offY = mapRect.y * ratio;
-            } else if (transform.scale <= 1.15) {
-                // Vue France entière : boîte Météo-NPDC (West: -5.8°, East: +10.2°, North: 51.6°, South: 41.1°)
-                outW = 2200;
-                outH = 1640;
-                var fx0 = 270;  // Ouest Bretagne
-                var fx1 = 1870; // Est Corse
-                var fy0 = 125;  // Nord Mer du Nord / Sud Angleterre
-                var fy1 = 1460; // Sud Bonifacio
-                var fw = fx1 - fx0; // 1600
-                var fh = fy1 - fy0; // 1335
-                var scale = Math.min(outW / fw, outH / fh);
-                hScale = scale;
-                vScale = scale;
-                var cx = (fx0 + fx1) / 2; // 1070
-                var cy = (fy0 + fy1) / 2; // 792.5
-                offX = outW / 2 - cx * scale;
-                offY = outH / 2 - cy * scale;
             } else {
-                // Vue zoomée (région/département) : remplit 100% du canvas 2200×1640 en cover (zéro bande noire)
+                // Vue Standard 4:3 (2200x1640) : reproduction exacte et fidèle de la vue actuelle (Europe, France ou Région)
                 outW = 2200;
                 outH = 1640;
                 var viewRect = computeMapRect(vw, vh);
