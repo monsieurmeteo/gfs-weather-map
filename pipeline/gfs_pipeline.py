@@ -12,6 +12,9 @@ import os, sys, json, datetime, tempfile, urllib3, time
 import requests, numpy as np
 from PIL import Image
 from scipy.interpolate import RegularGridInterpolator
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 urllib3.disable_warnings()
 
@@ -25,12 +28,12 @@ from fetch_and_render_all import (
 )
 
 WIDTH, HEIGHT = 2200, 1640
-# Domaine etendu Europe et France
-BOUNDS = {"south": 32.0, "west": -18.0, "north": 65.0, "east": 32.0}
+# Domaine synoptique Europe Atlantique exact (Islande, Groenland, Europe, Maghreb)
+BOUNDS = {"south": 28.0, "west": -35.0, "north": 70.0, "east": 38.0}
 
 def mercator_y(lat):
-    r = np.radians(np.clip(lat, -85.0, 85.0))
-    return np.log(np.tan(np.pi / 4.0 + r / 2.0))
+    lat = max(-85.0, min(85.0, lat))
+    return np.log(np.tan(np.pi / 4.0 + np.radians(lat) / 2.0))
 
 N_Y = mercator_y(BOUNDS["north"])
 S_Y = mercator_y(BOUNDS["south"])
@@ -56,6 +59,26 @@ def regrid_europe(data, src_lats, src_lons):
     )
     pts = np.column_stack((GRID_LATS.ravel(), GRID_LONS.ravel()))
     return interp(pts).reshape((HEIGHT, WIDTH)).astype(np.float32)
+
+def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
+    pal = PALETTES.get("geopotentiel_500", PALETTES["temperature"])
+    base_img = apply_palette(z500_grid, pal)
+    
+    fig = plt.figure(figsize=(WIDTH / 100.0, HEIGHT / 100.0), dpi=100)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.axis("off")
+    ax.imshow(base_img, origin="upper", extent=[0, WIDTH, HEIGHT, 0])
+    
+    if prmsl_grid is not None:
+        gx = np.linspace(0, WIDTH, prmsl_grid.shape[1])
+        gy = np.linspace(0, HEIGHT, prmsl_grid.shape[0])
+        GX, GY = np.meshgrid(gx, gy)
+        levels = np.arange(960, 1055, 5)
+        cs = ax.contour(GX, GY, prmsl_grid, levels=levels, colors="white", linewidths=2.4)
+        ax.clabel(cs, inline=True, fmt="%d", fontsize=16, colors="white")
+    
+    fig.savefig(output_path, format="webp", dpi=100, pil_kwargs={"quality": 88})
+    plt.close(fig)
 
 def run_gfs_pipeline(max_hours=240):
     try:
@@ -117,10 +140,10 @@ def run_gfs_pipeline(max_hours=240):
             "dir": f"/gfs.{day_str}/{h_str}/atmos",
             "file": f"gfs.t{h_str}z.pgrb2.0p25.f{fhh}",
             "subregion": "",
-            "leftlon": "-18",
-            "rightlon": "32",
-            "toplat": "65",
-            "bottomlat": "32",
+            "leftlon": "-35",
+            "rightlon": "38",
+            "toplat": "70",
+            "bottomlat": "28",
         }
         for v in gfs_req_vars:
             params["var_" + v] = "on"
@@ -178,6 +201,12 @@ def run_gfs_pipeline(max_hours=240):
                 try: os.remove(tmp)
                 except: pass
 
+        prmsl_regrid = None
+        if "PRMSL" in cached:
+            p_val, p_la, p_lo = cached["PRMSL"]
+            if p_val.max() > 10000: p_val = p_val / 100.0
+            prmsl_regrid = regrid_europe(p_val, p_la, p_lo)
+
         for layer in LAYERS:
             dst = os.path.join(OUTPUT_DIR, layer, f"{lh:03d}.webp")
 
@@ -189,6 +218,16 @@ def run_gfs_pipeline(max_hours=240):
                     spd = np.sqrt(u.astype(np.float32) ** 2 + v.astype(np.float32) ** 2) * 3.6
                     save_webp(regrid_europe(spd, la, lo), layer, dst)
                     step["files"][layer] = f"maps/{layer}/{lh:03d}.webp"
+                continue
+
+            if layer == "geopotentiel_500" and "HGT" in cached:
+                ensure_dir(os.path.dirname(dst))
+                d, la, lo = cached["HGT"]
+                if d.max() > 15000: d = d / 98.0665
+                elif d.max() > 1000: d = d / 10.0
+                z_regrid = regrid_europe(d, la, lo)
+                render_z500_with_isobars(z_regrid, prmsl_regrid, dst)
+                step["files"][layer] = f"maps/{layer}/{lh:03d}.webp"
                 continue
 
             key = gfs_layer_var.get(layer, "TMP")
@@ -203,11 +242,6 @@ def run_gfs_pipeline(max_hours=240):
                     d = d / 100.0
                 elif layer in ("rafales", "rafales_cumul") and d.max() < 200:
                     d = d * 3.6
-                elif layer == "geopotentiel_500":
-                    if d.max() > 15000:
-                        d = d / 98.0665 # Geopotentiel m2/s2 vers dam
-                    elif d.max() > 1000:
-                        d = d / 10.0    # Metres vers dam
 
                 rf = regrid_europe(d, la, lo)
                 if layer == "rafales_cumul":

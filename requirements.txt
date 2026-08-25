@@ -2,6 +2,7 @@ requests
 numpy
 pillow
 scipy
+matplotlib
 cfgrib
 xarray
 eccodes
