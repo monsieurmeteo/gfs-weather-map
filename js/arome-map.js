@@ -2628,19 +2628,21 @@
         // ────────────────────────────────────────────────────────────────────
         function computeMapRect(width, height, t) {
             t = t || transform;
-            var s = Math.max(width / 2200.0, height / 1640.0);
             var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (currentModel === 'gfs') || (currentModel === 'arpege');
-            
+
             if (isEurope) {
-                // Vue synoptique Europe Entière & France : affichage plein cadre avec centrage équilibré
-                var scale = s * t.scale;
+                // Mode "contain" : tout le domaine visible (Maroc, Espagne, Islande, Scandinavie)
+                // Math.min = letterbox — pas de coupure, centré
+                var scale = Math.min(width / 2200.0, height / 1640.0) * t.scale;
                 return {
-                    x: width / 2 + t.x - 1180.0 * scale,
+                    x: width / 2 + t.x - 1100.0 * scale,
                     y: height / 2 + t.y - 820.0 * scale,
                     w: 2200.0 * scale,
                     h: 1640.0 * scale
                 };
             }
+
+            var s = Math.max(width / 2200.0, height / 1640.0);
 
             if (t.scale <= 1.15) {
                 // Vue France entière : englobe TOUTE la France métropolitaine ET la Corse
