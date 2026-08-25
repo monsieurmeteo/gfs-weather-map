@@ -28,8 +28,8 @@ from fetch_and_render_all import (
 )
 
 WIDTH, HEIGHT = 2200, 1640
-# Domaine synoptique Europe Atlantique exact (Islande, Groenland, Europe, Maghreb)
-BOUNDS = {"south": 28.0, "west": -35.0, "north": 70.0, "east": 38.0}
+# Domaine synoptique officiel Météociel ARPEGE/GFS Europe (Groenland, Islande, Europe, Maghreb)
+BOUNDS = {"south": 30.0, "west": -30.0, "north": 68.0, "east": 35.0}
 
 def mercator_y(lat):
     lat = max(-85.0, min(85.0, lat))
