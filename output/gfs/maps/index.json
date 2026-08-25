@@ -3,8 +3,8 @@
   "model_name": "GFS 0.25° Europe & France",
   "provider": "NOAA (National Oceanic and Atmospheric Administration)",
   "resolution": "0.25° (~25 km)",
-  "run_time": "2026-08-25T06:00:00+00:00",
-  "generated_at": "2026-08-25T15:33:44.916725+00:00",
+  "run_time": "2026-08-25T12:00:00+00:00",
+  "generated_at": "2026-08-25T16:21:45.256517+00:00",
   "bounds": {
     "south": 30.0,
     "west": -30.0,
@@ -19,7 +19,7 @@
   "steps": [
     {
       "lead_hour": 0,
-      "valid_time": "2026-08-25T06:00:00+00:00",
+      "valid_time": "2026-08-25T12:00:00+00:00",
       "files": {
         "temperature": "maps/temperature/000.webp",
         "temperature_ressentie": "maps/temperature_ressentie/000.webp",
@@ -37,7 +37,7 @@
     },
     {
       "lead_hour": 3,
-      "valid_time": "2026-08-25T09:00:00+00:00",
+      "valid_time": "2026-08-25T15:00:00+00:00",
       "files": {
         "temperature": "maps/temperature/003.webp",
         "temperature_ressentie": "maps/temperature_ressentie/003.webp",
@@ -59,7 +59,7 @@
     },
     {
       "lead_hour": 6,
-      "valid_time": "2026-08-25T12:00:00+00:00",
+      "valid_time": "2026-08-25T18:00:00+00:00",
       "files": {
         "temperature": "maps/temperature/006.webp",
         "temperature_ressentie": "maps/temperature_ressentie/006.webp",
@@ -81,7 +81,7 @@
     },
     {
       "lead_hour": 9,
-      "valid_time": "2026-08-25T15:00:00+00:00",
+      "valid_time": "2026-08-25T21:00:00+00:00",
       "files": {
         "temperature": "maps/temperature/009.webp",
         "temperature_ressentie": "maps/temperature_ressentie/009.webp",
@@ -103,7 +103,7 @@
     },
     {
       "lead_hour": 12,
-      "valid_time": "2026-08-25T18:00:00+00:00",
+      "valid_time": "2026-08-26T00:00:00+00:00",
       "files": {
         "temperature": "maps/temperature/012.webp",
         "temperature_ressentie": "maps/temperature_ressentie/012.webp",
@@ -125,7 +125,7 @@
     },
     {
       "lead_hour": 15,
-      "valid_time": "2026-08-25T21:00:00+00:00",
+      "valid_time": "2026-08-26T03:00:00+00:00",
       "files": {
         "temperature": "maps/temperature/015.webp",
         "temperature_ressentie": "maps/temperature_ressentie/015.webp",
@@ -147,7 +147,7 @@
     },
     {
       "lead_hour": 18,
-      "valid_time": "2026-08-26T00:00:00+00:00",
+      "valid_time": "2026-08-26T06:00:00+00:00",
       "files": {
         "temperature": "maps/temperature/018.webp",
         "temperature_ressentie": "maps/temperature_ressentie/018.webp",
@@ -169,7 +169,7 @@
     },
     {
       "lead_hour": 21,
-      "valid_time": "2026-08-26T03:00:00+00:00",
+      "valid_time": "2026-08-26T09:00:00+00:00",
       "files": {
         "temperature": "maps/temperature/021.webp",
         "temperature_ressentie": "maps/temperature_ressentie/021.webp",
@@ -191,7 +191,7 @@
     },
     {
       "lead_hour": 24,
-      "valid_time": "2026-08-26T06:00:00+00:00",
+      "valid_time": "2026-08-26T12:00:00+00:00",
       "files": {
         "temperature": "maps/temperature/024.webp",
         "temperature_ressentie": "maps/temperature_ressentie/024.webp",
