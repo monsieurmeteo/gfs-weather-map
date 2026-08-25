@@ -74,8 +74,8 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
         gy = np.linspace(0, HEIGHT, prmsl_grid.shape[0])
         GX, GY = np.meshgrid(gx, gy)
         levels = np.arange(960, 1055, 5)
-        cs = ax.contour(GX, GY, prmsl_grid, levels=levels, colors="white", linewidths=2.4)
-        ax.clabel(cs, inline=True, fmt="%d", fontsize=16, colors="white")
+        cs = ax.contour(GX, GY, prmsl_grid, levels=levels, colors="white", linewidths=3.2)
+        ax.clabel(cs, inline=True, fmt="%d", fontsize=18, colors="white")
     
     fig.savefig(output_path, format="webp", dpi=100, pil_kwargs={"quality": 88})
     plt.close(fig)

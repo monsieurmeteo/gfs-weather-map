@@ -139,17 +139,15 @@ def main():
     svg = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" width="%d" height="%d">\n'
-        '<!-- Liseré noir sous-jacent -->\n'
-        '<path d="%s" fill="none" stroke="#000000" stroke-width="3.8" stroke-linejoin="round" stroke-linecap="round"/>\n'
-        '<!-- Côtes et frontières blanches éclatantes style Météociel (sans départements) -->\n'
-        '<path d="%s" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>\n'
-        '</svg>\n' % (WIDTH, HEIGHT, WIDTH, HEIGHT, all_lines, all_lines)
+        '<!-- Contours des pays et côtes en noir net style Météociel -->\n'
+        '<path d="%s" fill="none" stroke="#000000" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>\n'
+        '</svg>\n' % (WIDTH, HEIGHT, WIDTH, HEIGHT, all_lines)
     )
 
     with open(os.path.join(OUTPUT_DIR, 'frontieres.svg'), 'w', encoding='utf-8') as f:
         f.write(svg)
 
-    print('✅ frontieres.svg style Météociel épuré (sans départements) généré avec succès !')
+    print('✅ frontieres.svg en noir net style Météociel (sans départements) généré avec succès !')
 
 if __name__ == '__main__':
     main()
