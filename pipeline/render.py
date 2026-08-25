@@ -217,6 +217,9 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
             for lbl in labels:
                 lbl.set_weight("bold")
                 lbl.set_path_effects([
+                    matplotlib.patheffects.Stroke(linewidth=3, foreground="#000000"),
+                    matplotlib.patheffects.Normal(),
+                ])
     ensure_dir(os.path.dirname(output_path))
     fig.savefig(output_path, format="webp", dpi=100, pil_kwargs={"quality": 88})
     plt.close(fig)
