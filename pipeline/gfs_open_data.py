@@ -209,10 +209,6 @@ def render_lead(cached, lead, domain, out_dir, steps, state):
             save("point_rosee", td_c)
             save("humidex", humidex_c(t_c, td_c))
 
-    if dpt is not None:
-        td_c = regrid(dpt, lambda v: v - 273.15)
-        save("point_rosee", td_c)
-
     if rh is not None:
         save("humidite", regrid(rh))
 
@@ -231,7 +227,8 @@ def render_lead(cached, lead, domain, out_dir, steps, state):
         save("rafales_cumul", state["max_gust"])
 
     if tcdc is not None:
-        save("nebulosite", regrid(tcdc, lambda v: v * 100.0))
+        # TCDC GFS déjà exprimé en % (0-100)
+        save("nebulosite", regrid(tcdc))
 
     if cape is not None:
         save("mucape", regrid(cape))
