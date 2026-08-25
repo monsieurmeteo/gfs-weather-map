@@ -326,27 +326,44 @@ def run_model(run_dt, domain, out_dir, max_hours, leads):
     return n_ok
 
 
-def run_all(max_hours=120):
-    max_hours = max(3, min(int(max_hours), 120))  # 6 = 3 échéances (mode ajustement)
-    leads = list(range(0, max_hours + 1, 3))
-    log("Échéances : H+00 → H+%03d (%d pas)" % (max_hours, len(leads)))
+def compute_leads(max_hours):
+    """Génère la liste des échéances GFS officielles jusqu'à 384 h (16 jours).
+    - 0 → 120 h  : pas fin de 3 h (court terme)
+    - 126 → 240 h : pas de 6 h (moyen terme)
+    - 252 → 384 h : pas de 12 h (long terme)
+    """
+    max_h = max(3, min(int(max_hours), 384))
+    if max_h <= 120:
+        return list(range(0, max_h + 1, 3))
+    leads = list(range(0, 121, 3))
+    if max_h > 120:
+        h_mid = min(max_h, 240)
+        leads.extend(range(126, h_mid + 1, 6))
+    if max_h > 240:
+        leads.extend(range(252, max_h + 1, 12))
+    return leads
+
+
+def run_all(max_hours=384):
+    leads = compute_leads(max_hours)
+    log("Échéances : H+00 → H+%03d (%d pas)" % (leads[-1], len(leads)))
 
     run_dt = latest_run()
     log("Run GFS sélectionné : %s" % run_dt.isoformat())
 
     base = os.path.join(BASE_DIR, "output")
     run_model(run_dt, EUROPE, os.path.join(base, "gfs", "maps"),
-              max_hours, leads)
+              leads[-1], leads)
     run_model(run_dt, FRANCE, os.path.join(base, "gfs_france", "maps"),
-              max_hours, leads)
+              leads[-1], leads)
     print("[GFS] Pipeline terminé avec succès.", flush=True)
 
 
 def main():
     import argparse
     ap = argparse.ArgumentParser(description="Pipeline GFS 0.25° Europe & France")
-    ap.add_argument("--max-hours", type=int, default=120,
-                    help="Échéance max GFS en heures (24-120, défaut 120)")
+    ap.add_argument("--max-hours", type=int, default=384,
+                    help="Échéance max GFS en heures (24-384, défaut 384)")
     args = ap.parse_args()
     run_all(max_hours=args.max_hours)
 

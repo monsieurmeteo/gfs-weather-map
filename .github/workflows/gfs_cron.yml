@@ -12,9 +12,9 @@ on:
         required: false
         default: 'full'
       max_hours:
-        description: 'Échéance GFS max en heures (6 = 3 échéances rapides, 120 = complet)'
+        description: 'Échéance GFS max en heures (6 = rapide, 102 = ARPEGE, 384 = GFS 16 jours complet)'
         required: false
-        default: '120'
+        default: '384'
       models:
         description: 'Modèles à lancer : gfs, arpege ou gfs,arpege'
         required: false
