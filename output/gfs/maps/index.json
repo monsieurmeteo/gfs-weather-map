@@ -6,10 +6,10 @@
   "run_time": "2026-08-25T06:00:00+00:00",
   "generated_at": "2026-08-25T14:52:00.416264+00:00",
   "bounds": {
-    "south": 32.0,
-    "west": -18.0,
-    "north": 65.0,
-    "east": 32.0
+    "south": 28.0,
+    "west": -35.0,
+    "north": 70.0,
+    "east": 38.0
   },
   "width": 2200,
   "height": 1640,
@@ -290,5 +290,8 @@
       "label": "Géopotentiel Z500",
       "unit": "dam"
     }
-  }
+  },
+  "overlay": "maps/frontieres.svg",
+  "mask": "maps/mask_france.png",
+  "fond": "maps/fond.webp"
 }

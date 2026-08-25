@@ -265,8 +265,12 @@ def run_gfs_pipeline(max_hours=240):
         "bounds": BOUNDS,
         "width": WIDTH,
         "height": HEIGHT,
+        "overlay": "maps/frontieres.svg",
+        "mask": "maps/mask_france.png",
+        "fond": "maps/fond.webp",
         "steps": steps,
         "layers": {
+            "geopotentiel_500": {"label": "Géop. Z500 & Pression au sol", "unit": "dam/hPa"},
             "temperature": {"label": "Température à 2 m", "unit": "°C"},
             "temperature_ressentie": {"label": "Température ressentie", "unit": "°C"},
             "point_rosee": {"label": "Point de rosée à 2 m", "unit": "°C"},
