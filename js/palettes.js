@@ -559,6 +559,42 @@
                 { value: 1040, color: '#c85000' },
             ]
         },
+        geopotentiel_500: {
+            label: 'Géop. Z500 & pression au sol', unit: 'dam', decimals: 0, transparent_below: null,
+            stops: [
+                { value: 492, color: '#4a004a' },
+                { value: 496, color: '#660066' },
+                { value: 500, color: '#880088' },
+                { value: 504, color: '#330066' },
+                { value: 508, color: '#000088' },
+                { value: 512, color: '#0022cc' },
+                { value: 516, color: '#0055ee' },
+                { value: 520, color: '#0088ff' },
+                { value: 524, color: '#00bbff' },
+                { value: 528, color: '#00e5ff' },
+                { value: 532, color: '#00ffcc' },
+                { value: 536, color: '#00ff66' },
+                { value: 540, color: '#33ff00' },
+                { value: 544, color: '#88ff00' },
+                { value: 548, color: '#ccff00' },
+                { value: 552, color: '#ffff00' },
+                { value: 556, color: '#ffea00' },
+                { value: 560, color: '#ffd000' },
+                { value: 564, color: '#ffaa00' },
+                { value: 568, color: '#ff8000' },
+                { value: 572, color: '#ff5500' },
+                { value: 576, color: '#ff2200' },
+                { value: 580, color: '#ee0000' },
+                { value: 584, color: '#cc0000' },
+                { value: 588, color: '#aa0000' },
+                { value: 592, color: '#880000' },
+                { value: 596, color: '#700000' },
+                { value: 600, color: '#550000' },
+                { value: 604, color: '#400000' },
+                { value: 608, color: '#300000' },
+                { value: 612, color: '#200000' },
+            ]
+        },
     };
 
     function getLayerPalette(key) { return PALETTES[key] || PALETTES.temperature; }

@@ -3369,11 +3369,16 @@
                 var currentParams = new URLSearchParams(window.location.search);
                 if (!currentParams.get('region')) {
                     var regSel = document.getElementById('select-region');
-                    if (regSel && regSel.querySelector('option[value="hdf"]')) {
+                    if (regSel && regSel.querySelector('option[value="europe"]')) {
+                        regSel.value = 'europe';
+                        if (typeof focusLocation === 'function') {
+                            focusLocation({ latitude: 49.0, longitude: 8.0, scale: 1.0 });
+                        }
+                    } else if (regSel && regSel.querySelector('option[value="hdf"]')) {
                         regSel.value = 'hdf';
-                    }
-                    if (typeof focusLocation === 'function') {
-                        focusLocation({ latitude: 49.85, longitude: 2.82, scale: 2.65 });
+                        if (typeof focusLocation === 'function') {
+                            focusLocation({ latitude: 49.85, longitude: 2.82, scale: 2.65 });
+                        }
                     }
                 } else if (pendingFocus && typeof focusLocation === 'function') {
                     focusLocation(pendingFocus);

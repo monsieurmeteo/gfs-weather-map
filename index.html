@@ -909,10 +909,10 @@
     </script>
 
     <div data-amfm-app
-         data-base-url="output/arome"
-         data-model="arome"
+         data-base-url="output/gfs"
+         data-model="gfs"
          data-logo="logo.png"
-         data-variable="temperature"
+         data-variable="geopotentiel_500"
          data-timezone="Europe/Paris"
          data-animation="1">
         
@@ -922,30 +922,31 @@
                 <!-- Gauche : Marque + Modèle + Commune -->
                 <div class="amfm-nav-brand">
                     <img src="logo.png" alt="Météo-Climat Pro" class="amfm-logo" aria-hidden="false">
-                    <span class="amfm-title-text">AROME HD</span>
-                    <span class="amfm-badge">1,3 km</span>
-                    <a href="previsions.html" class="amfm-btn amfm-btn-commune" aria-label="Prévisions détaillées par commune ou code postal" title="Prévisions par commune">
-                        <i class="fa-solid fa-house-chimney" aria-hidden="true"></i> <span>Commune</span>
-                    </a>
+                    <span class="amfm-title-text">GFS 0.25°</span>
+                    <span class="amfm-badge">Europe</span>
                 </div>
 
                 <!-- Centre : Sélecteur de Calque Météo + Sélecteur de Région -->
                 <div class="amfm-nav-controls">
                     <!-- Sélecteur de Modèle masqué pour compatibilité JS -->
                     <select id="select-model" style="display:none;" aria-label="Sélection du modèle de prévision">
-                        <option value="arome" selected>🇫🇷 AROME HD (1,3 km)</option>
+                        <option value="gfs" selected>🌍 GFS 0.25° (Europe)</option>
                     </select>
 
                     <!-- Sélecteur direct de Calque Météo -->
                     <select id="direct-layer-select" class="amfm-select-layer" aria-label="Sélection du paramètre météorologique">
+                        <optgroup label="🗺️ Synoptique & Altitude">
+                            <option value="geopotentiel_500" selected>🗺️ Géop. Z500 & Pression au sol (dam/hPa)</option>
+                            <option value="pression">🧭 Pression niveau mer (hPa)</option>
+                        </optgroup>
                         <optgroup label="🌡️ Températures">
-                            <option value="temperature" selected>🌡️ Température à 2 m (°C)</option>
+                            <option value="temperature">🌡️ Température à 2 m (°C)</option>
                             <option value="temperature_ressentie">❄️ Température ressentie (°C)</option>
                             <option value="point_rosee">💧 Point de rosée (°C)</option>
                             <option value="humidex">🔥 Indice Humidex</option>
                         </optgroup>
                         <optgroup label="🌧️ Précipitations & Pluie">
-                            <option value="pluie_1h">🌧️ Pluie horaire (mm/h)</option>
+                            <option value="pluie_1h">🌧️ Précipitations 3h (mm)</option>
                             <option value="pluie_cumul">📊 Précipitations cumulées (mm)</option>
                             <option value="reflectivite">📡 Réflectivité Radar Doppler (dBZ)</option>
                             <option value="graupel">🧊 Graupel / Grésil (mm)</option>
@@ -959,20 +960,16 @@
                             <option value="nebulosite">☁️ Nébulosité totale (%)</option>
                             <option value="nuages_bas">🌫️ Nuages bas / Brouillard (%)</option>
                             <option value="nuages_moyens">⛅ Nuages moyens (%)</option>
-                            <option value="nuages_eleves">🌤️ Nuages élevés / Voile (%)</option>
-                            <option value="humidite">🌫️ Humidité relative (%)</option>
+                            <option value="nuages_eleves">🌤️ Nuages élevés (%)</option>
+                            <option value="humidite">💧 Humidité relative (%)</option>
                         </optgroup>
-                        <optgroup label="⛈️ Orages & Convection">
-                            <option value="mucape">⚡ Instabilité convective (MUCAPE J/kg)</option>
+                        <optgroup label="⚡ Orages & Instabilité">
+                            <option value="mucape">⚡ Instabilité MUCAPE (J/kg)</option>
                         </optgroup>
-                        <optgroup label="❄️ Neige & Hiver">
-                            <option value="neige">❄️ Chutes de neige (cm/h)</option>
+                        <optgroup label="❄️ Hiver & Neige">
+                            <option value="neige">❄️ Chutes de neige (cm)</option>
                             <option value="neige_au_sol">🏔️ Épaisseur neige au sol (cm)</option>
                             <option value="equivalent_eau_neige">💧 Cumul neigeux équiv. eau (mm)</option>
-                        </optgroup>
-                        <optgroup label="🧭 Pression & Atmosphère">
-                            <option value="pression">🧭 Pression niveau mer (hPa)</option>
-                            <option value="pression_surface">⛰️ Pression au sol (hPa)</option>
                         </optgroup>
                     </select>
 
