@@ -898,14 +898,14 @@
             weatherCtx.restore();
             context.drawImage(weatherMasked, 0, 0);
 
-            // Frontières vectorielles uniques (noir franc 100% net, calibré pour résolution HD 2200x1640 et GIF)
+            // Frontières vectorielles uniques (traits blancs éclatants et liseré de contraste style Météociel)
             if (vectorDefinition && vectorDefinition.paths && vectorDefinition.paths.length) {
                 context.save();
                 context.transform(hScale, 0, 0, vScale, offX, offY);
-                var hdStrokeFactor = 2.4;
+                var hdStrokeFactor = 1.8;
                 vectorDefinition.paths.forEach(function (entry) {
-                    context.strokeStyle = '#05080c';
-                    context.globalAlpha = 1.0;
+                    context.strokeStyle = entry.colour || '#ffffff';
+                    context.globalAlpha = entry.opacity || 1.0;
                     context.lineCap = 'round';
                     context.lineJoin = 'round';
                     context.lineWidth = ((entry.width || 1.6) * hdStrokeFactor) / hScale;

@@ -9,8 +9,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_DIR = os.path.join(BASE_DIR, 'output', 'gfs', 'maps')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Domaine synoptique officiel Météociel ARPEGE/GFS Europe
-BOUNDS = {'south': 30.0, 'west': -30.0, 'north': 68.0, 'east': 35.0}
+# Domaine synoptique officiel Météociel ARPEGE/GFS Europe (Groenland, Islande, Europe, Maghreb)
+BOUNDS = {'south': 28.0, 'west': -38.0, 'north': 70.0, 'east': 32.0}
 WIDTH, HEIGHT = 2200, 1640
 
 OCEAN = (143, 163, 184)
@@ -47,9 +47,15 @@ def polygon_path(rings):
     return ' '.join(parts)
 
 def line_to_svg(geom):
-    pts = [project(p[0], p[1]) for p in geom.coords]
-    if len(pts) < 2: return ''
-    return 'M%.1f %.1f L%s' % (pts[0][0], pts[0][1], ' '.join('%.1f %.1f' % p for p in pts[1:]))
+    if geom is None or geom.is_empty:
+        return ''
+    if geom.geom_type == 'LineString':
+        pts = [project(p[0], p[1]) for p in geom.coords]
+        if len(pts) < 2: return ''
+        return 'M%.1f %.1f L%s' % (pts[0][0], pts[0][1], ' '.join('%.1f %.1f' % p for p in pts[1:]))
+    elif geom.geom_type == 'MultiLineString':
+        return ' '.join(line_to_svg(g) for g in geom.geoms if not g.is_empty)
+    return ''
 
 def main():
     print('Chargement des fichiers GeoJSON haute précision...')
@@ -127,25 +133,23 @@ def main():
 
     foreign_boundaries_d = extract_lines(boundaries)
     foreign_coastlines_d = extract_lines(coastlines)
-    all_foreign_d = (foreign_boundaries_d + ' ' + foreign_coastlines_d).strip()
-
-    dept_combined = ' '.join(depts_d)
-    all_lines = (all_foreign_d + ' ' + dept_combined).strip()
+    france_border_d = line_to_svg(france_union.boundary)
+    all_lines = (foreign_boundaries_d + ' ' + foreign_coastlines_d + ' ' + france_border_d).strip()
 
     svg = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" width="%d" height="%d">\n'
-        '<!-- Liseré noir de contraste -->\n'
+        '<!-- Liseré noir sous-jacent -->\n'
         '<path d="%s" fill="none" stroke="#000000" stroke-width="3.8" stroke-linejoin="round" stroke-linecap="round"/>\n'
-        '<!-- Trait blanc éclatant style Météociel -->\n'
-        '<path d="%s" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>\n'
+        '<!-- Côtes et frontières blanches éclatantes style Météociel (sans départements) -->\n'
+        '<path d="%s" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>\n'
         '</svg>\n' % (WIDTH, HEIGHT, WIDTH, HEIGHT, all_lines, all_lines)
     )
 
     with open(os.path.join(OUTPUT_DIR, 'frontieres.svg'), 'w', encoding='utf-8') as f:
         f.write(svg)
 
-    print('✅ frontieres.svg style Météociel (blanc + liseré noir) généré avec succès !')
+    print('✅ frontieres.svg style Météociel épuré (sans départements) généré avec succès !')
 
 if __name__ == '__main__':
     main()
