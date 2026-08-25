@@ -1,0 +1,54 @@
+name: Synchronisation Résumés Quotidiens
+
+on:
+  schedule:
+    # Toutes les 15 minutes (0, 15, 30, 45)
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync_summaries:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Install dependencies
+      run: npm install @supabase/supabase-js dotenv
+
+    - name: Run Collect Script
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        VITE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        MF_CONSUMER_KEY: ${{ secrets.MF_CONSUMER_KEY }}
+        MF_CONSUMER_SECRET: ${{ secrets.MF_CONSUMER_SECRET }}
+      run: node scripts/cron_collect_6mn.mjs
+
+    - name: Run Sync Script
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        VITE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: node scripts/resync_summaries_local.mjs
+
+    - name: Cleanup observations (limite 300 000 lignes)
+      env:
+        VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        VITE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: |
+        node --input-type=module << 'SCRIPT'
+        import { createClient } from '@supabase/supabase-js';
+        const sb = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_SERVICE_ROLE_KEY);
+        const { data, error } = await sb.rpc('cleanup_observations_to_limit', { max_rows: 300000 });
+        if (error) { console.error('❌ Cleanup error:', error.message); }
+        else {
+          const r = data?.[0];
+          if (r?.rows_deleted > 0) console.log(`🧹 Cleanup: ${r.rows_before} → supprimé ${r.rows_deleted} lignes (pivot: ${r.pivot_timestamp})`);
+          else console.log(`✅ Table dans les limites (~${r?.rows_before} lignes), rien à supprimer.`);
+        }
+        SCRIPT

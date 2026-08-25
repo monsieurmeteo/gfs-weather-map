@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    
+    <!-- Anti-Cache Stratégique HTTP & Navigateurs -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <!-- SEO & Métadonnées Générales -->
+    <title>Météo AROME HD 1,3 km & Multi-Modèles — Météo-Climat Pro</title>
+    <meta name="description" content="Visualisation cartographique haute résolution des prévisions météo AROME HD (1,3 km) de Météo-France et multi-modèles (ARPEGE, ICON, GFS, ECMWF) : températures, rafales, pluie radar, orages MUCAPE et neige.">
+    <meta name="author" content="Météo-Climat Pro">
+    <meta name="theme-color" content="#070b14">
+    <link rel="icon" type="image/png" href="https://alertes-meteo.com/assets/logo_meteo_climat_pro.png">
+
+    <!-- Open Graph (LinkedIn, Facebook, WhatsApp) -->
+    <meta property="og:site_name" content="Météo-Climat Pro">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Cartographie Haute Résolution AROME HD 1,3 km — Météo-Climat Pro">
+    <meta property="og:description" content="Cartes météo 2D haute définition des modèles AROME HD, ARPEGE, ICON-EU, GFS et ECMWF en direct.">
+    <meta property="og:image" content="https://alertes-meteo.com/assets/logo_meteo_climat_pro.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="fr_FR">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Météo AROME HD 1,3 km — Météo-Climat Pro">
+    <meta name="twitter:description" content="Explorez les sorties du modèle météo AROME HD 1,3 km et des modèles mondiaux en ultra-haute résolution.">
+    <meta name="twitter:image" content="https://alertes-meteo.com/assets/logo_meteo_climat_pro.png">
+
+    <!-- FontAwesome Vector Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+
+    <style>
+        :root {
+            --amfm-bg: #070b14;
+            --amfm-surface: rgba(10, 16, 28, 0.88);
+            --amfm-border: rgba(255, 255, 255, 0.12);
+            --amfm-border-focus: #00d2ff;
+            --amfm-accent: #00d2ff;
+            --amfm-accent-hover: #38bdf8;
+            --amfm-text: #f8fafc;
+            --amfm-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background-color: var(--amfm-bg);
+            color: var(--amfm-text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        [data-amfm-app] {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Viewport Cartographique Multi-Canvas */
+        .amfm-viewport {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #070b14;
+            cursor: grab;
+            touch-action: none;
+            outline: none;
+        }
+        .amfm-viewport:active { cursor: grabbing; }
+
+        .amfm-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Header Supérieur : Barre Unique Ultra-Compacte (~48 px) */
+        .amfm-header {
+            position: absolute;
+            top: max(10px, env(safe-area-inset-top));
+            left: max(12px, env(safe-area-inset-left));
+            right: max(12px, env(safe-area-inset-right));
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .amfm-navbar {
+            pointer-events: auto;
+            background: var(--amfm-surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--amfm-border);
+            border-radius: 12px;
+            padding: 5px 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-height: 48px;
+        }
+
+        /* Bloc Gauche : Marque + Modèle + Commune */
+        .amfm-nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .amfm-logo {
+            height: 24px;
+            width: auto;
+            display: block;
+        }
+        .amfm-title-text {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #fff;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+        }
+        .amfm-badge {
+            background: linear-gradient(135deg, #00d2ff, #0284c7);
+            color: #070b14 !important;
+            font-size: 10.5px;
+            font-weight: 900;
+            padding: 2px 7px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        /* Bloc Centre : Sélecteurs de Calque et Région */
+        .amfm-nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            max-width: 620px;
+            justify-content: center;
+        }
+
+        /* Bloc Droite : Exports + Outils + Échéance */
+        .amfm-nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .amfm-headline {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--amfm-accent);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            background: rgba(0, 210, 255, 0.1);
+            border: 1px solid rgba(0, 210, 255, 0.25);
+            padding: 4px 10px;
+            border-radius: 8px;
+            max-width: 280px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .amfm-headline .amfm-headline-layer {
+            color: var(--amfm-muted);
+            font-weight: 600;
+        }
+
+        /* Sélecteurs stylisés compacts */
+        select {
+            background: rgba(14, 23, 40, 0.95);
+            border: 1px solid var(--amfm-border);
+            color: #fff;
+            font-size: 12.5px;
+            font-weight: 700;
+            padding: 0 10px;
+            border-radius: 8px;
+            height: 36px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2338bdf8' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 28px;
+        }
+        select:hover, select:focus-visible {
+            border-color: var(--amfm-border-focus);
+            box-shadow: 0 0 8px rgba(0, 210, 255, 0.3);
+        }
+        .amfm-select-layer {
+            flex: 1.2;
+            min-width: 170px;
+        }
+        .amfm-select-region {
+            flex: 0.8;
+            min-width: 130px;
+        }
+        .amfm-select-sea {
+            flex: 0.8;
+            min-width: 140px;
+        }
+
+        /* Boutons d'Action compacts */
+        .amfm-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--amfm-border);
+            color: #fff;
+            padding: 0 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            height: 36px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+        .amfm-btn:hover, .amfm-btn:focus-visible {
+            background: rgba(0, 210, 255, 0.22);
+            border-color: var(--amfm-accent);
+            outline: 2px solid var(--amfm-border-focus);
+            outline-offset: 1px;
+        }
+        .amfm-btn:active { transform: scale(0.96); }
+
+        .amfm-btn-icon {
+            width: 36px;
+            padding: 0;
+        }
+        .amfm-btn.is-active {
+            background: rgba(0, 210, 255, 0.2);
+            border-color: var(--amfm-accent);
+            color: var(--amfm-accent-hover);
+            box-shadow: 0 0 8px rgba(0, 210, 255, 0.3) inset;
+        }
+
+        .amfm-btn-commune {
+            background: rgba(56, 189, 248, 0.14);
+            border-color: rgba(56, 189, 248, 0.35);
+            color: #38bdf8;
+        }
+        .amfm-btn-commune:hover {
+            background: #0284c7;
+            color: #fff;
+        }
+
+        .amfm-btn-download {
+            background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+            color: #fff !important;
+            font-weight: 800 !important;
+            border: 1px solid rgba(0, 210, 255, 0.35);
+            padding: 0 9px;
+        }
+        .amfm-btn-download:hover {
+            box-shadow: 0 0 12px rgba(0, 210, 255, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .amfm-btn-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Légende Météorologique Compacte Pro */
+        .amfm-legend {
+            position: absolute;
+            left: max(14px, env(safe-area-inset-left));
+            bottom: calc(max(10px, env(safe-area-inset-bottom)) + 58px);
+            z-index: 100;
+            background: var(--amfm-surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--amfm-border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+            width: 220px;
+            pointer-events: none;
+        }
+        .amfm-legend-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 11px;
+            font-weight: 800;
+            margin-bottom: 5px;
+            color: #fff;
+            letter-spacing: 0.2px;
+        }
+        .amfm-legend-header [data-amfm-legend-unit] {
+            color: var(--amfm-accent);
+            font-size: 12px;
+            font-weight: 900;
+        }
+        .amfm-legend-bar {
+            height: 10px;
+            border-radius: 5px;
+            background: linear-gradient(to right, #482173, #3478c5, #55b7dd, #70cf66, #f2d43d, #ea652b, #d93435, #5b1037);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+        }
+        .amfm-legend-ticks {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--amfm-muted);
+            margin-top: 4px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Timeline Inférieure Compacte (~48 px) */
+        .amfm-timeline {
+            position: absolute;
+            bottom: max(10px, env(safe-area-inset-bottom));
+            left: max(12px, env(safe-area-inset-left));
+            right: max(12px, env(safe-area-inset-right));
+            z-index: 100;
+            background: var(--amfm-surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--amfm-border);
+            border-radius: 12px;
+            padding: 6px 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-height: 48px;
+        }
+
+        .amfm-player {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .amfm-player button {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--amfm-border);
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .amfm-player button:hover, .amfm-player button:focus-visible {
+            background: #0284c7;
+            border-color: var(--amfm-accent);
+            outline: 2px solid var(--amfm-border-focus);
+            outline-offset: 1px;
+        }
+        .amfm-player button:active { transform: scale(0.94); }
+
+        .amfm-slider-track {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .amfm-info-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .amfm-validity {
+            color: var(--amfm-accent);
+            font-variant-numeric: tabular-nums;
+        }
+        .amfm-lead {
+            background: rgba(0, 210, 255, 0.18);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            padding: 1px 7px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Style Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.16);
+            outline: none;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        input[type="range"]:hover {
+            background: rgba(255, 255, 255, 0.26);
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--amfm-accent);
+            box-shadow: 0 0 10px var(--amfm-accent), 0 2px 4px rgba(0,0,0,0.6);
+            border: 2px solid #ffffff;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            box-shadow: 0 0 14px #38bdf8;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--amfm-accent);
+            box-shadow: 0 0 10px var(--amfm-accent);
+            border: 2px solid #ffffff;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-track {
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        /* Sonde de Pixel */
+        .amfm-probe {
+            position: fixed;
+            z-index: 1500;
+            pointer-events: none;
+            background: rgba(8, 12, 20, 0.95);
+            border: 1px solid var(--amfm-accent);
+            border-radius: 8px;
+            padding: 5px 10px;
+            display: none;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8);
+        }
+        .amfm-probe.active { display: block; }
+        .amfm-probe-pinned {
+            display: flex !important;
+            flex-direction: column;
+            gap: 2px;
+            position: absolute;
+            z-index: 1500;
+            pointer-events: auto;
+            background: rgba(8, 12, 20, 0.96);
+            border: 1px solid var(--amfm-accent);
+            border-radius: 8px;
+            padding: 5px 10px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8);
+        }
+        .amfm-probe-pin-close {
+            position: absolute;
+            top: 2px;
+            right: 6px;
+            background: none;
+            border: none;
+            color: var(--amfm-muted);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
+        .amfm-probe-pin-close:hover { color: #fff; }
+        .amfm-probe-val {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--amfm-accent);
+            font-variant-numeric: tabular-nums;
+        }
+        .amfm-probe-label { font-size: 10.5px; color: var(--amfm-muted); }
+
+        /* Modal de Personnalisation GIF */
+        .amfm-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(4, 7, 13, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            animation: amfmFadeIn 0.2s ease-out;
+        }
+        .amfm-modal-overlay[hidden] { display: none !important; }
+        @keyframes amfmFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .amfm-modal-box {
+            background: rgba(11, 18, 32, 0.96);
+            border: 1px solid rgba(0, 210, 255, 0.4);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 440px;
+            padding: 22px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 210, 255, 0.15);
+            color: #fff;
+        }
+        .amfm-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 10px;
+        }
+        .amfm-modal-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--amfm-accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .amfm-modal-close {
+            background: none;
+            border: none;
+            color: var(--amfm-muted);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+        }
+        .amfm-modal-close:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+        .amfm-form-group {
+            margin-bottom: 14px;
+        }
+        .amfm-form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--amfm-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .amfm-radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .amfm-radio-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.15s ease;
+        }
+        .amfm-radio-card:hover {
+            background: rgba(0, 210, 255, 0.08);
+            border-color: rgba(0, 210, 255, 0.3);
+        }
+        .amfm-radio-card input[type="radio"] {
+            accent-color: var(--amfm-accent);
+            cursor: pointer;
+        }
+        .amfm-range-custom {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+            padding-left: 26px;
+        }
+        .amfm-select-mini {
+            background: rgba(7, 11, 20, 0.9);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 6px;
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .amfm-modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .amfm-btn-generate-gif {
+            flex: 1;
+            background: linear-gradient(135deg, #0099ff, #00d2ff);
+            color: #070b14;
+            border: none;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+            transition: transform 0.15s ease;
+        }
+        .amfm-btn-generate-gif:hover { transform: translateY(-1px); }
+        .amfm-btn-generate-gif:disabled { opacity: 0.6; cursor: not-allowed; }
+        .amfm-progress-container {
+            margin-top: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid rgba(0, 210, 255, 0.2);
+        }
+        .amfm-progress-bar-bg {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .amfm-progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #0099ff, #00d2ff);
+            border-radius: 4px;
+            transition: width 0.15s ease;
+        }
+        .amfm-progress-text {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--amfm-accent);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 📱 RESPONSIVE */
+        @media (max-width: 1024px) {
+            .amfm-navbar {
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 8px 10px;
+            }
+            .amfm-nav-controls {
+                order: 3;
+                width: 100%;
+                max-width: 100%;
+            }
+            .amfm-headline { display: none; }
+        }
+        @media (max-width: 650px) {
+            .amfm-btn-download span,
+            .amfm-btn-commune span {
+                display: none;
+            }
+            .amfm-title-text { display: none; }
+            .amfm-legend {
+                bottom: calc(max(10px, env(safe-area-inset-bottom)) + 60px);
+                width: 180px;
+                padding: 6px 10px;
+            }
+        }
+        @media (max-height: 500px) and (orientation: landscape) {
+            .amfm-legend { display: none; }
+            .amfm-header { top: 4px; }
+            .amfm-timeline { bottom: 4px; }
+        }
+        /* 🔒 Écran d'Authentification / Accès Protégé */
+        #amfm-auth-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(5, 9, 17, 0.94);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 1;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        #amfm-auth-overlay.is-hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .amfm-auth-card {
+            width: 100%;
+            max-width: 400px;
+            background: linear-gradient(180deg, rgba(16, 26, 44, 0.96) 0%, rgba(10, 16, 28, 0.98) 100%);
+            border: 1px solid rgba(0, 210, 255, 0.4);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(0, 210, 255, 0.15);
+            border-radius: 20px;
+            padding: 32px 28px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .amfm-auth-logo {
+            max-width: 240px;
+            margin: 0 auto 2px auto;
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));
+        }
+        .amfm-auth-title {
+            font-size: 19px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.3px;
+        }
+        .amfm-auth-subtitle {
+            font-size: 13px;
+            color: var(--amfm-muted);
+            margin-top: -10px;
+            line-height: 1.4;
+        }
+        .amfm-auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            text-align: left;
+        }
+        .amfm-auth-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .amfm-auth-field label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .amfm-auth-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .amfm-auth-input-wrapper i {
+            position: absolute;
+            left: 14px;
+            color: #00d2ff;
+            font-size: 14px;
+        }
+        .amfm-auth-input {
+            width: 100%;
+            height: 44px;
+            padding: 0 14px 0 40px;
+            background: rgba(7, 11, 20, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 14.5px;
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .amfm-auth-input:focus {
+            border-color: #00d2ff;
+            box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.25);
+        }
+        .amfm-auth-error {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ff3366;
+            background: rgba(255, 51, 102, 0.12);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: none;
+            text-align: center;
+        }
+        .amfm-auth-btn {
+            height: 46px;
+            background: linear-gradient(135deg, #00d2ff 0%, #0077ff 100%);
+            border: none;
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 8px 20px rgba(0, 119, 255, 0.35);
+            transition: transform 0.15s, box-shadow 0.15s;
+            margin-top: 4px;
+        }
+        .amfm-auth-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(0, 119, 255, 0.5);
+        }
+        .amfm-auth-btn:active {
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body>
+    <!-- 🔒 Écran d'Authentification Sécurisé -->
+    <div id="amfm-auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <div class="amfm-auth-card">
+            <img src="logo.png" alt="Météo-Climat Pro" class="amfm-auth-logo" onerror="this.src='https://alertes-meteo.com/assets/logo_meteo_climat_pro.png'">
+            <div class="amfm-auth-title" id="auth-title">Espace Professionnel</div>
+            <div class="amfm-auth-subtitle">Veuillez vous identifier pour accéder aux modèles haute résolution</div>
+            <form id="amfm-auth-form" class="amfm-auth-form" onsubmit="return false;">
+                <div class="amfm-auth-error" id="auth-error-msg">Identifiant ou mot de passe incorrect.</div>
+                <div class="amfm-auth-field">
+                    <label for="auth-user">Utilisateur</label>
+                    <div class="amfm-auth-input-wrapper">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="auth-user" class="amfm-auth-input" placeholder="Nom d'utilisateur" autocomplete="username" required>
+                    </div>
+                </div>
+                <div class="amfm-auth-field">
+                    <label for="auth-pass">Mot de passe</label>
+                    <div class="amfm-auth-input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="auth-pass" class="amfm-auth-input" placeholder="Mot de passe" autocomplete="current-password" required>
+                    </div>
+                </div>
+                <button type="submit" id="auth-submit" class="amfm-auth-btn">
+                    <i class="fa-solid fa-lock-open"></i> Accéder aux Cartes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var AUTH_KEY = 'amfm_auth_token';
+        var VALID_USER = 'gfs';
+        var VALID_PASS = 'mto59';
+        var overlay = document.getElementById('amfm-auth-overlay');
+        var form = document.getElementById('amfm-auth-form');
+        var userIn = document.getElementById('auth-user');
+        var passIn = document.getElementById('auth-pass');
+        var errBox = document.getElementById('auth-error-msg');
+
+        if (localStorage.getItem(AUTH_KEY) === 'valid') {
+            if (overlay) overlay.classList.add('is-hidden');
+        } else {
+            if (overlay) overlay.classList.remove('is-hidden');
+            setTimeout(function() { if (userIn) userIn.focus(); }, 120);
+        }
+
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var u = (userIn && userIn.value ? userIn.value.trim() : '');
+                var p = (passIn && passIn.value ? passIn.value.trim() : '');
+                if (u === VALID_USER && p === VALID_PASS) {
+                    localStorage.setItem(AUTH_KEY, 'valid');
+                    // Purge immédiate de tous les caches navigateurs
+                    if ('caches' in window) {
+                        try {
+                            caches.keys().then(function(names) {
+                                names.forEach(function(name) { caches.delete(name); });
+                            });
+                        } catch(e) {}
+                    }
+                    try { sessionStorage.clear(); } catch(e) {}
+                    if (errBox) errBox.style.display = 'none';
+                    if (overlay) overlay.classList.add('is-hidden');
+                } else {
+                    if (errBox) {
+                        errBox.style.display = 'block';
+                        errBox.textContent = 'Identifiant ou mot de passe incorrect.';
+                    }
+                    if (passIn) {
+                        passIn.value = '';
+                        passIn.focus();
+                    }
+                }
+            });
+        }
+    })();
+    </script>
+
+    <div data-amfm-app
+         data-base-url="output/arome"
+         data-model="arome"
+         data-logo="logo.png"
+         data-variable="temperature"
+         data-timezone="Europe/Paris"
+         data-animation="1">
+        
+        <!-- Header Supérieur : Barre Unique Ultra-Compacte (~48 px) -->
+        <header class="amfm-header" role="banner">
+            <div class="amfm-navbar" role="region" aria-label="Contrôles de la carte">
+                <!-- Gauche : Marque + Modèle + Commune -->
+                <div class="amfm-nav-brand">
+                    <img src="logo.png" alt="Météo-Climat Pro" class="amfm-logo" aria-hidden="false">
+                    <span class="amfm-title-text">AROME HD</span>
+                    <span class="amfm-badge">1,3 km</span>
+                    <a href="previsions.html" class="amfm-btn amfm-btn-commune" aria-label="Prévisions détaillées par commune ou code postal" title="Prévisions par commune">
+                        <i class="fa-solid fa-house-chimney" aria-hidden="true"></i> <span>Commune</span>
+                    </a>
+                </div>
+
+                <!-- Centre : Sélecteur de Calque Météo + Sélecteur de Région -->
+                <div class="amfm-nav-controls">
+                    <!-- Sélecteur de Modèle masqué pour compatibilité JS -->
+                    <select id="select-model" style="display:none;" aria-label="Sélection du modèle de prévision">
+                        <option value="arome" selected>🇫🇷 AROME HD (1,3 km)</option>
+                    </select>
+
+                    <!-- Sélecteur direct de Calque Météo -->
+                    <select id="direct-layer-select" class="amfm-select-layer" aria-label="Sélection du paramètre météorologique">
+                        <optgroup label="🌡️ Températures">
+                            <option value="temperature" selected>🌡️ Température à 2 m (°C)</option>
+                            <option value="temperature_ressentie">❄️ Température ressentie (°C)</option>
+                            <option value="point_rosee">💧 Point de rosée (°C)</option>
+                            <option value="humidex">🔥 Indice Humidex</option>
+                        </optgroup>
+                        <optgroup label="🌧️ Précipitations & Pluie">
+                            <option value="pluie_1h">🌧️ Pluie horaire (mm/h)</option>
+                            <option value="pluie_cumul">📊 Précipitations cumulées (mm)</option>
+                            <option value="reflectivite">📡 Réflectivité Radar Doppler (dBZ)</option>
+                            <option value="graupel">🧊 Graupel / Grésil (mm)</option>
+                        </optgroup>
+                        <optgroup label="💨 Vent & Tempêtes">
+                            <option value="vent">💨 Vent moyen à 10 m (km/h)</option>
+                            <option value="rafales">⚡ Rafales maximales (km/h)</option>
+                            <option value="rafales_cumul">🌪️ Rafales max cumulées (km/h)</option>
+                        </optgroup>
+                        <optgroup label="☁️ Nuages & Ciel">
+                            <option value="nebulosite">☁️ Nébulosité totale (%)</option>
+                            <option value="nuages_bas">🌫️ Nuages bas / Brouillard (%)</option>
+                            <option value="nuages_moyens">⛅ Nuages moyens (%)</option>
+                            <option value="nuages_eleves">🌤️ Nuages élevés / Voile (%)</option>
+                            <option value="humidite">🌫️ Humidité relative (%)</option>
+                        </optgroup>
+                        <optgroup label="⛈️ Orages & Convection">
+                            <option value="mucape">⚡ Instabilité convective (MUCAPE J/kg)</option>
+                        </optgroup>
+                        <optgroup label="❄️ Neige & Hiver">
+                            <option value="neige">❄️ Chutes de neige (cm/h)</option>
+                            <option value="neige_au_sol">🏔️ Épaisseur neige au sol (cm)</option>
+                            <option value="equivalent_eau_neige">💧 Cumul neigeux équiv. eau (mm)</option>
+                        </optgroup>
+                        <optgroup label="🧭 Pression & Atmosphère">
+                            <option value="pression">🧭 Pression niveau mer (hPa)</option>
+                            <option value="pression_surface">⛰️ Pression au sol (hPa)</option>
+                        </optgroup>
+                    </select>
+
+                    <!-- Sélecteur de Zone (Hauts-de-France par défaut) -->
+                    <select id="select-region" data-amfm-region-select class="amfm-select-region" aria-label="Zoomer sur une région de France">
+                        <option value="hdf" selected>🏘️ Hauts-de-France</option>
+                        <option value="france">🇫🇷 France Entière</option>
+                        <option value="normandie">🍏 Normandie</option>
+                        <option value="idf">🗼 Île-de-France</option>
+                        <option value="grandest">🥨 Grand Est</option>
+                        <option value="bretagne">⛵ Bretagne</option>
+                        <option value="pdl">⚓ Pays de la Loire</option>
+                        <option value="cvl">🏰 Centre-Val de Loire</option>
+                        <option value="bfc">🍇 Bourgogne-Franche-Comté</option>
+                        <option value="naq">🌊 Nouvelle-Aquitaine</option>
+                        <option value="ara">⛰️ Auvergne-Rhône-Alpes</option>
+                        <option value="occitanie">🌞 Occitanie</option>
+                        <option value="paca">☀️ PACA</option>
+                        <option value="corse">🏝️ Corse</option>
+                        <option value="belgique">🇧🇪 Belgique</option>
+                    </select>
+                </div>
+
+                <!-- Droite : Exports + Outils + Échéance -->
+                <div class="amfm-nav-actions">
+                    <div class="amfm-btn-group">
+                        <button type="button" class="amfm-btn amfm-btn-download" data-amfm-capture aria-label="Télécharger en PNG 4:3" title="Télécharger la carte en PNG HD (4:3 Standard)">
+                            <i class="fa-solid fa-download" aria-hidden="true"></i> <span>PNG</span>
+                        </button>
+                        <button type="button" class="amfm-btn amfm-btn-download" data-amfm-capture-screen aria-label="Capture d'écran HD fidèle" title="Télécharger la Capture d'Écran HD exacte (reproduction 100% fidèle au cadrage actuel)">
+                            <i class="fa-solid fa-camera" aria-hidden="true"></i> <span>Écran</span>
+                        </button>
+                        <button type="button" class="amfm-btn amfm-btn-download" data-amfm-capture-jpeg aria-label="Télécharger en JPEG" title="Télécharger en JPEG">
+                            <i class="fa-solid fa-image" aria-hidden="true"></i> <span>JPEG</span>
+                        </button>
+                        <button type="button" class="amfm-btn amfm-btn-download" data-amfm-capture-gif aria-label="Télécharger l'animation GIF" title="Télécharger le GIF animé">
+                            <i class="fa-solid fa-film" aria-hidden="true"></i> <span>GIF</span>
+                        </button>
+                    </div>
+
+                    <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-reset aria-label="Recentrer la carte météo" title="Recentrer sur la France">
+                        <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+                    </button>
+
+                    <button type="button" class="amfm-btn amfm-btn-icon is-active" data-amfm-toggle-cities aria-pressed="true" aria-label="Afficher ou masquer les villes" title="Afficher/Masquer les villes">
+                        <i class="fa-solid fa-city" aria-hidden="true"></i>
+                    </button>
+
+                    <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-values aria-pressed="false" aria-label="Afficher ou masquer la grille de valeurs météo" title="Afficher/Masquer les valeurs météo sur la carte">
+                        <i class="fa-solid fa-hashtag" aria-hidden="true"></i>
+                    </button>
+
+                    <!-- Sélecteur Mode Terre / Mer -->
+                    <select class="amfm-select-sea" data-amfm-select-sea aria-label="Filtrer l'affichage des valeurs en mer et littoral" title="Zone d'affichage des valeurs météo">
+                        <option value="none" selected>🌊 Partout (Mer comprise)</option>
+                        <option value="land">🌲 Terres seules</option>
+                        <option value="coast">🏖️ Terres + Bord de mer</option>
+                    </select>
+
+                    <button type="button" class="amfm-btn amfm-btn-icon" onclick="localStorage.removeItem('amfm_auth_token'); if('caches' in window){caches.keys().then(function(k){k.forEach(function(n){caches.delete(n);});});} window.location.reload(true);" aria-label="Déconnexion et vider le cache" title="Vider le cache et Déconnexion">
+                        <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                    </button>
+
+                    <div class="amfm-headline" data-amfm-headline aria-live="polite">
+                        <span class="amfm-headline-layer">Température à 2 m (°C) — </span>Chargement…
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Viewport Cartographique Multi-Canvas -->
+        <main class="amfm-viewport" data-amfm-viewport tabindex="0" role="main" aria-label="Carte interactive de prévisions météo AROME HD (Touches +/- pour zoomer, flèches pour naviguer)">
+            <canvas class="amfm-canvas" data-amfm-weather aria-hidden="true"></canvas>
+            <canvas class="amfm-canvas" data-amfm-vectors aria-hidden="true"></canvas>
+            <canvas class="amfm-canvas" data-amfm-values aria-hidden="true"></canvas>
+            <canvas class="amfm-canvas" data-amfm-labels aria-hidden="true"></canvas>
+        </main>
+
+        <!-- Sonde de Pixel -->
+        <div class="amfm-probe" data-amfm-probe role="status">
+            <div class="amfm-probe-val" data-amfm-probe-value>—</div>
+            <div class="amfm-probe-label" data-amfm-probe-label>Température</div>
+        </div>
+
+        <!-- Légende Dynamique avec Ticks -->
+        <aside class="amfm-legend" data-amfm-legend role="complementary" aria-label="Échelle colorimétrique de la carte">
+            <div class="amfm-legend-header">
+                <span data-amfm-legend-label>Échelle</span>
+                <span data-amfm-legend-unit>°C</span>
+            </div>
+            <div class="amfm-legend-bar" data-amfm-legend-bar></div>
+            <div class="amfm-legend-ticks" data-amfm-legend-ticks>
+                <span>-15°</span><span>0°</span><span>15°</span><span>30°</span><span>45°</span>
+            </div>
+        </aside>
+
+        <!-- Timeline Inférieure Compacte -->
+        <footer class="amfm-timeline" role="region" aria-label="Contrôle de la timeline et des échéances de prévision">
+            <div class="amfm-player">
+                <button type="button" data-amfm-previous aria-label="Échéance horaire précédente" title="Échéance précédente">
+                    <i class="fa-solid fa-backward-step"></i>
+                </button>
+                <button type="button" data-amfm-play aria-label="Lancer la lecture automatique de l'animation" title="Lecture / Pause">
+                    <i class="fa-solid fa-play"></i>
+                </button>
+                <button type="button" data-amfm-next aria-label="Échéance horaire suivante" title="Échéance suivante">
+                    <i class="fa-solid fa-forward-step"></i>
+                </button>
+            </div>
+
+            <div class="amfm-slider-track">
+                <div class="amfm-info-row">
+                    <span class="amfm-validity" data-amfm-validity aria-live="polite">Chargement…</span>
+                    <span class="amfm-lead" data-amfm-lead>H+00</span>
+                </div>
+                <input type="range" data-amfm-slider min="0" max="24" value="0" step="1" aria-label="Curseur d'échéance temporelle" aria-valuetext="H+00">
+            </div>
+        </footer>
+
+        <!-- Modal de Personnalisation GIF -->
+        <div class="amfm-modal-overlay" data-amfm-gif-modal hidden>
+            <div class="amfm-modal-box" role="dialog" aria-modal="true" aria-labelledby="amfm-gif-title">
+                <div class="amfm-modal-header">
+                    <div class="amfm-modal-title" id="amfm-gif-title">
+                        <i class="fa-solid fa-film"></i> Exporter l'Animation GIF
+                    </div>
+                    <button type="button" class="amfm-modal-close" data-amfm-gif-close aria-label="Fermer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="amfm-form-group">
+                    <label class="amfm-form-label">Plage d'échéances à inclure</label>
+                    <div class="amfm-radio-group">
+                        <label class="amfm-radio-card">
+                            <input type="radio" name="gif-range" value="all" checked>
+                            <span><strong>Tout le run</strong> (H+01 → H+51)</span>
+                        </label>
+                        <label class="amfm-radio-card">
+                            <input type="radio" name="gif-range" value="24h">
+                            <span><strong>Prochaines 24h</strong> (H+01 → H+24)</span>
+                        </label>
+                        <label class="amfm-radio-card">
+                            <input type="radio" name="gif-range" value="48h">
+                            <span><strong>Prochaines 48h</strong> (H+01 → H+48)</span>
+                        </label>
+                        <label class="amfm-radio-card">
+                            <input type="radio" name="gif-range" value="custom">
+                            <span><strong>Personnalisé</strong></span>
+                        </label>
+                        <div class="amfm-range-custom" data-amfm-gif-custom-range style="display:none;">
+                            <span>De :</span>
+                            <select class="amfm-select-mini" data-amfm-gif-start aria-label="Échéance de début"></select>
+                            <span>À :</span>
+                            <select class="amfm-select-mini" data-amfm-gif-end aria-label="Échéance de fin"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="amfm-form-group">
+                    <label class="amfm-form-label">Vitesse de lecture</label>
+                    <div style="display:flex; gap:8px;">
+                        <label class="amfm-radio-card" style="flex:1;">
+                            <input type="radio" name="gif-speed" value="500"> <span>0.5s</span>
+                        </label>
+                        <label class="amfm-radio-card" style="flex:1;">
+                            <input type="radio" name="gif-speed" value="1000" checked> <span>1s (Défaut)</span>
+                        </label>
+                        <label class="amfm-radio-card" style="flex:1;">
+                            <input type="radio" name="gif-speed" value="1500"> <span>1.5s</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="amfm-progress-container" data-amfm-gif-progress-box style="display:none;">
+                    <div class="amfm-progress-text">
+                        <span data-amfm-gif-status-text><i class="fa-solid fa-hourglass-half fa-spin"></i> Génération en cours…</span>
+                        <span data-amfm-gif-percent>0%</span>
+                    </div>
+                    <div class="amfm-progress-bar-bg">
+                        <div class="amfm-progress-bar-fill" data-amfm-gif-bar></div>
+                    </div>
+                </div>
+
+                <div class="amfm-modal-actions">
+                    <button type="button" class="amfm-btn-generate-gif" data-amfm-gif-submit>
+                        <i class="fa-solid fa-download"></i> Lancer la Génération GIF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts : palettes (source unique) puis moteur cartographique -->
+    <script src="js/palettes.js?v=1.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <script src="js/regions.js?v=1.0.0"></script>
+    <script src="js/arome-map.js?v=6.0.8"></script>
+</body>
+</html>
+
+
+

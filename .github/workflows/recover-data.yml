@@ -1,0 +1,29 @@
+name: Recover Missing Data (May 5-9)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  recover_data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120 # Peut être long
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Install dependencies
+      run: npm install @supabase/supabase-js dotenv
+
+    - name: Run Recovery Script
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        MF_CONSUMER_KEY: ${{ secrets.MF_CONSUMER_KEY }}
+        MF_CONSUMER_SECRET: ${{ secrets.MF_CONSUMER_SECRET }}
+      run: node scratch/recover_may_5_to_9.mjs

@@ -1,0 +1,104 @@
+name: Pipeline Modeles Meteo
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'arome | ecmwf | icon-eu | all'
+        required: false
+        default: 'all'
+  schedule:
+    - cron: '30 1,4,7,10,13,16,19,22 * * *'
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Division du modèle ICON-EU (120 pas de temps) en 4 tranches s'exécutant en parallèle
+          - model: 'icon-eu'
+            steps: '0-29'
+            skip_metadata: 'true'
+            
+          - model: 'icon-eu'
+            steps: '30-59'
+            skip_metadata: 'true'
+            
+          - model: 'icon-eu'
+            steps: '60-89'
+            skip_metadata: 'true'
+            
+          - model: 'icon-eu'
+            steps: '90-180'
+            skip_metadata: 'true'
+
+    name: "${{ matrix.model }} (Steps: ${{ matrix.steps }})"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libgeos-dev libproj-dev proj-data proj-bin libeccodes-dev libeccodes-tools
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python packages
+        run: |
+          pip install --upgrade pip
+          pip install -r scripts/meteo/requirements.txt
+
+      - name: Run Pipeline Chunk
+        working-directory: scripts/meteo
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          MF_API_TOKEN: ${{ secrets.MF_API_TOKEN }}
+          METEO_STEPS: ${{ matrix.steps }}
+          SKIP_METADATA: ${{ matrix.skip_metadata }}
+        run: python run_pipeline.py ${{ matrix.model }}
+
+  consolidate:
+    runs-on: ubuntu-latest
+    needs: pipeline
+    name: "Consolidation & Cleanup"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies (lightweight)
+        run: |
+          pip install --upgrade pip
+          pip install requests
+
+      - name: Consolidate ICON-EU Metadata
+        working-directory: scripts/meteo
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python update_metadata.py icon-eu
+
+      - name: Consolidate ECMWF Metadata
+        working-directory: scripts/meteo
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python update_metadata.py ecmwf
+
+      - name: Cleanup old files (Supabase >48h)
+        working-directory: scripts/meteo
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python cleanup_supabase.py

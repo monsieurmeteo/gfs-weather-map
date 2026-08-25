@@ -1,0 +1,105 @@
+name: "Mise a Jour Automatique Multi-Modeles Meteo (24/7)"
+
+on:
+  schedule:
+    # Heures ideales des runs complets Météo-France (01h05, 07h05, 11h05, 13h05, 16h05, 19h05, 22h05 heure de Paris)
+    - cron: '5 23,5,9,11,14,17,20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "weather-pipeline"
+  cancel-in-progress: false
+
+jobs:
+  update-weather-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    env:
+      METEOFRANCE_TOKEN: ${{ secrets.METEOFRANCE_TOKEN }}
+
+    steps:
+      - name: Recuperation du depot
+        uses: actions/checkout@v4
+
+      - name: Configuration de Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installation des dependances systeme et Python
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libeccodes-dev libeccodes-tools
+          python -m pip install --upgrade pip
+          pip install numpy pillow requests eccodes cfgrib xarray scipy ecmwf-opendata
+
+      - name: Verification du token AROME
+        run: |
+          if [ -z "$METEOFRANCE_TOKEN" ]; then
+            echo "WARNING: METEOFRANCE_TOKEN non configure — AROME sera saute"
+          else
+            echo "Token AROME present (${#METEOFRANCE_TOKEN} caracteres)"
+          fi
+
+      - name: Execution du Pipeline Multi-Modeles
+        run: |
+          # Pour l'instant : AROME via open data (GRIB2 data.gouv.fr, gratuit).
+          # Les autres modèles seront réactivés plus tard.
+          # -u = sortie non bufferisée (progression visible en temps réel dans les logs)
+          python -u pipeline/arome_open_data.py
+
+      - name: Commit et Push des nouvelles cartes
+        run: |
+          git config --global user.name "Meteo Automations Bot"
+          git config --global user.email "bot@meteo-climat.pro"
+          git add output/
+          if git diff --staged --quiet; then
+            echo "Aucune nouvelle carte a pousser."
+          else
+            git commit -m "Mise a jour automatique des modeles meteo [$(date -u +'%Y-%m-%d %H:%MZ')]"
+          fi
+          # Fusionner avec le remote en gardant NOS artefacts regeneres
+          for i in 1 2 3; do
+            git fetch origin main
+            git merge origin/main -X ours --no-edit || {
+              git checkout --ours -- output/ 2>/dev/null || true
+              git add output/
+              git commit -m "Merge remote changes" --no-edit || true
+            }
+            if git push origin main; then
+              echo "Push reussi."
+              break
+            fi
+            echo "Tentative $i echouee, retry dans 5s..."
+            sleep 5
+          done
+
+      # ── Déploiement intégré (le push GITHUB_TOKEN ne redéclenche pas
+      #    deploy-pages.yml, donc on déploie ici directement). ──────────
+      - name: Preparation du site (fichiers necessaires uniquement)
+        run: |
+          mkdir -p _site
+          cp index.html _site/ 2>/dev/null || true
+          cp previsions.html _site/ 2>/dev/null || true
+          cp logo.png _site/ 2>/dev/null || true
+          cp -r js _site/ 2>/dev/null || true
+          cp -r css _site/ 2>/dev/null || true
+          cp -r output _site/ 2>/dev/null || true
+
+      - name: Configuration Pages
+        uses: actions/configure-pages@v5
+
+      - name: Televersement de l'artefact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+      - name: Deploiement sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
