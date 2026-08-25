@@ -15,6 +15,7 @@ from scipy.interpolate import RegularGridInterpolator
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.patheffects
 
 urllib3.disable_warnings()
 
@@ -74,8 +75,17 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
         gy = np.linspace(0, HEIGHT, prmsl_grid.shape[0])
         GX, GY = np.meshgrid(gx, gy)
         levels = np.arange(960, 1055, 5)
-        cs = ax.contour(GX, GY, prmsl_grid, levels=levels, colors="white", linewidths=4.8)
-        ax.clabel(cs, inline=True, fmt="%d", fontsize=22, colors="white")
+        # 1. Liseré noir d'ombrage et de contraste
+        ax.contour(GX, GY, prmsl_grid, levels=levels, colors="#000000", linewidths=11.0)
+        # 2. Ligne blanche éclatante doublée (8.5px)
+        cs = ax.contour(GX, GY, prmsl_grid, levels=levels, colors="#ffffff", linewidths=8.0)
+        labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=24, colors="#ffffff")
+        for lbl in labels:
+            lbl.set_weight("bold")
+            lbl.set_path_effects([
+                matplotlib.patheffects.Stroke(linewidth=4, foreground="#000000"),
+                matplotlib.patheffects.Normal()
+            ])
     
     fig.savefig(output_path, format="webp", dpi=100, pil_kwargs={"quality": 88})
     plt.close(fig)
