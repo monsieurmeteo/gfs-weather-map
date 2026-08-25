@@ -4,7 +4,7 @@
   "provider": "NOAA (National Oceanic and Atmospheric Administration)",
   "resolution": "0.25° (~25 km)",
   "run_time": "2026-08-25T06:00:00+00:00",
-  "generated_at": "2026-08-25T14:46:47.482181+00:00",
+  "generated_at": "2026-08-25T14:52:00.416264+00:00",
   "bounds": {
     "south": 32.0,
     "west": -18.0,
@@ -22,21 +22,13 @@
         "temperature_ressentie": "maps/temperature_ressentie/000.webp",
         "point_rosee": "maps/point_rosee/000.webp",
         "humidex": "maps/humidex/000.webp",
-        "pluie_1h": "maps/pluie_1h/000.webp",
-        "pluie_cumul": "maps/pluie_cumul/000.webp",
-        "reflectivite": "maps/reflectivite/000.webp",
-        "graupel": "maps/graupel/000.webp",
         "vent": "maps/vent/000.webp",
         "rafales": "maps/rafales/000.webp",
         "rafales_cumul": "maps/rafales_cumul/000.webp",
         "nebulosite": "maps/nebulosite/000.webp",
         "mucape": "maps/mucape/000.webp",
-        "neige": "maps/neige/000.webp",
-        "neige_au_sol": "maps/neige_au_sol/000.webp",
-        "equivalent_eau_neige": "maps/equivalent_eau_neige/000.webp",
         "pression": "maps/pression/000.webp",
         "pression_surface": "maps/pression_surface/000.webp",
-        "humidite": "maps/humidite/000.webp",
         "geopotentiel_500": "maps/geopotentiel_500/000.webp"
       }
     },
@@ -57,12 +49,8 @@
         "rafales_cumul": "maps/rafales_cumul/003.webp",
         "nebulosite": "maps/nebulosite/003.webp",
         "mucape": "maps/mucape/003.webp",
-        "neige": "maps/neige/003.webp",
-        "neige_au_sol": "maps/neige_au_sol/003.webp",
-        "equivalent_eau_neige": "maps/equivalent_eau_neige/003.webp",
         "pression": "maps/pression/003.webp",
         "pression_surface": "maps/pression_surface/003.webp",
-        "humidite": "maps/humidite/003.webp",
         "geopotentiel_500": "maps/geopotentiel_500/003.webp"
       }
     },
@@ -83,12 +71,8 @@
         "rafales_cumul": "maps/rafales_cumul/006.webp",
         "nebulosite": "maps/nebulosite/006.webp",
         "mucape": "maps/mucape/006.webp",
-        "neige": "maps/neige/006.webp",
-        "neige_au_sol": "maps/neige_au_sol/006.webp",
-        "equivalent_eau_neige": "maps/equivalent_eau_neige/006.webp",
         "pression": "maps/pression/006.webp",
         "pression_surface": "maps/pression_surface/006.webp",
-        "humidite": "maps/humidite/006.webp",
         "geopotentiel_500": "maps/geopotentiel_500/006.webp"
       }
     },
@@ -109,12 +93,8 @@
         "rafales_cumul": "maps/rafales_cumul/009.webp",
         "nebulosite": "maps/nebulosite/009.webp",
         "mucape": "maps/mucape/009.webp",
-        "neige": "maps/neige/009.webp",
-        "neige_au_sol": "maps/neige_au_sol/009.webp",
-        "equivalent_eau_neige": "maps/equivalent_eau_neige/009.webp",
         "pression": "maps/pression/009.webp",
         "pression_surface": "maps/pression_surface/009.webp",
-        "humidite": "maps/humidite/009.webp",
         "geopotentiel_500": "maps/geopotentiel_500/009.webp"
       }
     },
@@ -135,12 +115,8 @@
         "rafales_cumul": "maps/rafales_cumul/012.webp",
         "nebulosite": "maps/nebulosite/012.webp",
         "mucape": "maps/mucape/012.webp",
-        "neige": "maps/neige/012.webp",
-        "neige_au_sol": "maps/neige_au_sol/012.webp",
-        "equivalent_eau_neige": "maps/equivalent_eau_neige/012.webp",
         "pression": "maps/pression/012.webp",
         "pression_surface": "maps/pression_surface/012.webp",
-        "humidite": "maps/humidite/012.webp",
         "geopotentiel_500": "maps/geopotentiel_500/012.webp"
       }
     },
@@ -161,12 +137,8 @@
         "rafales_cumul": "maps/rafales_cumul/015.webp",
         "nebulosite": "maps/nebulosite/015.webp",
         "mucape": "maps/mucape/015.webp",
-        "neige": "maps/neige/015.webp",
-        "neige_au_sol": "maps/neige_au_sol/015.webp",
-        "equivalent_eau_neige": "maps/equivalent_eau_neige/015.webp",
         "pression": "maps/pression/015.webp",
         "pression_surface": "maps/pression_surface/015.webp",
-        "humidite": "maps/humidite/015.webp",
         "geopotentiel_500": "maps/geopotentiel_500/015.webp"
       }
     },
@@ -187,12 +159,8 @@
         "rafales_cumul": "maps/rafales_cumul/018.webp",
         "nebulosite": "maps/nebulosite/018.webp",
         "mucape": "maps/mucape/018.webp",
-        "neige": "maps/neige/018.webp",
-        "neige_au_sol": "maps/neige_au_sol/018.webp",
-        "equivalent_eau_neige": "maps/equivalent_eau_neige/018.webp",
         "pression": "maps/pression/018.webp",
         "pression_surface": "maps/pression_surface/018.webp",
-        "humidite": "maps/humidite/018.webp",
         "geopotentiel_500": "maps/geopotentiel_500/018.webp"
       }
     },
@@ -213,12 +181,8 @@
         "rafales_cumul": "maps/rafales_cumul/021.webp",
         "nebulosite": "maps/nebulosite/021.webp",
         "mucape": "maps/mucape/021.webp",
-        "neige": "maps/neige/021.webp",
-        "neige_au_sol": "maps/neige_au_sol/021.webp",
-        "equivalent_eau_neige": "maps/equivalent_eau_neige/021.webp",
         "pression": "maps/pression/021.webp",
         "pression_surface": "maps/pression_surface/021.webp",
-        "humidite": "maps/humidite/021.webp",
         "geopotentiel_500": "maps/geopotentiel_500/021.webp"
       }
     },
@@ -239,12 +203,8 @@
         "rafales_cumul": "maps/rafales_cumul/024.webp",
         "nebulosite": "maps/nebulosite/024.webp",
         "mucape": "maps/mucape/024.webp",
-        "neige": "maps/neige/024.webp",
-        "neige_au_sol": "maps/neige_au_sol/024.webp",
-        "equivalent_eau_neige": "maps/equivalent_eau_neige/024.webp",
         "pression": "maps/pression/024.webp",
         "pression_surface": "maps/pression_surface/024.webp",
-        "humidite": "maps/humidite/024.webp",
         "geopotentiel_500": "maps/geopotentiel_500/024.webp"
       }
     }
