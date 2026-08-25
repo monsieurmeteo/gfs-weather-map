@@ -185,7 +185,8 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
     """Rend toutes les couches d'une échéance ARPEGE (Z500 en priorité)."""
     step = {"lead_hour": lead,
             "valid_time": (run_dt + datetime.timedelta(hours=lead)).isoformat(),
-            "files": {}}
+            "files": {},
+            "probes": {}}
 
     def regrid(field, convert=None):
         if field is None:
@@ -201,6 +202,7 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
         step["files"][name] = "maps/%s/%03d.webp" % (name, lead)
         write_hkv(data, os.path.join(out_dir, "values", name,
                                      "%03d.hkv.gz" % lead))
+        step["probes"][name] = "maps/values/%s/%03d.hkv.gz" % (name, lead)
         state["counts"][name] = state["counts"].get(name, 0) + 1
 
     # ★ Couche maîtresse : Z500 (m²/s² → dam) + isobares

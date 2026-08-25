@@ -479,6 +479,9 @@
                     if (lastHover) {
                         updateProbe(lastHover.x, lastHover.y);
                     }
+                    if (valuesVisible) {
+                        scheduleRender();
+                    }
                 })
                 .catch(function () {
                     if (token === probeLoadToken) {
@@ -2015,11 +2018,19 @@
             regionSelect.addEventListener('change', function (e) {
                 var val = e.target.value || 'europe';
                 if (val === 'europe') {
-                    // Vue Europe : neutre — reste sur le modèle courant s'il est
-                    // déjà en domaine Europe (GFS Europe ou ARPEGE).
                     if (currentModel === 'gfs_france') {
-                        pendingFocus = { latitude: 49.0, longitude: 8.0, scale: 1.0 };
+                        transform = { scale: 1, x: 0, y: 0 };
                         switchModel('gfs');
+                    } else {
+                        resetView();
+                    }
+                    updateUrl();
+                    return;
+                }
+                if (val === 'france') {
+                    if (currentModel !== 'gfs_france') {
+                        transform = { scale: 1, x: 0, y: 0 };
+                        switchModel('gfs_france');
                     } else {
                         resetView();
                     }
@@ -2032,27 +2043,15 @@
                     updateUrl();
                     return;
                 }
-                var targetModel = cfg.model || 'gfs';
-                var focus = null;
-                if (cfg.reset) {
-                    focus = { latitude: 46.4, longitude: 2.2, scale: 1.0 };
-                } else if (cfg.latitude !== undefined) {
-                    focus = {
-                        latitude: cfg.latitude,
-                        longitude: cfg.longitude,
-                        scale: cfg.scale
-                    };
-                }
-                if (!focus) {
-                    resetView();
-                    updateUrl();
-                    return;
-                }
+                var targetModel = (currentModel === 'arpege') ? 'arpege' : (cfg.model || 'gfs');
+                var focus = {
+                    latitude: cfg.latitude,
+                    longitude: cfg.longitude,
+                    scale: cfg.scale
+                };
                 if (currentModel !== targetModel) {
                     pendingFocus = focus;
                     switchModel(targetModel);
-                } else if (cfg.reset) {
-                    resetView();
                 } else {
                     focusLocation(focus);
                 }
@@ -2132,10 +2131,10 @@
                     }
                     var regSel = document.getElementById('select-region');
                     if (regSel) {
-                        var europeOpt = regSel.querySelector('option[value="europe"]');
-                        if (europeOpt) europeOpt.disabled = isFranceOnly;
                         if (isFranceOnly && regSel.value === 'europe') {
                             regSel.value = 'france';
+                        } else if (!isFranceOnly && regSel.value === 'france') {
+                            regSel.value = 'europe';
                         }
                     }
 
@@ -2178,13 +2177,10 @@
         if (modelSelect) {
             modelSelect.addEventListener('change', function(e) {
                 var v = e.target.value;
-                // Changer de modèle réinitialise la région au domaine par défaut
+                transform = { scale: 1, x: 0, y: 0 };
                 var regSel = document.getElementById('select-region');
                 if (regSel) {
                     regSel.value = (v === 'gfs_france') ? 'france' : 'europe';
-                    // Masquer "Europe Entière" pour GFS France (domaine France uniquement)
-                    var europeOpt = regSel.querySelector('option[value="europe"]');
-                    if (europeOpt) europeOpt.disabled = (v === 'gfs_france');
                 }
                 switchModel(v);
             });
@@ -2959,14 +2955,17 @@
             resizeCanvas(valuesCanvas, width, height, pixelRatio);
             valuesContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
             valuesContext.clearRect(0, 0, width, height);
-            if (!valuesVisible || !manifest || !currentLayer || !manifest.layers[currentLayer] || !samplerReady) {
+            if (!valuesVisible || !manifest || !currentLayer || !manifest.layers[currentLayer] || (!samplerReady && !currentProbe)) {
                 return;
             }
 
             var layer = manifest.layers[currentLayer];
             var mapRect = computeMapRect(width, height);
-            // Pas de la grille dense et équilibré pour couvrir toute la France sans vide
-            var stepPx = transform.scale < 1.35 ? 36 : (transform.scale < 2.5 ? 34 : 32);
+            var isEurope = (manifest && manifest.bounds && (manifest.bounds.projection === 'lambert' || manifest.bounds.west < -20)) || (currentModel === 'gfs') || (currentModel === 'arpege');
+            // Pas de la grille dense et équilibré pour couvrir le domaine sans vide
+            var stepPx = isEurope ?
+                (transform.scale < 1.35 ? 44 : (transform.scale < 2.5 ? 38 : 32)) :
+                (transform.scale < 1.35 ? 36 : (transform.scale < 2.5 ? 34 : 32));
             var fontSize = transform.scale < 1.35 ? 10 : 11.5;
             valuesContext.font = '800 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
             valuesContext.textAlign = 'center';
@@ -2980,7 +2979,7 @@
                     var u = (x - mapRect.x) / mapRect.w;
                     if (u < 0 || u > 1) continue;
 
-                    // Exclusion totale des valeurs en mer (ne garder que les terres)
+                    // Exclusion des valeurs en mer selon seaMode
                     if (!isLand(u, v)) continue;
 
                     var val = sampleProbe(currentProbe, u, v);

@@ -63,7 +63,7 @@ ALIASES = {
     "msl": "PRMSL", "prmsl": "PRMSL",
     "sp": "PRES",
     "tcc": "TCDC",
-    "gh": "HGT",
+    "gh": "HGT", "hgt": "HGT", "z": "HGT", "gp": "HGT",
 }
 
 
@@ -167,7 +167,8 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
     """Rend toutes les couches d'une échéance pour un domaine."""
     step = {"lead_hour": lead,
             "valid_time": (run_dt + datetime.timedelta(hours=lead)).isoformat(),
-            "files": {}}
+            "files": {},
+            "probes": {}}
     t2m = layer_field("T2M", cached)
     t850 = layer_field("T850", cached)
     dpt = layer_field("DPT", cached)
@@ -190,6 +191,7 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
         if extra_hkv:
             write_hkv(data, os.path.join(out_dir, "values", name,
                                          "%03d.hkv.gz" % lead))
+            step["probes"][name] = "maps/values/%s/%03d.hkv.gz" % (name, lead)
         state["counts"][name] = state["counts"].get(name, 0) + 1
 
     def regrid(field, convert=None):
