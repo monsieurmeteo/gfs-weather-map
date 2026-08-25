@@ -14,9 +14,9 @@ DOMAINS = {
     "europe": {
         "projection": "lambert",
         "lat1": 35.0, "lat2": 65.0, "lat0": 50.0, "lon0": -5.0,
-        "x_min": -0.48, "x_max": 0.42,
+        "x_min": -0.40, "x_max": 0.48,
         "y_min": -0.42, "y_max": 0.38,
-        "south": 20.0, "west": -55.0, "north": 75.0, "east": 48.0,
+        "south": 20.0, "west": -45.0, "north": 75.0, "east": 50.0,
         "width": 2200, "height": 1640,
         "label": "Europe",
     },

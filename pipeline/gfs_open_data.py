@@ -46,11 +46,12 @@ GFS_LEVS = {
     "lev_mean_sea_level": "on",
     "lev_entire_atmosphere": "on",
     "lev_500_mb": "on",
+    "lev_850_mb": "on",
 }
 
 # Alias cfgrib GFS → clés canoniques
 ALIASES = {
-    "t2m": "T2M", "2t": "T2M",
+    "t2m": "T2M", "2t": "T2M", "t": "T2M", "tmp": "T2M",
     "d2m": "DPT", "2d": "DPT",
     "r2": "RH", "2r": "RH",
     "u10": "U10", "10u": "U10",
@@ -139,6 +140,13 @@ def decode_grib(grib_bytes):
                     lev = float(ds[v].isobaricInhPa.values)
                     if lev != 500.0:
                         continue
+                # TMP : niveau 850 hPa vs 2 m
+                if key == "T2M" and "isobaricInhPa" in ds[v].coords:
+                    lev = float(ds[v].isobaricInhPa.values)
+                    if lev == 850.0:
+                        key = "T850"
+                    else:
+                        continue
                 # Première occurrence conservée (évite les doublons tcc)
                 if key not in cached:
                     cached[key] = (val.astype(np.float32), lat, lon)
@@ -161,6 +169,7 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
             "valid_time": (run_dt + datetime.timedelta(hours=lead)).isoformat(),
             "files": {}}
     t2m = layer_field("T2M", cached)
+    t850 = layer_field("T850", cached)
     dpt = layer_field("DPT", cached)
     rh = layer_field("RH", cached)
     u10 = layer_field("U10", cached)
@@ -211,6 +220,10 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
             td_c = regrid(dpt, lambda v: v - 273.15)
             save("point_rosee", td_c)
             save("humidex", humidex_c(t_c, td_c))
+
+    if t850 is not None:
+        t850_c = regrid(t850, lambda v: v - 273.15)
+        save("temperature_850", t850_c)
 
     if rh is not None:
         save("humidite", regrid(rh))

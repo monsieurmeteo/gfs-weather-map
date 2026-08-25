@@ -523,4 +523,6 @@ PALETTES = {
         (1040.0,(200,80,0,255)),
     ],
 }
+PALETTES["temperature_850"] = PALETTES["temperature"]
+
 

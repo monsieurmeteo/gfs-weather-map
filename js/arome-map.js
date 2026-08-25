@@ -881,23 +881,38 @@
             weatherCtx.restore();
             context.drawImage(weatherMasked, 0, 0);
 
-            // Frontières vectorielles uniques (style officiel Météociel GFS)
+            // Frontières vectorielles uniques (noir franc 100% net pour France/AROME, adapté Europe)
             if (vectorDefinition && vectorDefinition.paths && vectorDefinition.paths.length) {
                 context.save();
                 context.transform(hScale, 0, 0, vScale, offX, offY);
-                var hdStrokeFactor = 1.6;
-                vectorDefinition.paths.forEach(function (entry) {
-                    var isDept = entry.kind === 'department';
-                    if (isDept && transform.scale <= 1.35) {
-                        return;
-                    }
-                    context.strokeStyle = entry.colour || (isDept ? '#7a828e' : '#0b1220');
-                    context.globalAlpha = isDept ? 0.85 : (entry.opacity || 1.0);
-                    context.lineCap = 'round';
-                    context.lineJoin = 'round';
-                    context.lineWidth = ((entry.width || (isDept ? 0.8 : 1.8)) * hdStrokeFactor) / hScale;
-                    context.stroke(entry.path);
-                });
+                var isFrance = (currentModel === 'gfs_france') || (manifest && manifest.bounds && manifest.bounds.projection === 'mercator');
+                if (isFrance) {
+                    // Copie conforme du moteur AROME : noir franc #05080c, hdStrokeFactor 2.4, départements 100% visibles
+                    var hdStrokeFactor = 2.4;
+                    vectorDefinition.paths.forEach(function (entry) {
+                        context.strokeStyle = '#05080c';
+                        context.globalAlpha = 1.0;
+                        context.lineCap = 'round';
+                        context.lineJoin = 'round';
+                        context.lineWidth = ((entry.width || 1.6) * hdStrokeFactor) / hScale;
+                        context.stroke(entry.path);
+                    });
+                } else {
+                    // Domaine Europe : synoptique
+                    var hdStrokeFactor = 1.8;
+                    vectorDefinition.paths.forEach(function (entry) {
+                        var isDept = entry.kind === 'department';
+                        if (isDept && transform.scale <= 1.35) {
+                            return;
+                        }
+                        context.strokeStyle = entry.colour || (isDept ? '#7a828e' : '#0b1220');
+                        context.globalAlpha = isDept ? 0.85 : (entry.opacity || 1.0);
+                        context.lineCap = 'round';
+                        context.lineJoin = 'round';
+                        context.lineWidth = ((entry.width || (isDept ? 0.8 : 1.8)) * hdStrokeFactor) / hScale;
+                        context.stroke(entry.path);
+                    });
+                }
                 context.restore();
                 context.globalAlpha = 1;
             }
@@ -2112,6 +2127,8 @@
                     if (dSel) {
                         var z500Opt = dSel.querySelector('option[value="geopotentiel_500"]');
                         if (z500Opt) z500Opt.disabled = isFranceOnly;
+                        var t850Opt = dSel.querySelector('option[value="temperature_850"]');
+                        if (t850Opt) t850Opt.disabled = isFranceOnly;
                     }
                     var regSel = document.getElementById('select-region');
                     if (regSel) {
@@ -2572,18 +2589,32 @@
                 pixelRatio * mapRect.x,
                 pixelRatio * mapRect.y
             );
-            vectorDefinition.paths.forEach(function (entry) {
-                var isDept = entry.kind === 'department';
-                if (isDept && transform.scale <= 1.35) {
-                    return; // Masqué sur la vue globale Europe pour éviter la surcharge
-                }
-                vectorContext.strokeStyle = entry.colour || (isDept ? '#7a828e' : '#0b1220');
-                vectorContext.globalAlpha = isDept ? (transform.scale > 2.0 ? 0.9 : 0.6) : (entry.opacity || 1.0);
-                vectorContext.lineCap = 'round';
-                vectorContext.lineJoin = 'round';
-                vectorContext.lineWidth = (entry.width || (isDept ? 0.8 : 1.8)) / horizontalScale;
-                vectorContext.stroke(entry.path);
-            });
+            var isFrance = (currentModel === 'gfs_france') || (manifest && manifest.bounds && manifest.bounds.projection === 'mercator');
+            if (isFrance) {
+                // Copie conforme du moteur AROME interactif
+                vectorDefinition.paths.forEach(function (entry) {
+                    vectorContext.strokeStyle = entry.colour || '#0d1117';
+                    vectorContext.globalAlpha = 1.0;
+                    vectorContext.lineCap = 'round';
+                    vectorContext.lineJoin = 'round';
+                    vectorContext.lineWidth = (entry.width || 1.6) / horizontalScale;
+                    vectorContext.stroke(entry.path);
+                });
+            } else {
+                // Mode Europe synoptique
+                vectorDefinition.paths.forEach(function (entry) {
+                    var isDept = entry.kind === 'department';
+                    if (isDept && transform.scale <= 1.35) {
+                        return; // Masqué sur la vue globale Europe pour éviter la surcharge
+                    }
+                    vectorContext.strokeStyle = entry.colour || (isDept ? '#7a828e' : '#0b1220');
+                    vectorContext.globalAlpha = isDept ? (transform.scale > 2.0 ? 0.9 : 0.6) : (entry.opacity || 1.0);
+                    vectorContext.lineCap = 'round';
+                    vectorContext.lineJoin = 'round';
+                    vectorContext.lineWidth = (entry.width || (isDept ? 0.8 : 1.8)) / horizontalScale;
+                    vectorContext.stroke(entry.path);
+                });
+            }
             vectorContext.globalAlpha = 1;
         }
 
@@ -2793,8 +2824,7 @@
                 var rho = F / Math.pow(Math.tan(Math.PI / 4 + r_lat / 2), n);
                 var theta = n * (r_lon - r_lon0);
                 var x = rho * Math.sin(theta);
-                var y = rho0 - rho * Math.cos(theta);
-                var u = (x - (-0.48)) / (0.42 - (-0.48));
+                var u = (x - (-0.40)) / (0.48 - (-0.40)); // sync avec domains.py x_min=-0.40, x_max=0.48
                 var v = (0.38 - y) / (0.38 - (-0.42)); // sync avec domains.py y_max=0.38, y_min=-0.42
                 return { u: u, v: v };
             }
@@ -2885,7 +2915,7 @@
         }
 
         function getValueColour(val, layerKey) {
-            if (layerKey === 'temperature' || layerKey === 'temperature_ressentie' || layerKey === 'point_rosee' || layerKey === 't2m') {
+            if (layerKey === 'temperature' || layerKey === 'temperature_850' || layerKey === 'temperature_ressentie' || layerKey === 'point_rosee' || layerKey === 't2m') {
                 if (val >= 40) return '#ff2a6d'; // Canicule extrême (fuchsia)
                 if (val >= 35) return '#ff7b00'; // Très forte chaleur (orange vif)
                 if (val >= 30) return '#ffea00'; // Forte chaleur (jaune d'or dès 30°C)

@@ -593,8 +593,11 @@
                 { value: 604, color: '#400000' },
                 { value: 608, color: '#300000' },
                 { value: 612, color: '#200000' },
-            ]
         },
+    };
+    PALETTES.temperature_850 = {
+        label: 'Température à 850 hPa (~1 500 m)', unit: '°C', decimals: 1, transparent_below: null,
+        stops: PALETTES.temperature.stops
     };
 
     function getLayerPalette(key) { return PALETTES[key] || PALETTES.temperature; }

@@ -97,6 +97,8 @@ def key_of(cat, num, level):
     """(parameterCategory, parameterNumber, level) → clé canonique ou None."""
     if (cat, num) == (0, 0) and level == 2:
         return "T2M"
+    if (cat, num) == (0, 0) and level == 850:
+        return "T850"
     if (cat, num) == (1, 1) and level == 2:
         return "RH"
     if (cat, num) == (2, 2) and level == 10:

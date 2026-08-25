@@ -35,6 +35,7 @@ LAYER_META = {
     "pression":              ("Pression niveau mer",           "hPa",  0, "Pression et géopotentiel"),
     "pression_surface":      ("Pression au sol",               "hPa",  0, "Pression et géopotentiel"),
     "geopotentiel_500":      ("Géopotentiel 500 hPa",          "dam",  0, "Pression et géopotentiel"),
+    "temperature_850":       ("Température à 850 hPa (~1 500 m)", "°C", 1, "Pression et géopotentiel"),
     "pluie_1h":              ("Précipitations sur 3 h",        "mm",   1, "Précipitations"),
     "pluie_cumul":           ("Précipitations cumulées",       "mm",   1, "Précipitations"),
     "neige_au_sol":          ("Épaisseur de neige au sol",     "cm",   1, "Autres"),
@@ -42,11 +43,11 @@ LAYER_META = {
 
 # Ordre d'affichage des couches dans le sélecteur
 LAYER_ORDER = [
+    "geopotentiel_500", "temperature_850", "pression", "pression_surface",
     "temperature", "temperature_ressentie", "point_rosee", "humidex",
     "vent", "rafales", "rafales_cumul",
     "nebulosite", "nuages_bas", "nuages_moyens", "nuages_eleves",
     "humidite", "mucape",
-    "pression", "pression_surface", "geopotentiel_500",
     "pluie_1h", "pluie_cumul", "neige_au_sol",
 ]
 

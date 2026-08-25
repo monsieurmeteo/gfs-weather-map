@@ -75,6 +75,8 @@ NATURAL = "#0b1220"   # côtes / frontières nationales (noir franc)
 DEPT = "#7a828e"      # départements (gris fin)
 
 
+LAND_FRANCE = (232, 228, 218)  # France légèrement distincte
+
 def generate(domain):
     dom = Domain(domain)
     W, H = dom.width, dom.height
@@ -100,23 +102,19 @@ def generate(domain):
     draw = ImageDraw.Draw(img)
     mask_img = Image.new("L", (W, H), 0)
     mask_draw = ImageDraw.Draw(mask_img)
+    france_names = {"France", "French Guiana"}
     for feat in countries.get("features", []):
+        props = feat.get("properties", {})
+        name = props.get("NAME") or props.get("ADMIN") or props.get("name") or ""
         geom = feat.get("geometry")
         if not geom:
             continue
+        fill = LAND_FRANCE if (name in france_names and domain == "france") else LAND
         for ring in iter_rings(geom):
             pts = [project(dom, p[0], p[1]) for p in ring]
             if len(pts) >= 3:
-                draw.polygon(pts, fill=LAND)
+                draw.polygon(pts, fill=fill)
                 mask_draw.polygon(pts, fill=255)
-    for feat in countries.get("features", []):
-        geom = feat.get("geometry")
-        if not geom:
-            continue
-        for ring in iter_rings(geom):
-            pts = [project(dom, p[0], p[1]) for p in ring]
-            if len(pts) >= 2:
-                draw.line(pts, fill=BORDER, width=2)
     for d in out_dirs:
         img.save(os.path.join(d, "fond.webp"), "WEBP", quality=90)
         mask_img.save(os.path.join(d, "mask_france.png"), "PNG")
@@ -165,19 +163,34 @@ def generate(domain):
                       + " " + france_border_d).strip()
     depts_combined = " ".join(depts_d)
 
+    if domain == "france":
+        # Style officiel AROME France : traits noir franc nets et épais pour web & exports
+        nat_stroke = "#0d1117"
+        nat_width = "2.6"
+        dept_stroke = "#0d1117"
+        dept_width = "1.6"
+        dept_opacity = "1.0"
+    else:
+        # Style Europe : lisibilité synoptique à grande échelle
+        nat_stroke = NATURAL
+        nat_width = "1.8"
+        dept_stroke = DEPT
+        dept_width = "0.8"
+        dept_opacity = "0.85"
+
     svg = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" '
         'width="%d" height="%d">\n'
         '<!-- Côtes et frontières nationales -->\n'
-        '<path d="%s" fill="none" stroke="%s" stroke-width="1.8" '
+        '<path d="%s" fill="none" stroke="%s" stroke-width="%s" '
         'stroke-linejoin="round" stroke-linecap="round"/>\n'
         '<!-- Départements français -->\n'
-        '<path d="%s" fill="none" stroke="%s" stroke-width="0.8" '
-        'stroke-opacity="0.85" stroke-linejoin="round" '
+        '<path d="%s" fill="none" stroke="%s" stroke-width="%s" '
+        'stroke-opacity="%s" stroke-linejoin="round" '
         'stroke-linecap="round"/>\n'
-        '</svg>\n' % (W, H, W, H, national_lines, NATURAL,
-                      depts_combined, DEPT)
+        '</svg>\n' % (W, H, W, H, national_lines, nat_stroke, nat_width,
+                      depts_combined, dept_stroke, dept_width, dept_opacity)
     )
     for d in out_dirs:
         with open(os.path.join(d, "frontieres.svg"), "w",

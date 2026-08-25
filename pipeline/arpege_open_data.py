@@ -244,6 +244,11 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
                     felt = wind_chill_c(t_c, wind_kmh)
                 save("temperature_ressentie", felt)
 
+    t850 = fields.get("T850")
+    if t850 is not None:
+        t850_c = regrid(t850, lambda v: v - 273.15)
+        save("temperature_850", t850_c)
+
     if rh is not None:
         save("humidite", regrid(rh))
 
