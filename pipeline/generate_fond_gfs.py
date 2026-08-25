@@ -78,10 +78,14 @@ DEPT = "#7a828e"      # départements (gris fin)
 def generate(domain):
     dom = Domain(domain)
     W, H = dom.width, dom.height
-    out_dir = os.path.join(BASE_DIR, "output",
-                           "gfs_france" if domain == "france" else "gfs",
-                           "maps")
-    os.makedirs(out_dir, exist_ok=True)
+    out_dirs = [os.path.join(BASE_DIR, "output",
+                             "gfs_france" if domain == "france" else "gfs",
+                             "maps")]
+    if domain == "europe":
+        out_dirs.append(os.path.join(BASE_DIR, "output", "arpege", "maps"))
+    for d in out_dirs:
+        os.makedirs(d, exist_ok=True)
+    out_dir = out_dirs[0]
     print("Fond %s : %s (lon %g..%g, lat %g..%g, %dx%d, proj: %s)"
           % (domain, dom.name, dom.west, dom.east, dom.south,
              dom.north, W, H, dom.projection), flush=True)
@@ -113,8 +117,9 @@ def generate(domain):
             pts = [project(dom, p[0], p[1]) for p in ring]
             if len(pts) >= 2:
                 draw.line(pts, fill=BORDER, width=2)
-    img.save(os.path.join(out_dir, "fond.webp"), "WEBP", quality=90)
-    mask_img.save(os.path.join(out_dir, "mask_france.png"), "PNG")
+    for d in out_dirs:
+        img.save(os.path.join(d, "fond.webp"), "WEBP", quality=90)
+        mask_img.save(os.path.join(d, "mask_france.png"), "PNG")
 
     # 2) frontieres.svg (nationales noires + départements gris)
     bounds_box = shapely.geometry.box(dom.west - 0.5, dom.south - 0.5,
@@ -174,11 +179,12 @@ def generate(domain):
         '</svg>\n' % (W, H, W, H, national_lines, NATURAL,
                       depts_combined, DEPT)
     )
-    with open(os.path.join(out_dir, "frontieres.svg"), "w",
-              encoding="utf-8") as f:
-        f.write(svg)
-    print("✅ %s : fond.webp, mask_france.png, frontieres.svg générés dans %s"
-          % (domain, out_dir), flush=True)
+    for d in out_dirs:
+        with open(os.path.join(d, "frontieres.svg"), "w",
+                  encoding="utf-8") as f:
+            f.write(svg)
+        print("✅ %s : fond.webp, mask_france.png, frontieres.svg générés dans %s"
+              % (domain, d), flush=True)
 
 
 def main():

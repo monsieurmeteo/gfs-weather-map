@@ -80,7 +80,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: output
-          key: tiles-gfs-arpege-v1
+          key: tiles-gfs-arpege-${{ hashFiles('pipeline/domains.py') }}-${{ github.run_id }}
+          restore-keys: |
+            tiles-gfs-arpege-${{ hashFiles('pipeline/domains.py') }}-
+            tiles-gfs-arpege-
 
       - name: Vérification des dalles en cache (mode front)
         if: env.MODE == 'front'
@@ -100,7 +103,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: output
-          key: tiles-gfs-arpege-v1
+          key: tiles-gfs-arpege-${{ hashFiles('pipeline/domains.py') }}-${{ github.run_id }}
 
       - name: Préparation du site statique
         run: |

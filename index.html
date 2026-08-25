@@ -4,23 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     
-    <!-- Anti-Cache Stratégique HTTP & Navigateurs -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
     <!-- SEO & Métadonnées Générales -->
-    <title>Météo GFS 0.25° Europe & France — Météo-Climat Pro</title>
-    <meta name="description" content="Visualisation cartographique haute résolution des prévisions météo GFS 0.25° (NOAA) sur l'Europe et la France : températures, rafales, pluie cumulée, orages MUCAPE, pression MSLP et neige.">
+    <title>Météo GFS 0.25° & ARPEGE Europe 0.1° — Météo-Climat Pro</title>
+    <meta name="description" content="Visualisation cartographique HD des prévisions météo GFS 0.25° (NOAA) et ARPEGE Europe 0.1° (Météo-France) : Z500, pression, températures, vent, rafales, pluie, orages MUCAPE et neige.">
     <meta name="author" content="Météo-Climat Pro">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://monsieurmeteo.github.io/gfs-weather-map/">
     <meta name="theme-color" content="#070b14">
     <link rel="icon" type="image/png" href="logo.png">
 
     <!-- Open Graph (LinkedIn, Facebook, WhatsApp) -->
     <meta property="og:site_name" content="Météo-Climat Pro">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Cartographie GFS 0.25° Europe & France — Météo-Climat Pro">
-    <meta property="og:description" content="Cartes météo 2D haute définition du modèle mondial GFS (NOAA) jusqu'à J+10 sur l'Europe et la France en direct.">
+    <meta property="og:url" content="https://monsieurmeteo.github.io/gfs-weather-map/">
+    <meta property="og:title" content="Météo GFS 0.25° & ARPEGE Europe 0.1° — Météo-Climat Pro">
+    <meta property="og:description" content="Cartes météo haute définition des modèles GFS (NOAA) et ARPEGE (Météo-France) en direct sur l'Europe et la France.">
     <meta property="og:image" content="https://monsieurmeteo.github.io/gfs-weather-map/logo.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -28,8 +26,8 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Météo GFS & ARPEGE — Europe & France | Météo-Climat Pro">
-    <meta name="twitter:description" content="Cartes HD des modèles GFS 0,25° (Europe & France) et ARPEGE Europe 0,1° en open data : Z500, températures, vent, précipitations, orages.">
+    <meta name="twitter:title" content="Météo GFS 0.25° & ARPEGE Europe 0.1° — Météo-Climat Pro">
+    <meta name="twitter:description" content="Cartes météo HD des modèles GFS 0,25° et ARPEGE Europe 0,1° en open data : Z500, températures, vent, précipitations, orages.">
     <meta name="twitter:image" content="https://monsieurmeteo.github.io/gfs-weather-map/logo.png">
 
     <!-- FontAwesome Vector Icons -->
@@ -679,6 +677,48 @@
             justify-content: space-between;
         }
 
+        .amfm-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(7, 11, 20, 0.92);
+            border: 1px solid var(--amfm-accent);
+            padding: 14px 24px;
+            border-radius: 12px;
+            color: var(--amfm-accent);
+            font-size: 13.5px;
+            font-weight: 700;
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(10px);
+            pointer-events: none;
+        }
+        .amfm-error {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(220, 38, 38, 0.92);
+            border: 1px solid #ef4444;
+            padding: 10px 20px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            z-index: 600;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            max-width: 90%;
+            text-align: center;
+        }
+        .amfm-loading[hidden], .amfm-error[hidden] {
+            display: none !important;
+        }
+
         /* 📱 RESPONSIVE */
         @media (max-width: 1024px) {
             .amfm-navbar {
@@ -850,6 +890,12 @@
             <canvas class="amfm-canvas" data-amfm-vectors aria-hidden="true"></canvas>
             <canvas class="amfm-canvas" data-amfm-values aria-hidden="true"></canvas>
             <canvas class="amfm-canvas" data-amfm-labels aria-hidden="true"></canvas>
+            <!-- Indicateur de Chargement -->
+            <div class="amfm-loading" data-amfm-loading hidden>
+                <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> <span>Chargement des données météo…</span>
+            </div>
+            <!-- Boîte d'Alerte / Erreur Réseau -->
+            <div class="amfm-error" data-amfm-error hidden role="alert"></div>
         </main>
 
         <!-- Sonde de Pixel -->
@@ -965,9 +1011,9 @@
         </div>
     </div>
 
-    <script src="js/palettes.js?v=2.0.4"></script>
+    <script src="js/palettes.js?v=2.0.5"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
-    <script src="js/regions.js?v=2.0.4"></script>
-    <script src="js/arome-map.js?v=2.0.4"></script>
+    <script src="js/regions.js?v=2.0.5"></script>
+    <script src="js/arome-map.js?v=2.0.5"></script>
 </body>
 </html>

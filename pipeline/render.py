@@ -203,32 +203,35 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
 
     h, w = z500_grid.shape
     fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
-    fig.patch.set_alpha(0)
-    ax = fig.add_axes([0, 0, 1, 1])
-    ax.axis("off")
-    ax.set_facecolor((0, 0, 0, 0))
-    ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
-    if prmsl_grid is not None:
-        p_clean = np.where(np.isnan(prmsl_grid), 1013.25, prmsl_grid)
-        smooth_p = scipy.ndimage.gaussian_filter(p_clean, sigma=1.8)
-        gx = np.linspace(0, w, smooth_p.shape[1])
-        gy = np.linspace(0, h, smooth_p.shape[0])
-        GX, GY = np.meshgrid(gx, gy)
-        levels = np.arange(960, 1055, 5)
-        ax.contour(GX, GY, smooth_p, levels=levels, colors="#000000", linewidths=3.6)
-        cs = ax.contour(GX, GY, smooth_p, levels=levels, colors="#ffffff", linewidths=2.4)
-        labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=16,
-                           colors="#ffffff", inline_spacing=15)
-        if labels:
-            for lbl in labels:
-                lbl.set_weight("bold")
-                lbl.set_path_effects([
-                    matplotlib.patheffects.Stroke(linewidth=3, foreground="#000000"),
-                    matplotlib.patheffects.Normal(),
-                ])
-    ensure_dir(os.path.dirname(output_path))
-    fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 88})
-    plt.close(fig)
+    try:
+        fig.patch.set_alpha(0)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis("off")
+        ax.set_facecolor((0, 0, 0, 0))
+        ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
+        if prmsl_grid is not None:
+            p_clean = np.where(np.isnan(prmsl_grid), 1013.25, prmsl_grid)
+            smooth_p = scipy.ndimage.gaussian_filter(p_clean, sigma=2.8)
+            gx = np.linspace(0, w, smooth_p.shape[1])
+            gy = np.linspace(0, h, smooth_p.shape[0])
+            GX, GY = np.meshgrid(gx, gy)
+            # Niveaux de 935 à 1060 hPa pour couvrir toutes les dépressions et anticyclones
+            levels = np.arange(935, 1065, 5)
+            ax.contour(GX, GY, smooth_p, levels=levels, colors="#000000", linewidths=4.2)
+            cs = ax.contour(GX, GY, smooth_p, levels=levels, colors="#ffffff", linewidths=2.2)
+            labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=15,
+                               colors="#ffffff", inline_spacing=14)
+            if labels:
+                for lbl in labels:
+                    lbl.set_weight("bold")
+                    lbl.set_path_effects([
+                        matplotlib.patheffects.Stroke(linewidth=3.2, foreground="#000000"),
+                        matplotlib.patheffects.Normal(),
+                    ])
+        ensure_dir(os.path.dirname(output_path))
+        fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 88})
+    finally:
+        plt.close(fig)
 
 
 def render_pression_with_isobars(prmsl_grid, output_path):
@@ -246,36 +249,38 @@ def render_pression_with_isobars(prmsl_grid, output_path):
 
     h, w = prmsl_grid.shape
     fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
-    fig.patch.set_alpha(0)
-    ax = fig.add_axes([0, 0, 1, 1])
-    ax.axis("off")
-    ax.set_facecolor((0, 0, 0, 0))
-    ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
-    if prmsl_grid is not None:
-        p_clean = np.where(np.isnan(prmsl_grid), 1013.25, prmsl_grid)
-        # Lissage plus fort → isobares lisses, sans tremblements
-        smooth_p = scipy.ndimage.gaussian_filter(p_clean, sigma=3.5)
-        gx = np.linspace(0, w, smooth_p.shape[1])
-        gy = np.linspace(0, h, smooth_p.shape[0])
-        GX, GY = np.meshgrid(gx, gy)
-        # Tous les 5 hPa — moins dense, plus lisible à l'échelle France
-        levels = np.arange(955, 1060, 5)
-        # Halo blanc épais en dessous pour contraste sur fond coloré
-        ax.contour(GX, GY, smooth_p, levels=levels, colors="#ffffff", linewidths=4.5, alpha=0.8)
-        # Isobare noire par-dessus
-        cs = ax.contour(GX, GY, smooth_p, levels=levels, colors="#111111", linewidths=2.2)
-        labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=15,
-                           colors="#111111", inline_spacing=10)
-        if labels:
-            for lbl in labels:
-                lbl.set_weight("bold")
-                lbl.set_path_effects([
-                    matplotlib.patheffects.Stroke(linewidth=3.5, foreground="#ffffff"),
-                    matplotlib.patheffects.Normal(),
-                ])
-    ensure_dir(os.path.dirname(output_path))
-    fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 88})
-    plt.close(fig)
+    try:
+        fig.patch.set_alpha(0)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis("off")
+        ax.set_facecolor((0, 0, 0, 0))
+        ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
+        if prmsl_grid is not None:
+            p_clean = np.where(np.isnan(prmsl_grid), 1013.25, prmsl_grid)
+            # Lissage plus fort → isobares lisses, sans tremblements
+            smooth_p = scipy.ndimage.gaussian_filter(p_clean, sigma=3.5)
+            gx = np.linspace(0, w, smooth_p.shape[1])
+            gy = np.linspace(0, h, smooth_p.shape[0])
+            GX, GY = np.meshgrid(gx, gy)
+            # Tous les 5 hPa de 935 à 1060 hPa
+            levels = np.arange(935, 1065, 5)
+            # Halo blanc épais en dessous pour contraste sur fond coloré
+            ax.contour(GX, GY, smooth_p, levels=levels, colors="#ffffff", linewidths=4.5, alpha=0.8)
+            # Isobare noire par-dessus
+            cs = ax.contour(GX, GY, smooth_p, levels=levels, colors="#111111", linewidths=2.2)
+            labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=15,
+                               colors="#111111", inline_spacing=10)
+            if labels:
+                for lbl in labels:
+                    lbl.set_weight("bold")
+                    lbl.set_path_effects([
+                        matplotlib.patheffects.Stroke(linewidth=3.5, foreground="#ffffff"),
+                        matplotlib.patheffects.Normal(),
+                    ])
+        ensure_dir(os.path.dirname(output_path))
+        fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 88})
+    finally:
+        plt.close(fig)
 
 
 

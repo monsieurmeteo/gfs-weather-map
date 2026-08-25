@@ -88,8 +88,8 @@ def download_lead(run_dt, lead):
         "dir": "/gfs.%s/%s/atmos" % (day, hh),
         "file": "gfs.t%sz.pgrb2.0p25.f%03d" % (hh, lead),
         "subregion": "",
-        "leftlon": "-40", "rightlon": "45",
-        "toplat": "75", "bottomlat": "22",
+        "leftlon": "-55", "rightlon": "48",
+        "toplat": "75", "bottomlat": "20",
     }
     for v in GFS_REQ_VARS:
         params["var_" + v] = "on"

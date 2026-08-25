@@ -1108,9 +1108,9 @@
                         for (var pi = 0; pi < places.length; pi += 1) {
                             var place = places[pi];
                             if (!Array.isArray(place) || place.length < 4) { continue; }
-                            if (Number(place[1]) < popMin) { continue; }
-                            var u = (Number(place[3]) - Number(bounds.west)) / longitudeSpan;
-                            var v = (northY - mercator(Number(place[2]))) / mercatorSpan;
+                            var proj = projectCoords(Number(place[2]), Number(place[3]));
+                            var u = proj.u;
+                            var v = proj.v;
                             var sx = u * 2200 * hScale + offX;
                             var sy = v * 1640 * vScale + offY;
                             if (sx < 25 || sx > output.width - 25 || sy < 25 || sy > output.height - 25) {
@@ -1693,7 +1693,7 @@
                 return [];
             }
             return manifest.steps.filter(function (step) {
-                return step && step.files && step.files[currentLayer] && Number(step.lead_hour) >= 1;
+                return step && step.files && step.files[currentLayer] && Number(step.lead_hour) >= 0;
             });
         }
 
@@ -2107,17 +2107,26 @@
                             scheduleRender();
                         };
                     }
-                    if (modelKey === 'gfs_france' && currentLayer === 'geopotentiel_500' && manifest.layers['pression']) {
+                    var isFranceOnly = (modelKey === 'gfs_france');
+                    var dSel = document.getElementById('direct-layer-select');
+                    if (dSel) {
+                        var z500Opt = dSel.querySelector('option[value="geopotentiel_500"]');
+                        if (z500Opt) z500Opt.disabled = isFranceOnly;
+                    }
+                    var regSel = document.getElementById('select-region');
+                    if (regSel) {
+                        var europeOpt = regSel.querySelector('option[value="europe"]');
+                        if (europeOpt) europeOpt.disabled = isFranceOnly;
+                        if (isFranceOnly && regSel.value === 'europe') {
+                            regSel.value = 'france';
+                        }
+                    }
+
+                    if (isFranceOnly && currentLayer === 'geopotentiel_500' && manifest.layers['pression']) {
                         currentLayer = 'pression';
-                        var dSel = document.getElementById('direct-layer-select');
                         if (dSel) dSel.value = 'pression';
-                    } else if ((modelKey === 'gfs' || modelKey === 'arpege') && currentLayer === 'pression' && manifest.layers['geopotentiel_500']) {
-                        currentLayer = 'geopotentiel_500';
-                        var dSel = document.getElementById('direct-layer-select');
-                        if (dSel) dSel.value = 'geopotentiel_500';
                     } else if (!manifest.layers[currentLayer]) {
-                        currentLayer = Object.keys(manifest.layers)[0] || 'temperature';
-                        var dSel = document.getElementById('direct-layer-select');
+                        currentLayer = manifest.layers['geopotentiel_500'] ? 'geopotentiel_500' : (Object.keys(manifest.layers)[0] || 'temperature');
                         if (dSel) dSel.value = currentLayer;
                     }
                     if (typeof buildLayerMenu === 'function') buildLayerMenu();
@@ -2786,7 +2795,7 @@
                 var x = rho * Math.sin(theta);
                 var y = rho0 - rho * Math.cos(theta);
                 var u = (x - (-0.48)) / (0.42 - (-0.48));
-                var v = (0.43 - y) / (0.43 - (-0.24));
+                var v = (0.38 - y) / (0.38 - (-0.42)); // sync avec domains.py y_max=0.38, y_min=-0.42
                 return { u: u, v: v };
             }
             var bounds = manifest && manifest.bounds ? manifest.bounds : { south: 39.5, west: -8.5, north: 52.5, east: 13.5 };
@@ -2876,14 +2885,14 @@
         }
 
         function getValueColour(val, layerKey) {
-            if (layerKey === 'temperature' || layerKey === 'point_rosee' || layerKey === 't2m') {
+            if (layerKey === 'temperature' || layerKey === 'temperature_ressentie' || layerKey === 'point_rosee' || layerKey === 't2m') {
                 if (val >= 40) return '#ff2a6d'; // Canicule extrême (fuchsia)
                 if (val >= 35) return '#ff7b00'; // Très forte chaleur (orange vif)
                 if (val >= 30) return '#ffea00'; // Forte chaleur (jaune d'or dès 30°C)
                 if (val <= 0)  return '#70d6ff'; // Gelées (cyan éclatant)
                 return '#ffffff';
             }
-            if (layerKey === 'vent_moyen' || layerKey === 'rafales' || layerKey === 'rafales_max_cumul' || layerKey === 'wind' || layerKey === 'gust') {
+            if (layerKey === 'vent' || layerKey === 'vent_moyen' || layerKey === 'rafales' || layerKey === 'rafales_cumul' || layerKey === 'rafales_max_cumul' || layerKey === 'wind' || layerKey === 'gust') {
                 if (val >= 120) return '#ff2a6d'; // Tempête violente
                 if (val >= 105) return '#ff7b00'; // Tempête
                 if (val >= 90)  return '#ffea00'; // Fort coup de vent (dès 90 km/h)
@@ -2899,6 +2908,12 @@
                 if (val >= 80) return '#ff2a6d'; // Cumul exceptionnel
                 if (val >= 50) return '#ff7b00'; // Fort cumul
                 if (val >= 20) return '#ffea00'; // Cumul notable (dès 20 mm)
+                return '#ffffff';
+            }
+            if (layerKey === 'neige' || layerKey === 'neige_au_sol') {
+                if (val >= 50) return '#ff2a6d';
+                if (val >= 20) return '#ff7b00';
+                if (val >= 5)  return '#70d6ff';
                 return '#ffffff';
             }
             if (layerKey === 'mucape') {
@@ -2999,7 +3014,8 @@
             if (!viewport) return;
             var w = viewport.clientWidth;
             var h = viewport.clientHeight;
-            var s = Math.max(w / 2200.0, h / 1640.0);
+            var isEurope = (manifest && manifest.bounds && (manifest.bounds.projection === 'lambert' || manifest.bounds.west < -20)) || (currentModel === 'gfs') || (currentModel === 'arpege');
+            var s = isEurope ? Math.min(w / 2200.0, h / 1640.0) : Math.max(w / 2200.0, h / 1640.0);
             var totalScale = s * transform.scale;
             var rasterW = 2200.0 * totalScale;
             var rasterH = 1640.0 * totalScale;
@@ -3040,8 +3056,9 @@
         function resetView() {
             transform = { scale: 1, x: 0, y: 0 };
             var regSel = document.getElementById('select-region');
-            if (regSel) regSel.value = 'europe';
+            if (regSel) regSel.value = (currentModel === 'gfs_france') ? 'france' : 'europe';
             applyTransform();
+            if (typeof updateUrl === 'function') updateUrl();
         }
 
         if (viewport) {
@@ -3092,16 +3109,12 @@
                     !Number.isFinite(longitude)) {
                 return;
             }
-            var bounds = manifest.bounds;
-            var west = Number(bounds.west);
-            var east = Number(bounds.east);
-            var northY = mercator(Number(bounds.north));
-            var southY = mercator(Number(bounds.south));
-            var u = (longitude - west) / (east - west);
-            var v = (northY - mercator(latitude)) / (northY - southY);
+            var isEurope = (manifest && manifest.bounds && (manifest.bounds.projection === 'lambert' || manifest.bounds.west < -20)) || (currentModel === 'gfs') || (currentModel === 'arpege');
+            var proj = projectCoords(latitude, longitude);
+            var u = proj.u;
+            var v = proj.v;
             var scale = clamp(Number(pendingFocus.scale) || 1.0, 1.0, maxScale);
-            // Même baseScale que computeMapRect et applyTransform pour cohérence totale
-            var s = Math.max(width / 2200.0, height / 1640.0);
+            var s = isEurope ? Math.min(width / 2200.0, height / 1640.0) : Math.max(width / 2200.0, height / 1640.0);
             transform.scale = scale;
             transform.x = 2200.0 * s * scale * (0.5 - u);
             transform.y = 1640.0 * s * scale * (0.5 - v) + (height * 0.04);

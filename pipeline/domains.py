@@ -61,7 +61,7 @@ def lambert_conformal_direct(lats, lons, lat1=35.0, lat2=65.0, lat0=50.0, lon0=-
     return x, y
 
 
-def lambert_conformal_inverse(xs, ys, lat1=35.0, lat2=65.0, lat0=50.0, lon0=5.0):
+def lambert_conformal_inverse(xs, ys, lat1=35.0, lat2=65.0, lat0=50.0, lon0=-5.0):
     r_lat1 = np.radians(lat1)
     r_lat2 = np.radians(lat2)
     r_lat0 = np.radians(lat0)

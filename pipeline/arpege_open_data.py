@@ -297,8 +297,10 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
         a = regrid(apcp)  # cumul depuis le début du run (mm)
         if a is not None:
             prev = state.get("tp_prev")
-            if prev is not None and np.isfinite(prev).all() and np.isfinite(a).all():
-                save("pluie_1h", a - prev)
+            if prev is not None:
+                # np.isfinite().all() toujours False à cause des NaN de bord → utiliser np.where
+                diff = np.where(np.isfinite(a) & np.isfinite(prev), a - prev, np.nan)
+                save("pluie_1h", np.clip(diff, 0, None))
             state["tp_prev"] = a
             save("pluie_cumul", a)
 
