@@ -2000,19 +2000,37 @@
             regionSelect.addEventListener('change', function (e) {
                 var val = e.target.value || 'europe';
                 if (val === 'europe') {
-                    resetView();
+                    if (currentModel !== 'gfs') {
+                        pendingFocus = { latitude: 49.0, longitude: 8.0, scale: 1.0 };
+                        switchModel('gfs');
+                    } else {
+                        resetView();
+                    }
                     updateUrl();
                     return;
                 }
                 var cfg = REGION_CONFIG[val];
-                if (cfg && cfg.latitude !== undefined) {
-                    focusLocation({
-                        latitude: cfg.latitude,
-                        longitude: cfg.longitude,
-                        scale: cfg.scale
-                    });
-                } else {
+                if (!cfg || cfg.latitude === undefined) {
                     resetView();
+                    updateUrl();
+                    return;
+                }
+                // Les régions françaises affichent le domaine France (gfs_france),
+                // les pays/Europe le domaine Europe (gfs) — cadrages toujours justes.
+                var FRENCH = { france: 1, hdf: 1, normandie: 1, idf: 1, grandest: 1,
+                               bretagne: 1, pdl: 1, cvl: 1, bfc: 1, naq: 1, ara: 1,
+                               occitanie: 1, paca: 1, corse: 1 };
+                var targetModel = FRENCH[val] ? 'gfs_france' : 'gfs';
+                var focus = {
+                    latitude: cfg.latitude,
+                    longitude: cfg.longitude,
+                    scale: cfg.scale
+                };
+                if (currentModel !== targetModel) {
+                    pendingFocus = focus;
+                    switchModel(targetModel);
+                } else {
+                    focusLocation(focus);
                 }
                 updateUrl();
             });
@@ -2028,23 +2046,21 @@
 
         function switchModel(modelKey) {
             var modelMap = {
-                arome: { path: 'output/arome', name: 'AROME HD', badge: '1,3 KM' },
-                arpege: { path: 'output/arpege', name: 'ARPEGE Europe', badge: '5 KM' },
-                icon: { path: 'output/icon', name: 'ICON-EU', badge: '7 KM' },
-                gfs: { path: 'output/gfs', name: 'GFS Monde', badge: '13 KM' },
-                ecmwf: { path: 'output/ecmwf', name: 'ECMWF IFS', badge: '9 KM' }
+                gfs: { path: 'output/gfs', name: 'GFS Europe', badge: '0,25°' },
+                gfs_france: { path: 'output/gfs_france', name: 'GFS France', badge: '0,25°' },
+                arpege: { path: 'output/arpege', name: 'ARPEGE Europe', badge: '0,1°' }
             };
-            var target = modelMap[modelKey] || modelMap.arome;
+            var target = modelMap[modelKey] || modelMap.gfs;
             var prevBaseUrl = baseUrl;
             baseUrl = target.path;
             app.dataset.baseUrl = target.path;
             app.dataset.model = modelKey;
 
-            var titleSpan = document.querySelector('.amfm-title span');
+            var titleSpan = document.querySelector('.amfm-title-text');
             if (titleSpan) {
-                titleSpan.textContent = 'MODÈLE ' + target.name;
+                titleSpan.textContent = target.name;
             }
-            var badge = document.querySelector('.amfm-title .amfm-badge');
+            var badge = document.querySelector('.amfm-badge');
             if (badge) {
                 badge.textContent = target.badge;
             }
@@ -2067,17 +2083,22 @@
                     currentModel = modelKey;
                     renderStep(0);
                     updateUrl();
+                    if (typeof applyUrlParams === 'function') applyUrlParams();
+                    if (pendingFocus && typeof focusLocation === 'function') {
+                        focusLocation(pendingFocus);
+                        pendingFocus = null;
+                    }
                 })
                 .catch(function () {
                     // Revert — ne jamais afficher les images d'un autre modèle
                     // sous une baseUrl cassée.
                     baseUrl = prevBaseUrl;
                     app.dataset.baseUrl = prevBaseUrl;
-                    app.dataset.model = 'arome';
-                    if (titleSpan) titleSpan.textContent = 'MODÈLE AROME HD';
-                    if (badge) badge.textContent = '1,3 KM';
+                    app.dataset.model = 'gfs';
+                    if (titleSpan) titleSpan.textContent = 'GFS Europe';
+                    if (badge) badge.textContent = '0,25°';
                     var modelSel = document.getElementById('select-model');
-                    if (modelSel) modelSel.value = 'arome';
+                    if (modelSel) modelSel.value = 'gfs';
                     showError('Modèle ' + target.name + ' non encore disponible — génération en cours.');
                     window.setTimeout(function() { clearError(); }, 4000);
                 });
@@ -3333,12 +3354,13 @@
                     try {
                         run.textContent = 'Run du ' +
                             runFormat.format(new Date(payload.run_time)).replace(':', 'h') +
-                            ' • résolution 1,3 km';
+                            ' • ' + (payload.resolution || '');
                     } catch (e) {}
                 }
                 if (mapRun && payload.run_time) {
                     try {
-                        mapRun.textContent = 'Run AROME ' + runLabelUtc(payload.run_time);
+                        mapRun.textContent = 'Run ' + (payload.model_name || currentModel) +
+                            ' ' + runLabelUtc(payload.run_time);
                     } catch (e) {}
                 }
                 if (generated && payload.generated_at) {
@@ -3361,6 +3383,12 @@
                 renderStep(currentStep);
                 applyUrlParams();
                 var currentParams = new URLSearchParams(window.location.search);
+                var modelParam = currentParams.get('model');
+                if (modelParam && modelParam !== currentModel &&
+                        typeof switchModel === 'function') {
+                    switchModel(modelParam);
+                    return;
+                }
                 if (!currentParams.get('region')) {
                     var regSel = document.getElementById('select-region');
                     if (regSel && regSel.querySelector('option[value="europe"]')) {

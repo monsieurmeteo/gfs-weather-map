@@ -1,0 +1,11 @@
+# Données générées par le pipeline (déployées via artefacts GitHub Actions)
+output/
+_site/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS / éditeurs
+Thumbs.db
+.DS_Store

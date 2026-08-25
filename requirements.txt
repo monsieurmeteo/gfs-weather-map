@@ -1,8 +1,10 @@
-requests
-numpy
-pillow
-scipy
-matplotlib
-cfgrib
-xarray
-eccodes
+# Dépendances épinglées (testées ensemble, Python 3.12)
+requests==2.34.2
+numpy==2.4.6
+pillow==12.2.0
+scipy==1.17.1
+matplotlib==3.10.9
+cfgrib==0.9.15.1
+xarray==2026.4.0
+eccodes==2.47.0
+shapely==2.1.2

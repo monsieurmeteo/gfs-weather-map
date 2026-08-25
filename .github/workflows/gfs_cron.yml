@@ -1,50 +1,87 @@
-name: GFS Europe & France - Extraction & Rendu 2D
+name: "Météo Multi-modèles GFS & ARPEGE — Build & Deploy"
 
 on:
   schedule:
-    # 4 fois par jour après la mise à disposition des runs GFS NOAA (00Z, 06Z, 12Z, 18Z)
-    - cron: '45 3,9,15,21 * * *'
+    # 4 fois/jour, après mise à disposition des runs 00Z/06Z/12Z/18Z
+    # (GFS prêt ~3h45, ARPEGE ~4h30 → 05:30/11:30/17:30/23:30 UTC)
+    - cron: '30 5,11,17,23 * * *'
   workflow_dispatch:
     inputs:
       max_hours:
-        description: 'Échéance maximale en heures (ex: 120, 240, 384)'
+        description: 'Échéance GFS max en heures (24 à 120)'
         required: false
         default: '120'
+      models:
+        description: 'Modèles à lancer : gfs, arpege ou gfs,arpege'
+        required: false
+        default: 'gfs,arpege'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build-and-render:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    timeout-minutes: 180
     steps:
       - name: Récupération du dépôt
         uses: actions/checkout@v4
 
-      - name: Configuration de Python
+      - name: Configuration Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - name: Installation des dépendances
+      - name: Dépendances système (eccodes)
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+
+      - name: Dépendances Python (épinglées)
+        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Exécution du Pipeline GFS Europe & France
+      - name: Validation des entrées
         run: |
-          python pipeline/gfs_pipeline.py --max-hours ${{ github.event.inputs.max_hours || '24' }}
-
-      - name: Commit et Push des cartes GFS
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add output/gfs/maps/
-          if git diff --staged --quiet; then
-            echo "Aucune modification détectée."
-          else
-            git commit -m "chore(gfs): mise a jour automatique des cartes GFS Europe & France"
-            git pull --rebase -X theirs origin main || true
-            git push origin main
+          MAX_HOURS="${{ inputs.max_hours }}"
+          MODELS="${{ inputs.models }}"
+          if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 24 ] || [ "$MAX_HOURS" -gt 120 ]; then
+            echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 24-120)"
+            exit 1
           fi
+          case "$MODELS" in
+            gfs|arpege|"gfs,arpege"|"arpege,gfs") ;;
+            *) echo "::error::models invalide: '$MODELS'"; exit 1 ;;
+          esac
+          echo "MAX_HOURS=$MAX_HOURS" >> "$GITHUB_ENV"
+          echo "MODELS=$MODELS" >> "$GITHUB_ENV"
+
+      - name: Exécution du pipeline multi-modèles
+        run: python -u pipeline/run_all.py --max-hours "$MAX_HOURS" --models "$MODELS"
+
+      - name: Préparation du site statique
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          cp logo.png _site/ 2>/dev/null || true
+          cp -r js _site/
+          cp -r output _site/
+
+      - name: Configuration Pages
+        uses: actions/configure-pages@v5
+
+      - name: Téléversement de l'artefact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+      - name: Déploiement sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

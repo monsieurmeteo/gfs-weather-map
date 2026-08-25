@@ -14,23 +14,23 @@
     <meta name="description" content="Visualisation cartographique haute résolution des prévisions météo GFS 0.25° (NOAA) sur l'Europe et la France : températures, rafales, pluie cumulée, orages MUCAPE, pression MSLP et neige.">
     <meta name="author" content="Météo-Climat Pro">
     <meta name="theme-color" content="#070b14">
-    <link rel="icon" type="image/png" href="https://alertes-meteo.com/assets/logo_meteo_climat_pro.png">
+    <link rel="icon" type="image/png" href="logo.png">
 
     <!-- Open Graph (LinkedIn, Facebook, WhatsApp) -->
     <meta property="og:site_name" content="Météo-Climat Pro">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Cartographie GFS 0.25° Europe & France — Météo-Climat Pro">
     <meta property="og:description" content="Cartes météo 2D haute définition du modèle mondial GFS (NOAA) jusqu'à J+10 sur l'Europe et la France en direct.">
-    <meta property="og:image" content="https://alertes-meteo.com/assets/logo_meteo_climat_pro.png">
+    <meta property="og:image" content="https://monsieurmeteo.github.io/gfs-weather-map/logo.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:locale" content="fr_FR">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Météo AROME HD 1,3 km — Météo-Climat Pro">
-    <meta name="twitter:description" content="Explorez les sorties du modèle météo AROME HD 1,3 km et des modèles mondiaux en ultra-haute résolution.">
-    <meta name="twitter:image" content="https://alertes-meteo.com/assets/logo_meteo_climat_pro.png">
+    <meta name="twitter:title" content="Météo GFS & ARPEGE — Europe & France | Météo-Climat Pro">
+    <meta name="twitter:description" content="Cartes HD des modèles GFS 0,25° (Europe & France) et ARPEGE Europe 0,1° en open data : Z500, températures, vent, précipitations, orages.">
+    <meta name="twitter:image" content="https://monsieurmeteo.github.io/gfs-weather-map/logo.png">
 
     <!-- FontAwesome Vector Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
@@ -217,6 +217,13 @@
         .amfm-select-layer {
             flex: 1.2;
             min-width: 170px;
+        }
+        .amfm-select-model {
+            flex: 0.9;
+            min-width: 150px;
+            background: rgba(0, 119, 255, 0.18);
+            border-color: rgba(0, 119, 255, 0.55);
+            font-weight: 800;
         }
         .amfm-select-region {
             flex: 0.8;
@@ -694,220 +701,9 @@
             .amfm-header { top: 4px; }
             .amfm-timeline { bottom: 4px; }
         }
-        /* 🔒 Écran d'Authentification / Accès Protégé */
-        #amfm-auth-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 99999;
-            background: rgba(5, 9, 17, 0.94);
-            backdrop-filter: blur(28px);
-            -webkit-backdrop-filter: blur(28px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            opacity: 1;
-            transition: opacity 0.35s ease, visibility 0.35s ease;
-        }
-        #amfm-auth-overlay.is-hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
-        .amfm-auth-card {
-            width: 100%;
-            max-width: 400px;
-            background: linear-gradient(180deg, rgba(16, 26, 44, 0.96) 0%, rgba(10, 16, 28, 0.98) 100%);
-            border: 1px solid rgba(0, 210, 255, 0.4);
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(0, 210, 255, 0.15);
-            border-radius: 20px;
-            padding: 32px 28px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-        .amfm-auth-logo {
-            max-width: 240px;
-            margin: 0 auto 2px auto;
-            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));
-        }
-        .amfm-auth-title {
-            font-size: 19px;
-            font-weight: 800;
-            color: #ffffff;
-            letter-spacing: -0.3px;
-        }
-        .amfm-auth-subtitle {
-            font-size: 13px;
-            color: var(--amfm-muted);
-            margin-top: -10px;
-            line-height: 1.4;
-        }
-        .amfm-auth-form {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            text-align: left;
-        }
-        .amfm-auth-field {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .amfm-auth-field label {
-            font-size: 12px;
-            font-weight: 700;
-            color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .amfm-auth-input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-        .amfm-auth-input-wrapper i {
-            position: absolute;
-            left: 14px;
-            color: #00d2ff;
-            font-size: 14px;
-        }
-        .amfm-auth-input {
-            width: 100%;
-            height: 44px;
-            padding: 0 14px 0 40px;
-            background: rgba(7, 11, 20, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-radius: 10px;
-            color: #ffffff;
-            font-size: 14.5px;
-            font-weight: 600;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .amfm-auth-input:focus {
-            border-color: #00d2ff;
-            box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.25);
-        }
-        .amfm-auth-error {
-            font-size: 13px;
-            font-weight: 700;
-            color: #ff3366;
-            background: rgba(255, 51, 102, 0.12);
-            border: 1px solid rgba(255, 51, 102, 0.3);
-            border-radius: 8px;
-            padding: 8px 12px;
-            display: none;
-            text-align: center;
-        }
-        .amfm-auth-btn {
-            height: 46px;
-            background: linear-gradient(135deg, #00d2ff 0%, #0077ff 100%);
-            border: none;
-            border-radius: 10px;
-            color: #ffffff;
-            font-size: 15px;
-            font-weight: 800;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            box-shadow: 0 8px 20px rgba(0, 119, 255, 0.35);
-            transition: transform 0.15s, box-shadow 0.15s;
-            margin-top: 4px;
-        }
-        .amfm-auth-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 24px rgba(0, 119, 255, 0.5);
-        }
-        .amfm-auth-btn:active {
-            transform: translateY(1px);
-        }
     </style>
 </head>
 <body>
-    <!-- 🔒 Écran d'Authentification Sécurisé -->
-    <div id="amfm-auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <div class="amfm-auth-card">
-            <img src="logo.png" alt="Météo-Climat Pro" class="amfm-auth-logo" onerror="this.src='https://alertes-meteo.com/assets/logo_meteo_climat_pro.png'">
-            <div class="amfm-auth-title" id="auth-title">Espace Professionnel</div>
-            <div class="amfm-auth-subtitle">Veuillez vous identifier pour accéder aux modèles haute résolution</div>
-            <form id="amfm-auth-form" class="amfm-auth-form" onsubmit="return false;">
-                <div class="amfm-auth-error" id="auth-error-msg">Identifiant ou mot de passe incorrect.</div>
-                <div class="amfm-auth-field">
-                    <label for="auth-user">Utilisateur</label>
-                    <div class="amfm-auth-input-wrapper">
-                        <i class="fa-solid fa-user"></i>
-                        <input type="text" id="auth-user" class="amfm-auth-input" placeholder="Nom d'utilisateur" autocomplete="username" required>
-                    </div>
-                </div>
-                <div class="amfm-auth-field">
-                    <label for="auth-pass">Mot de passe</label>
-                    <div class="amfm-auth-input-wrapper">
-                        <i class="fa-solid fa-lock"></i>
-                        <input type="password" id="auth-pass" class="amfm-auth-input" placeholder="Mot de passe" autocomplete="current-password" required>
-                    </div>
-                </div>
-                <button type="submit" id="auth-submit" class="amfm-auth-btn">
-                    <i class="fa-solid fa-lock-open"></i> Accéder aux Cartes
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <script>
-    (function() {
-        var AUTH_KEY = 'amfm_auth_token';
-        var VALID_USER = 'gfs';
-        var VALID_PASS = 'mto59';
-        var overlay = document.getElementById('amfm-auth-overlay');
-        var form = document.getElementById('amfm-auth-form');
-        var userIn = document.getElementById('auth-user');
-        var passIn = document.getElementById('auth-pass');
-        var errBox = document.getElementById('auth-error-msg');
-
-        if (localStorage.getItem(AUTH_KEY) === 'valid') {
-            if (overlay) overlay.classList.add('is-hidden');
-        } else {
-            if (overlay) overlay.classList.remove('is-hidden');
-            setTimeout(function() { if (userIn) userIn.focus(); }, 120);
-        }
-
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                var u = (userIn && userIn.value ? userIn.value.trim() : '');
-                var p = (passIn && passIn.value ? passIn.value.trim() : '');
-                if (u === VALID_USER && p === VALID_PASS) {
-                    localStorage.setItem(AUTH_KEY, 'valid');
-                    // Purge immédiate de tous les caches navigateurs
-                    if ('caches' in window) {
-                        try {
-                            caches.keys().then(function(names) {
-                                names.forEach(function(name) { caches.delete(name); });
-                            });
-                        } catch(e) {}
-                    }
-                    try { sessionStorage.clear(); } catch(e) {}
-                    if (errBox) errBox.style.display = 'none';
-                    if (overlay) overlay.classList.add('is-hidden');
-                } else {
-                    if (errBox) {
-                        errBox.style.display = 'block';
-                        errBox.textContent = 'Identifiant ou mot de passe incorrect.';
-                    }
-                    if (passIn) {
-                        passIn.value = '';
-                        passIn.focus();
-                    }
-                }
-            });
-        }
-    })();
-    </script>
-
     <div data-amfm-app
          data-base-url="output/gfs"
          data-model="gfs"
@@ -928,9 +724,11 @@
 
                 <!-- Centre : Sélecteur de Calque Météo + Sélecteur de Région -->
                 <div class="amfm-nav-controls">
-                    <!-- Sélecteur de Modèle masqué pour compatibilité JS -->
-                    <select id="select-model" style="display:none;" aria-label="Sélection du modèle de prévision">
-                        <option value="gfs" selected>🌍 GFS 0.25° (Europe)</option>
+                    <!-- Sélecteur de Modèle (GFS Europe / GFS France / ARPEGE Europe) -->
+                    <select id="select-model" class="amfm-select-model" aria-label="Sélection du modèle de prévision">
+                        <option value="gfs" selected>🌍 GFS Europe (0,25°)</option>
+                        <option value="gfs_france">🇫🇷 GFS France (0,25°)</option>
+                        <option value="arpege">🇪🇺 ARPEGE Europe (0,1°)</option>
                     </select>
 
                     <!-- Sélecteur direct de Calque Météo -->
@@ -948,8 +746,6 @@
                         <optgroup label="🌧️ Précipitations & Pluie">
                             <option value="pluie_1h">🌧️ Précipitations 3h (mm)</option>
                             <option value="pluie_cumul">📊 Précipitations cumulées (mm)</option>
-                            <option value="reflectivite">📡 Réflectivité Radar Doppler (dBZ)</option>
-                            <option value="graupel">🧊 Graupel / Grésil (mm)</option>
                         </optgroup>
                         <optgroup label="💨 Vent & Tempêtes">
                             <option value="vent">💨 Vent moyen à 10 m (km/h)</option>
@@ -967,9 +763,7 @@
                             <option value="mucape">⚡ Instabilité MUCAPE (J/kg)</option>
                         </optgroup>
                         <optgroup label="❄️ Hiver & Neige">
-                            <option value="neige">❄️ Chutes de neige (cm)</option>
                             <option value="neige_au_sol">🏔️ Épaisseur neige au sol (cm)</option>
-                            <option value="equivalent_eau_neige">💧 Cumul neigeux équiv. eau (mm)</option>
                         </optgroup>
                     </select>
 
@@ -1034,10 +828,6 @@
                         <option value="coast">🏖️ Terres + Bord de mer</option>
                     </select>
 
-                    <button type="button" class="amfm-btn amfm-btn-icon" onclick="localStorage.removeItem('amfm_auth_token'); if('caches' in window){caches.keys().then(function(k){k.forEach(function(n){caches.delete(n);});});} window.location.reload(true);" aria-label="Déconnexion et vider le cache" title="Vider le cache et Déconnexion">
-                        <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
-                    </button>
-
                     <div class="amfm-headline" data-amfm-headline aria-live="polite">
                         <span class="amfm-headline-layer">Température à 2 m (°C) — </span>Chargement…
                     </div>
@@ -1046,7 +836,7 @@
         </header>
 
         <!-- Viewport Cartographique Multi-Canvas -->
-        <main class="amfm-viewport" data-amfm-viewport tabindex="0" role="main" aria-label="Carte interactive de prévisions météo AROME HD (Touches +/- pour zoomer, flèches pour naviguer)">
+        <main class="amfm-viewport" data-amfm-viewport tabindex="0" role="main" aria-label="Carte interactive de prévisions météo GFS & ARPEGE (Touches +/- pour zoomer, flèches pour naviguer)">
             <canvas class="amfm-canvas" data-amfm-weather aria-hidden="true"></canvas>
             <canvas class="amfm-canvas" data-amfm-vectors aria-hidden="true"></canvas>
             <canvas class="amfm-canvas" data-amfm-values aria-hidden="true"></canvas>
@@ -1166,10 +956,10 @@
         </div>
     </div>
 
-    <script src="js/palettes.js?v=1.0.9"></script>
+    <script src="js/palettes.js?v=2.0.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
-    <script src="js/regions.js?v=1.0.9"></script>
-    <script src="js/arome-map.js?v=1.0.9"></script>
+    <script src="js/regions.js?v=2.0.0"></script>
+    <script src="js/arome-map.js?v=2.0.0"></script>
 </body>
 </html>
 
