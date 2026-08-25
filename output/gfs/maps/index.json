@@ -4,7 +4,7 @@
   "provider": "NOAA (National Oceanic and Atmospheric Administration)",
   "resolution": "0.25° (~25 km)",
   "run_time": "2026-08-25T06:00:00+00:00",
-  "generated_at": "2026-08-25T14:52:00.416264+00:00",
+  "generated_at": "2026-08-25T15:09:44.160656+00:00",
   "bounds": {
     "south": 28.0,
     "west": -35.0,
@@ -13,6 +13,9 @@
   },
   "width": 2200,
   "height": 1640,
+  "overlay": "maps/frontieres.svg",
+  "mask": "maps/mask_france.png",
+  "fond": "maps/fond.webp",
   "steps": [
     {
       "lead_hour": 0,
@@ -210,6 +213,10 @@
     }
   ],
   "layers": {
+    "geopotentiel_500": {
+      "label": "Géopotentiel Z500",
+      "unit": "dam"
+    },
     "temperature": {
       "label": "Température à 2 m",
       "unit": "°C"
@@ -285,13 +292,6 @@
     "humidite": {
       "label": "Humidité relative à 2 m",
       "unit": "%"
-    },
-    "geopotentiel_500": {
-      "label": "Géopotentiel Z500",
-      "unit": "dam"
     }
-  },
-  "overlay": "maps/frontieres.svg",
-  "mask": "maps/mask_france.png",
-  "fond": "maps/fond.webp"
+  }
 }
