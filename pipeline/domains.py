@@ -40,7 +40,7 @@ def inverse_mercator_y(y):
     return np.degrees(2.0 * np.arctan(np.exp(y)) - np.pi / 2.0)
 
 
-def lambert_conformal_direct(lats, lons, lat1=35.0, lat2=65.0, lat0=50.0, lon0=5.0):
+def lambert_conformal_direct(lats, lons, lat1=35.0, lat2=65.0, lat0=50.0, lon0=-5.0):
     r_lat1 = np.radians(lat1)
     r_lat2 = np.radians(lat2)
     r_lat0 = np.radians(lat0)
