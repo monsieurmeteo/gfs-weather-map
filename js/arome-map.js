@@ -2082,6 +2082,31 @@
                     manifest = payload;
                     applyPaletteStops();
                     currentStep = 0;
+                    if (payload.overlay && typeof loadVectorOverlay === 'function') {
+                        loadVectorOverlay(payload.overlay);
+                    }
+                    if (typeof loadPlaces === 'function') {
+                        loadPlaces();
+                    }
+                    if (payload.fond) {
+                        fondImageElement = new Image();
+                        fondImageElement.crossOrigin = 'anonymous';
+                        fondImageElement.src = versioned(payload.fond);
+                    }
+                    if (payload.mask) {
+                        franceMaskImage = new Image();
+                        franceMaskImage.crossOrigin = 'anonymous';
+                        franceMaskImage.src = versioned(payload.mask);
+                        franceMaskImage.onload = function () {
+                            if (maskSamplerContext) {
+                                try {
+                                    maskSamplerContext.drawImage(franceMaskImage, 0, 0, 2200, 1640);
+                                    maskSamplerReady = true;
+                                } catch (e) {}
+                            }
+                            scheduleRender();
+                        };
+                    }
                     if (!manifest.layers[currentLayer]) {
                         currentLayer = Object.keys(manifest.layers)[0] || 'temperature';
                         var dSel = document.getElementById('direct-layer-select');
@@ -2694,8 +2719,11 @@
         }
 
         function labelDensity() {
+            var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (currentModel === 'gfs');
             if (transform.scale < 1.35) {
-                return { population: 95000, maximum: 32, size: 12 };
+                return isEurope ?
+                    { population: 200000, maximum: 14, size: 12 } :
+                    { population: 95000, maximum: 32, size: 12 };
             }
             if (transform.scale < 2.25) {
                 return { population: 45000, maximum: 45, size: 12 };
