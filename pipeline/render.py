@@ -211,10 +211,18 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
         ax.set_facecolor((0, 0, 0, 0))
         ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
         if prmsl_grid is not None:
-            p_clean = np.where(np.isnan(prmsl_grid), 1013.25, prmsl_grid)
-            smooth_p = scipy.ndimage.gaussian_filter(p_clean, sigma=2.8)
-            gx = np.linspace(0, w, smooth_p.shape[1])
-            gy = np.linspace(0, h, smooth_p.shape[0])
+            nan_mask = np.isnan(prmsl_grid)
+            if nan_mask.any():
+                weights = scipy.ndimage.gaussian_filter((~nan_mask).astype(float), sigma=2.8)
+                vals = scipy.ndimage.gaussian_filter(np.where(nan_mask, 0.0, prmsl_grid), sigma=2.8)
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    smooth_p = np.where(weights > 0.1, vals / np.maximum(weights, 1e-6), np.nan)
+                smooth_p = np.ma.masked_invalid(smooth_p)
+            else:
+                smooth_p = scipy.ndimage.gaussian_filter(prmsl_grid, sigma=2.8)
+
+            gx = np.linspace(0, w, prmsl_grid.shape[1])
+            gy = np.linspace(0, h, prmsl_grid.shape[0])
             GX, GY = np.meshgrid(gx, gy)
             # Niveaux de 935 à 1060 hPa pour couvrir toutes les dépressions et anticyclones
             levels = np.arange(935, 1065, 5)
@@ -257,11 +265,18 @@ def render_pression_with_isobars(prmsl_grid, output_path):
         ax.set_facecolor((0, 0, 0, 0))
         ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
         if prmsl_grid is not None:
-            p_clean = np.where(np.isnan(prmsl_grid), 1013.25, prmsl_grid)
-            # Lissage plus fort → isobares lisses, sans tremblements
-            smooth_p = scipy.ndimage.gaussian_filter(p_clean, sigma=3.5)
-            gx = np.linspace(0, w, smooth_p.shape[1])
-            gy = np.linspace(0, h, smooth_p.shape[0])
+            nan_mask = np.isnan(prmsl_grid)
+            if nan_mask.any():
+                weights = scipy.ndimage.gaussian_filter((~nan_mask).astype(float), sigma=3.5)
+                vals = scipy.ndimage.gaussian_filter(np.where(nan_mask, 0.0, prmsl_grid), sigma=3.5)
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    smooth_p = np.where(weights > 0.1, vals / np.maximum(weights, 1e-6), np.nan)
+                smooth_p = np.ma.masked_invalid(smooth_p)
+            else:
+                smooth_p = scipy.ndimage.gaussian_filter(prmsl_grid, sigma=3.5)
+
+            gx = np.linspace(0, w, prmsl_grid.shape[1])
+            gy = np.linspace(0, h, prmsl_grid.shape[0])
             GX, GY = np.meshgrid(gx, gy)
             # Tous les 5 hPa de 935 à 1060 hPa
             levels = np.arange(935, 1065, 5)
