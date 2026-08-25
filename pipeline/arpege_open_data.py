@@ -181,9 +181,11 @@ def collect_fields(session, run_dt, max_lead):
     return all_fields
 
 
-def render_lead(fields, lead, domain, out_dir, state):
+def render_lead(fields, lead, run_dt, domain, out_dir, state):
     """Rend toutes les couches d'une échéance ARPEGE (Z500 en priorité)."""
-    step = {"lead_hour": lead, "valid_time": None, "files": {}}
+    step = {"lead_hour": lead,
+            "valid_time": (run_dt + datetime.timedelta(hours=lead)).isoformat(),
+            "files": {}}
 
     def regrid(field, convert=None):
         if field is None:
@@ -314,7 +316,7 @@ def run_model(run_dt, domain, out_dir, max_lead=MAX_LEAD):
     state = {"counts": {}, "max_gust": None, "tp_prev": None}
     n_ok = 0
     for lh in leads:
-        step = render_lead(all_fields[lh], lh, domain, out_dir, state)
+        step = render_lead(all_fields[lh], lh, run_dt, domain, out_dir, state)
         steps.append(step)
         n_ok += 1
         log("  H+%03d OK (%d couches)" % (lh, len(step["files"])))

@@ -154,9 +154,11 @@ def layer_field(key, cached):
     return cached.get(key)
 
 
-def render_lead(cached, lead, domain, out_dir, steps, state):
+def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
     """Rend toutes les couches d'une échéance pour un domaine."""
-    step = {"lead_hour": lead, "valid_time": None, "files": {}}
+    step = {"lead_hour": lead,
+            "valid_time": (run_dt + datetime.timedelta(hours=lead)).isoformat(),
+            "files": {}}
     t2m = layer_field("T2M", cached)
     dpt = layer_field("DPT", cached)
     rh = layer_field("RH", cached)
@@ -285,7 +287,7 @@ def run_model(run_dt, domain, out_dir, max_hours, leads):
         if not cached:
             log("!! H+%03d : aucun champ décodé" % lh)
             continue
-        step = render_lead(cached, lh, domain, out_dir, steps, state)
+        step = render_lead(cached, lh, run_dt, domain, out_dir, steps, state)
         steps.append(step)
         n_ok += 1
         log("  H+%03d OK (%d couches)" % (lh, len(step["files"])))
