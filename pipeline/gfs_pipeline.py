@@ -240,5 +240,9 @@ def run_gfs_pipeline(max_hours=240):
     print(f"🎉 Manifest GFS enregistré avec succès dans {manifest_path} !")
 
 if __name__ == "__main__":
-    run_gfs_pipeline(max_hours=120)
+    import argparse
+    parser = argparse.ArgumentParser(description="Pipeline GFS Europe & France")
+    parser.add_argument("--max-hours", type=int, default=24, help="Échéance max en heures (ex: 24, 48, 120)")
+    args = parser.parse_args()
+    run_gfs_pipeline(max_hours=args.max_hours)
 

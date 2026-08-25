@@ -35,7 +35,7 @@ jobs:
 
       - name: Exécution du Pipeline GFS Europe & France
         run: |
-          python pipeline/gfs_pipeline.py
+          python pipeline/gfs_pipeline.py --max-hours ${{ github.event.inputs.max_hours || '24' }}
 
       - name: Commit et Push des cartes GFS
         run: |
