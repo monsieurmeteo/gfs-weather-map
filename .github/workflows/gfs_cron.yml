@@ -46,6 +46,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "Aucune modification détectée."
           else
-            git commit -m "chore(gfs): mise a jour automatique des cartes GFS Europe & France [skip ci]"
+            git commit -m "chore(gfs): mise a jour automatique des cartes GFS Europe & France"
             git push origin main
           fi

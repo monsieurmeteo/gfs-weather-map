@@ -153,29 +153,47 @@ def run_gfs_pipeline(max_hours=240):
                 for ds in cfgrib.open_datasets(tmp):
                     for v in ds.data_vars:
                         vu = v.upper()
-                        if vu not in cached:
-                            cached[vu] = (ds[v].values, ds.latitude.values, ds.longitude.values)
-            except Exception:
-                pass
+                        val = ds[v].values
+                        # Réduction de dimension si nécessaire (ex: lev_500_mb)
+                        if val.ndim == 3 and val.shape[0] == 1:
+                            val = val[0]
+                        cached[vu] = (val, ds.latitude.values, ds.longitude.values)
+                        
+                        # Aliases standards universels
+                        if vu in ("T2M", "2T", "T"): cached["TMP"] = cached[vu]
+                        if vu in ("D2M", "2D", "D"): cached["DPT"] = cached[vu]
+                        if vu in ("GH", "Z", "HGT"): cached["HGT"] = cached[vu]
+                        if vu in ("MSL", "PRMSL"): cached["PRMSL"] = cached[vu]
+                        if vu in ("SP", "PRES"): cached["PRES"] = cached[vu]
+                        if vu in ("GUST", "FG10"): cached["GUST"] = cached[vu]
+                        if vu in ("10U", "U10", "U"): cached["UGRD"] = cached[vu]
+                        if vu in ("10V", "V10", "V"): cached["VGRD"] = cached[vu]
+                        if vu in ("TP", "APCP"): cached["APCP"] = cached[vu]
+                        if vu in ("CAPE", "MUCAPE"): cached["CAPE"] = cached[vu]
+                        if vu in ("SD", "SNOD"): cached["SNOD"] = cached[vu]
+                        if vu in ("TCC", "TCDC"): cached["TCDC"] = cached[vu]
+            except Exception as e:
+                print(f" (err: {e})", end="")
             finally:
                 try: os.remove(tmp)
                 except: pass
 
         for layer in LAYERS:
             dst = os.path.join(OUTPUT_DIR, layer, f"{lh:03d}.webp")
-            ensure_dir(os.path.dirname(dst))
-            step["files"][layer] = f"maps/{layer}/{lh:03d}.webp"
 
             if layer == "vent":
                 if "UGRD" in cached and "VGRD" in cached:
+                    ensure_dir(os.path.dirname(dst))
                     u, la, lo = cached["UGRD"]
                     v = cached["VGRD"][0] if len(cached["VGRD"]) > 0 else u
                     spd = np.sqrt(u.astype(np.float32) ** 2 + v.astype(np.float32) ** 2) * 3.6
                     save_webp(regrid_europe(spd, la, lo), layer, dst)
+                    step["files"][layer] = f"maps/{layer}/{lh:03d}.webp"
                 continue
 
             key = gfs_layer_var.get(layer, "TMP")
             if key in cached:
+                ensure_dir(os.path.dirname(dst))
                 d, la, lo = cached[key]
                 if layer in ("temperature", "temperature_ressentie", "humidex") and d.max() > 200:
                     d = d - 273.15
@@ -185,8 +203,11 @@ def run_gfs_pipeline(max_hours=240):
                     d = d / 100.0
                 elif layer in ("rafales", "rafales_cumul") and d.max() < 200:
                     d = d * 3.6
-                elif layer == "geopotentiel_500" and d.max() > 1000:
-                    d = d / 10.0  # dam
+                elif layer == "geopotentiel_500":
+                    if d.max() > 15000:
+                        d = d / 98.0665 # Geopotentiel m2/s2 vers dam
+                    elif d.max() > 1000:
+                        d = d / 10.0    # Metres vers dam
 
                 rf = regrid_europe(d, la, lo)
                 if layer == "rafales_cumul":
@@ -194,6 +215,7 @@ def run_gfs_pipeline(max_hours=240):
                     save_webp(max_gust_field, layer, dst)
                 else:
                     save_webp(rf, layer, dst)
+                step["files"][layer] = f"maps/{layer}/{lh:03d}.webp"
 
         print(" OK")
         steps.append(step)
