@@ -253,26 +253,30 @@ def render_pression_with_isobars(prmsl_grid, output_path):
     ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
     if prmsl_grid is not None:
         p_clean = np.where(np.isnan(prmsl_grid), 1013.25, prmsl_grid)
-        smooth_p = scipy.ndimage.gaussian_filter(p_clean, sigma=1.6)
+        # Lissage plus fort → isobares lisses, sans tremblements
+        smooth_p = scipy.ndimage.gaussian_filter(p_clean, sigma=3.5)
         gx = np.linspace(0, w, smooth_p.shape[1])
         gy = np.linspace(0, h, smooth_p.shape[0])
         GX, GY = np.meshgrid(gx, gy)
-        # Isobares principales tous les 2 ou 5 hPa (970 à 1045 hPa)
-        levels = np.arange(960, 1055, 2)
-        ax.contour(GX, GY, smooth_p, levels=levels, colors="#0b1220", linewidths=2.2)
-        cs = ax.contour(GX, GY, smooth_p, levels=levels, colors="#ffffff", linewidths=1.2)
-        labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=14,
-                           colors="#ffffff", inline_spacing=12)
+        # Tous les 5 hPa — moins dense, plus lisible à l'échelle France
+        levels = np.arange(955, 1060, 5)
+        # Halo blanc épais en dessous pour contraste sur fond coloré
+        ax.contour(GX, GY, smooth_p, levels=levels, colors="#ffffff", linewidths=4.5, alpha=0.8)
+        # Isobare noire par-dessus
+        cs = ax.contour(GX, GY, smooth_p, levels=levels, colors="#111111", linewidths=2.2)
+        labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=15,
+                           colors="#111111", inline_spacing=10)
         if labels:
             for lbl in labels:
                 lbl.set_weight("bold")
                 lbl.set_path_effects([
-                    matplotlib.patheffects.Stroke(linewidth=2.5, foreground="#0b1220"),
+                    matplotlib.patheffects.Stroke(linewidth=3.5, foreground="#ffffff"),
                     matplotlib.patheffects.Normal(),
                 ])
     ensure_dir(os.path.dirname(output_path))
     fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 88})
     plt.close(fig)
+
 
 
 # ── Formules physiques ──────────────────────────────────────────────────────
