@@ -217,7 +217,42 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
             for lbl in labels:
                 lbl.set_weight("bold")
                 lbl.set_path_effects([
-                    matplotlib.patheffects.Stroke(linewidth=3, foreground="#000000"),
+    ensure_dir(os.path.dirname(output_path))
+    fig.savefig(output_path, format="webp", dpi=100, pil_kwargs={"quality": 88})
+    plt.close(fig)
+
+
+def render_pression_with_isobars(prmsl_grid, output_path):
+    """Pression niveau mer colorée (palette pression) + isobares continues (hPa)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import matplotlib.patheffects
+    import scipy.ndimage
+
+    pal = PALETTES.get("pression", PALETTES["temperature"])
+    base_img = apply_palette(prmsl_grid, pal)
+    h, w = prmsl_grid.shape
+    fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.axis("off")
+    ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
+    if prmsl_grid is not None:
+        smooth_p = scipy.ndimage.gaussian_filter(prmsl_grid, sigma=1.6)
+        gx = np.linspace(0, w, smooth_p.shape[1])
+        gy = np.linspace(0, h, smooth_p.shape[0])
+        GX, GY = np.meshgrid(gx, gy)
+        # Isobares principales tous les 2 ou 5 hPa (970 à 1045 hPa)
+        levels = np.arange(960, 1055, 2)
+        ax.contour(GX, GY, smooth_p, levels=levels, colors="#0b1220", linewidths=2.2)
+        cs = ax.contour(GX, GY, smooth_p, levels=levels, colors="#ffffff", linewidths=1.2)
+        labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=14,
+                           colors="#ffffff", inline_spacing=12)
+        if labels:
+            for lbl in labels:
+                lbl.set_weight("bold")
+                lbl.set_path_effects([
+                    matplotlib.patheffects.Stroke(linewidth=2.5, foreground="#0b1220"),
                     matplotlib.patheffects.Normal(),
                 ])
     ensure_dir(os.path.dirname(output_path))

@@ -30,7 +30,8 @@ sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 from domains import EUROPE, FRANCE  # noqa: E402
 from render import (  # noqa: E402
     LAYER_ORDER, save_webp, write_hkv, write_places, write_manifest,
-    render_z500_with_isobars, wind_chill_c, heat_index_c, humidex_c,
+    render_z500_with_isobars, render_pression_with_isobars,
+    wind_chill_c, heat_index_c, humidex_c,
 )
 
 HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
@@ -237,7 +238,11 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
 
     if prmsl is not None:
         p = regrid(prmsl, lambda v: v / 100.0)
-        save("pression", p)
+        dst_p = os.path.join(out_dir, "pression", "%03d.webp" % lead)
+        render_pression_with_isobars(p, dst_p)
+        step["files"]["pression"] = "maps/pression/%03d.webp" % lead
+        write_hkv(p, os.path.join(out_dir, "values", "pression", "%03d.hkv.gz" % lead))
+        state["counts"]["pression"] = state["counts"].get("pression", 0) + 1
 
     if pres is not None:
         save("pression_surface", regrid(pres, lambda v: v / 100.0))

@@ -28,8 +28,8 @@ from domains import EUROPE  # noqa: E402
 import gribscan  # noqa: E402
 from render import (  # noqa: E402
     save_webp, write_hkv, write_places, write_manifest,
-    render_z500_with_isobars, dew_point_c, heat_index_c,
-    wind_chill_c, humidex_c,
+    render_z500_with_isobars, render_pression_with_isobars,
+    dew_point_c, heat_index_c, wind_chill_c, humidex_c,
 )
 
 HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
@@ -286,7 +286,11 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
 
     if prmsl is not None:
         p = regrid(prmsl, lambda v: v / 100.0)
-        save("pression", p)
+        dst_p = os.path.join(out_dir, "pression", "%03d.webp" % lead)
+        render_pression_with_isobars(p, dst_p)
+        step["files"]["pression"] = "maps/pression/%03d.webp" % lead
+        write_hkv(p, os.path.join(out_dir, "values", "pression", "%03d.hkv.gz" % lead))
+        state["counts"]["pression"] = state["counts"].get("pression", 0) + 1
 
     apcp = fields.get("APCP")
     if apcp is not None:

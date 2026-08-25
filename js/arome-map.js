@@ -2107,7 +2107,15 @@
                             scheduleRender();
                         };
                     }
-                    if (!manifest.layers[currentLayer]) {
+                    if (modelKey === 'gfs_france' && currentLayer === 'geopotentiel_500' && manifest.layers['pression']) {
+                        currentLayer = 'pression';
+                        var dSel = document.getElementById('direct-layer-select');
+                        if (dSel) dSel.value = 'pression';
+                    } else if ((modelKey === 'gfs' || modelKey === 'arpege') && currentLayer === 'pression' && manifest.layers['geopotentiel_500']) {
+                        currentLayer = 'geopotentiel_500';
+                        var dSel = document.getElementById('direct-layer-select');
+                        if (dSel) dSel.value = 'geopotentiel_500';
+                    } else if (!manifest.layers[currentLayer]) {
                         currentLayer = Object.keys(manifest.layers)[0] || 'temperature';
                         var dSel = document.getElementById('direct-layer-select');
                         if (dSel) dSel.value = currentLayer;
