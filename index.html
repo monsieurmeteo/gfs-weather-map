@@ -10,8 +10,8 @@
     <meta http-equiv="Expires" content="0">
     
     <!-- SEO & Métadonnées Générales -->
-    <title>Météo AROME HD 1,3 km & Multi-Modèles — Météo-Climat Pro</title>
-    <meta name="description" content="Visualisation cartographique haute résolution des prévisions météo AROME HD (1,3 km) de Météo-France et multi-modèles (ARPEGE, ICON, GFS, ECMWF) : températures, rafales, pluie radar, orages MUCAPE et neige.">
+    <title>Météo GFS 0.25° Europe & France — Météo-Climat Pro</title>
+    <meta name="description" content="Visualisation cartographique haute résolution des prévisions météo GFS 0.25° (NOAA) sur l'Europe et la France : températures, rafales, pluie cumulée, orages MUCAPE, pression MSLP et neige.">
     <meta name="author" content="Météo-Climat Pro">
     <meta name="theme-color" content="#070b14">
     <link rel="icon" type="image/png" href="https://alertes-meteo.com/assets/logo_meteo_climat_pro.png">
@@ -19,8 +19,8 @@
     <!-- Open Graph (LinkedIn, Facebook, WhatsApp) -->
     <meta property="og:site_name" content="Météo-Climat Pro">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Cartographie Haute Résolution AROME HD 1,3 km — Météo-Climat Pro">
-    <meta property="og:description" content="Cartes météo 2D haute définition des modèles AROME HD, ARPEGE, ICON-EU, GFS et ECMWF en direct.">
+    <meta property="og:title" content="Cartographie GFS 0.25° Europe & France — Météo-Climat Pro">
+    <meta property="og:description" content="Cartes météo 2D haute définition du modèle mondial GFS (NOAA) jusqu'à J+10 sur l'Europe et la France en direct.">
     <meta property="og:image" content="https://alertes-meteo.com/assets/logo_meteo_climat_pro.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -976,10 +976,11 @@
                         </optgroup>
                     </select>
 
-                    <!-- Sélecteur de Zone (Hauts-de-France par défaut) -->
-                    <select id="select-region" data-amfm-region-select class="amfm-select-region" aria-label="Zoomer sur une région de France">
-                        <option value="hdf" selected>🏘️ Hauts-de-France</option>
+                    <!-- Sélecteur de Zone (Europe / France / Régions) -->
+                    <select id="select-region" data-amfm-region-select class="amfm-select-region" aria-label="Zoomer sur une zone géographique">
+                        <option value="europe" selected>🇪🇺 Europe Entière</option>
                         <option value="france">🇫🇷 France Entière</option>
+                        <option value="hdf">🏘️ Hauts-de-France</option>
                         <option value="normandie">🍏 Normandie</option>
                         <option value="idf">🗼 Île-de-France</option>
                         <option value="grandest">🥨 Grand Est</option>
@@ -993,6 +994,10 @@
                         <option value="paca">☀️ PACA</option>
                         <option value="corse">🏝️ Corse</option>
                         <option value="belgique">🇧🇪 Belgique</option>
+                        <option value="uk">🇬🇧 Royaume-Uni & Irlande</option>
+                        <option value="allemagne">🇩🇪 Allemagne & Benelux</option>
+                        <option value="espagne">🇪🇸 Espagne & Portugal</option>
+                        <option value="italie">🇮🇹 Italie & Méditerranée</option>
                     </select>
                 </div>
 
