@@ -1,0 +1,51 @@
+name: GFS Europe & France - Extraction & Rendu 2D
+
+on:
+  schedule:
+    # 4 fois par jour après la mise à disposition des runs GFS NOAA (00Z, 06Z, 12Z, 18Z)
+    - cron: '45 3,9,15,21 * * *'
+  workflow_dispatch:
+    inputs:
+      max_hours:
+        description: 'Échéance maximale en heures (ex: 120, 240, 384)'
+        required: false
+        default: '120'
+
+jobs:
+  build-and-render:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Récupération du dépôt
+        uses: actions/checkout@v4
+
+      - name: Configuration de Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Installation des dépendances
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+          python -m pip install --upgrade pip
+          pip install requests numpy pillow scipy cfgrib xarray eccodes
+
+      - name: Exécution du Pipeline GFS Europe & France
+        run: |
+          python pipeline/gfs_pipeline.py
+
+      - name: Commit et Push des cartes GFS
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add output/gfs/maps/
+          if git diff --staged --quiet; then
+            echo "Aucune modification détectée."
+          else
+            git commit -m "chore(gfs): mise a jour automatique des cartes GFS Europe & France [skip ci]"
+            git pull --rebase origin main || true
+            git push origin main
+          fi
