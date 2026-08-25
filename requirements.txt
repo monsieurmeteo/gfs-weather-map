@@ -1,0 +1,7 @@
+requests
+numpy
+pillow
+scipy
+cfgrib
+xarray
+eccodes
