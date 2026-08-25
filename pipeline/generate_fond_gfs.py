@@ -134,20 +134,23 @@ def main():
     foreign_boundaries_d = extract_lines(boundaries)
     foreign_coastlines_d = extract_lines(coastlines)
     france_border_d = line_to_svg(france_union.boundary)
-    all_lines = (foreign_boundaries_d + ' ' + foreign_coastlines_d + ' ' + france_border_d).strip()
+    national_lines = (foreign_boundaries_d + ' ' + foreign_coastlines_d + ' ' + france_border_d).strip()
+    depts_combined = ' '.join(depts_d)
 
     svg = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" width="%d" height="%d">\n'
-        '<!-- Contours des pays et côtes en noir net style Météociel -->\n'
-        '<path d="%s" fill="none" stroke="#000000" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>\n'
-        '</svg>\n' % (WIDTH, HEIGHT, WIDTH, HEIGHT, all_lines)
+        '<!-- Côtes et frontières nationales en noir franc style Météociel GFS -->\n'
+        '<path d="%s" fill="none" stroke="#0b1220" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>\n'
+        '<!-- Départements français fins et discrets en gris style Météociel GFS -->\n'
+        '<path d="%s" fill="none" stroke="#7a828e" stroke-width="0.8" stroke-opacity="0.85" stroke-linejoin="round" stroke-linecap="round"/>\n'
+        '</svg>\n' % (WIDTH, HEIGHT, WIDTH, HEIGHT, national_lines, depts_combined)
     )
 
     with open(os.path.join(OUTPUT_DIR, 'frontieres.svg'), 'w', encoding='utf-8') as f:
         f.write(svg)
 
-    print('✅ frontieres.svg en noir net style Météociel (sans départements) généré avec succès !')
+    print('✅ frontieres.svg style Météociel GFS (national noir + départements gris fins) généré avec succès !')
 
 if __name__ == '__main__':
     main()

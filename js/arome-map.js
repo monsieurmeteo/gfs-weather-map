@@ -898,17 +898,21 @@
             weatherCtx.restore();
             context.drawImage(weatherMasked, 0, 0);
 
-            // Frontières vectorielles uniques (traits blancs éclatants et liseré de contraste style Météociel)
+            // Frontières vectorielles uniques (style officiel Météociel GFS)
             if (vectorDefinition && vectorDefinition.paths && vectorDefinition.paths.length) {
                 context.save();
                 context.transform(hScale, 0, 0, vScale, offX, offY);
-                var hdStrokeFactor = 1.8;
+                var hdStrokeFactor = 1.6;
                 vectorDefinition.paths.forEach(function (entry) {
-                    context.strokeStyle = entry.colour || '#ffffff';
-                    context.globalAlpha = entry.opacity || 1.0;
+                    var isDept = entry.kind === 'department';
+                    if (isDept && transform.scale <= 1.35) {
+                        return;
+                    }
+                    context.strokeStyle = entry.colour || (isDept ? '#7a828e' : '#0b1220');
+                    context.globalAlpha = isDept ? 0.85 : (entry.opacity || 1.0);
                     context.lineCap = 'round';
                     context.lineJoin = 'round';
-                    context.lineWidth = ((entry.width || 1.6) * hdStrokeFactor) / hScale;
+                    context.lineWidth = ((entry.width || (isDept ? 0.8 : 1.8)) * hdStrokeFactor) / hScale;
                     context.stroke(entry.path);
                 });
                 context.restore();
@@ -2503,11 +2507,15 @@
                 pixelRatio * mapRect.y
             );
             vectorDefinition.paths.forEach(function (entry) {
-                vectorContext.strokeStyle = entry.colour || '#0d1117';
-                vectorContext.globalAlpha = 1.0;
+                var isDept = entry.kind === 'department';
+                if (isDept && transform.scale <= 1.35) {
+                    return; // Masqué sur la vue globale Europe pour éviter la surcharge
+                }
+                vectorContext.strokeStyle = entry.colour || (isDept ? '#7a828e' : '#0b1220');
+                vectorContext.globalAlpha = isDept ? (transform.scale > 2.0 ? 0.9 : 0.6) : (entry.opacity || 1.0);
                 vectorContext.lineCap = 'round';
                 vectorContext.lineJoin = 'round';
-                vectorContext.lineWidth = entry.width / horizontalScale;
+                vectorContext.lineWidth = (entry.width || (isDept ? 0.8 : 1.8)) / horizontalScale;
                 vectorContext.stroke(entry.path);
             });
             vectorContext.globalAlpha = 1;
