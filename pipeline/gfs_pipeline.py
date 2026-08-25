@@ -77,15 +77,18 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
         levels = np.arange(960, 1055, 5)
         # 1. Liseré noir d'ombrage et de contraste
         ax.contour(GX, GY, prmsl_grid, levels=levels, colors="#000000", linewidths=11.0)
-        # 2. Ligne blanche éclatante doublée (8.5px)
+        # 2. Ligne blanche éclatante doublée (8.0px)
         cs = ax.contour(GX, GY, prmsl_grid, levels=levels, colors="#ffffff", linewidths=8.0)
-        labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=24, colors="#ffffff")
+        labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=24, colors="#000000", inline_spacing=22)
         for lbl in labels:
             lbl.set_weight("bold")
-            lbl.set_path_effects([
-                matplotlib.patheffects.Stroke(linewidth=4, foreground="#000000"),
-                matplotlib.patheffects.Normal()
-            ])
+            lbl.set_bbox(dict(
+                boxstyle="square,pad=0.25",
+                facecolor="#ffffff",
+                edgecolor="#000000",
+                linewidth=2.0,
+                alpha=0.98
+            ))
     
     fig.savefig(output_path, format="webp", dpi=100, pil_kwargs={"quality": 88})
     plt.close(fig)
