@@ -1987,33 +1987,37 @@
         if (regionSelect) {
             // Configuration précise et calibrée de chaque région :
             // centres réels et niveaux de zoom optimaux pour afficher
-            // la région ENTIÈRE dans le viewport sans excès de zoom.
             var REGION_CONFIG = {
-                france: { reset: true },
-                hdf: { latitude: 49.85, longitude: 2.82, scale: 2.65 },
-                normandie: { latitude: 48.95, longitude: -0.07, scale: 2.85 },
-                idf: { latitude: 48.65, longitude: 2.50, scale: 4.20 },
-                grandest: { latitude: 48.65, longitude: 5.80, scale: 2.25 },
-                bretagne: { latitude: 48.00, longitude: -3.08, scale: 2.80 },
-                pdl: { latitude: 47.30, longitude: -0.85, scale: 2.75 },
-                cvl: { latitude: 47.45, longitude: 1.60, scale: 2.55 },
-                bfc: { latitude: 47.10, longitude: 5.00, scale: 2.65 },
-                naq: { latitude: 44.95, longitude: 0.40, scale: 1.85 },
-                ara: { latitude: 45.30, longitude: 4.65, scale: 2.25 },
-                occitanie: { latitude: 43.50, longitude: 2.25, scale: 2.25 },
-                paca: { latitude: 43.85, longitude: 6.00, scale: 2.85 },
-                corse: { latitude: 42.10, longitude: 9.05, scale: 4.20 },
-                belgique: { latitude: 50.25, longitude: 4.40, scale: 3.10 }
+                europe: { latitude: 49.0, longitude: 8.0, scale: 1.0 },
+                france: { latitude: 46.5, longitude: 2.5, scale: 2.2 },
+                hdf: { latitude: 49.85, longitude: 2.82, scale: 4.5 },
+                normandie: { latitude: 48.95, longitude: -0.07, scale: 4.5 },
+                idf: { latitude: 48.65, longitude: 2.50, scale: 6.5 },
+                grandest: { latitude: 48.65, longitude: 5.80, scale: 4.0 },
+                bretagne: { latitude: 48.00, longitude: -3.08, scale: 4.5 },
+                pdl: { latitude: 47.30, longitude: -0.85, scale: 4.5 },
+                cvl: { latitude: 47.45, longitude: 1.60, scale: 4.5 },
+                bfc: { latitude: 47.10, longitude: 5.00, scale: 4.5 },
+                naq: { latitude: 44.95, longitude: 0.40, scale: 3.5 },
+                ara: { latitude: 45.30, longitude: 4.65, scale: 4.0 },
+                occitanie: { latitude: 43.50, longitude: 2.25, scale: 4.0 },
+                paca: { latitude: 43.85, longitude: 6.00, scale: 4.5 },
+                corse: { latitude: 42.10, longitude: 9.05, scale: 6.5 },
+                belgique: { latitude: 50.25, longitude: 4.40, scale: 5.0 },
+                uk: { latitude: 54.0, longitude: -2.5, scale: 2.8 },
+                allemagne: { latitude: 51.2, longitude: 10.4, scale: 2.8 },
+                espagne: { latitude: 40.0, longitude: -3.7, scale: 2.6 },
+                italie: { latitude: 42.5, longitude: 12.5, scale: 2.8 }
             };
 
             regionSelect.addEventListener('change', function (e) {
-                var val = e.target.value || 'france';
-                var cfg = REGION_CONFIG[val];
-                if (val === 'france' || (cfg && cfg.reset)) {
+                var val = e.target.value || 'europe';
+                if (val === 'europe') {
                     resetView();
                     updateUrl();
                     return;
                 }
+                var cfg = REGION_CONFIG[val];
                 if (cfg && cfg.latitude !== undefined) {
                     focusLocation({
                         latitude: cfg.latitude,
@@ -3006,14 +3010,10 @@
             var southY = mercator(Number(bounds.south));
             var u = (longitude - west) / (east - west);
             var v = (northY - mercator(latitude)) / (northY - southY);
-            var scale = clamp(Number(pendingFocus.scale) || 2, 1.16, maxScale);
+            var scale = clamp(Number(pendingFocus.scale) || 1.0, 1.0, maxScale);
             // Même baseScale que computeMapRect et applyTransform pour cohérence totale
             var s = Math.max(width / 2200.0, height / 1640.0);
             transform.scale = scale;
-            // Le raster est centré en (width/2 + tx, height/2 + ty) dans computeMapRect.
-            // On veut que le point (u,v) soit au centre de l'écran :
-            //   width/2 + tx + (u - 0.5) * 2200 * s * scale = width/2
-            // → tx = (0.5 - u) * 2200 * s * scale
             transform.x = 2200.0 * s * scale * (0.5 - u);
             transform.y = 1640.0 * s * scale * (0.5 - v) + (height * 0.04);
             pendingFocus = null;
