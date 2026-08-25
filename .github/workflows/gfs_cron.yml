@@ -12,7 +12,7 @@ on:
         required: false
         default: 'full'
       max_hours:
-        description: 'Échéance GFS max en heures (24 à 120)'
+        description: 'Échéance GFS max en heures (6 = 3 échéances rapides, 120 = complet)'
         required: false
         default: '120'
       models:
@@ -59,8 +59,8 @@ jobs:
           MODE="${{ inputs.mode || 'full' }}"
           MAX_HOURS="${{ inputs.max_hours || '120' }}"
           MODELS="${{ inputs.models || 'gfs,arpege' }}"
-          if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 24 ] || [ "$MAX_HOURS" -gt 120 ]; then
-            echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 24-120)"
+          if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 3 ] || [ "$MAX_HOURS" -gt 120 ]; then
+            echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 3-120 ; 6 = 3 échéances rapides)"
             exit 1
           fi
           case "$MODELS" in

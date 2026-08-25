@@ -337,7 +337,7 @@ def run_model(run_dt, domain, out_dir, max_lead=MAX_LEAD):
 
 
 def run_all(max_hours=MAX_LEAD):
-    max_lead = max(24, min(int(max_hours), MAX_LEAD))
+    max_lead = max(3, min(int(max_hours), MAX_LEAD))  # 6 = 3 échéances (mode ajustement)
     run_dt = select_run()
     log("Run ARPEGE sélectionné : %s" % run_str(run_dt))
     base = os.path.join(BASE_DIR, "output")

@@ -305,7 +305,7 @@ def run_model(run_dt, domain, out_dir, max_hours, leads):
 
 
 def run_all(max_hours=120):
-    max_hours = max(24, min(int(max_hours), 120))
+    max_hours = max(3, min(int(max_hours), 120))  # 6 = 3 échéances (mode ajustement)
     leads = list(range(0, max_hours + 1, 3))
     log("Échéances : H+00 → H+%03d (%d pas)" % (max_hours, len(leads)))
 
