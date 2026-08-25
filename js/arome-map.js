@@ -2946,12 +2946,9 @@
         }
 
         function resetView() {
-            // Vue initiale : cadrage automatique (computeMapRect) — la France
-            // remplit le viewport sans zones vides, avec le léger décalage
-            // qui compense le header flottant.
             transform = { scale: 1, x: 0, y: 0 };
             var regSel = document.getElementById('select-region');
-            if (regSel) regSel.value = 'france';
+            if (regSel) regSel.value = 'europe';
             applyTransform();
         }
 
