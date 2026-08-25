@@ -50,8 +50,10 @@ jobs:
 
       - name: Validation des entrées
         run: |
-          MAX_HOURS="${{ inputs.max_hours }}"
-          MODELS="${{ inputs.models }}"
+          # Les inputs sont vides sur les runs planifiés (schedule) :
+          # on applique les valeurs par défaut.
+          MAX_HOURS="${{ inputs.max_hours || '120' }}"
+          MODELS="${{ inputs.models || 'gfs,arpege' }}"
           if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 24 ] || [ "$MAX_HOURS" -gt 120 ]; then
             echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 24-120)"
             exit 1
