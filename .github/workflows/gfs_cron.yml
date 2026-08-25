@@ -7,6 +7,10 @@ on:
     - cron: '30 5,11,17,23 * * *'
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'full = régénère les données (~1h30) ; front = déploie le code seul (~5 min, dalles en cache)'
+        required: false
+        default: 'full'
       max_hours:
         description: 'Échéance GFS max en heures (24 à 120)'
         required: false
@@ -52,6 +56,7 @@ jobs:
         run: |
           # Les inputs sont vides sur les runs planifiés (schedule) :
           # on applique les valeurs par défaut.
+          MODE="${{ inputs.mode || 'full' }}"
           MAX_HOURS="${{ inputs.max_hours || '120' }}"
           MODELS="${{ inputs.models || 'gfs,arpege' }}"
           if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 24 ] || [ "$MAX_HOURS" -gt 120 ]; then
@@ -62,11 +67,40 @@ jobs:
             gfs|arpege|"gfs,arpege"|"arpege,gfs") ;;
             *) echo "::error::models invalide: '$MODELS'"; exit 1 ;;
           esac
+          case "$MODE" in
+            full|front) ;;
+            *) echo "::error::mode invalide: '$MODE' (full ou front)"; exit 1 ;;
+          esac
+          echo "MODE=$MODE" >> "$GITHUB_ENV"
           echo "MAX_HOURS=$MAX_HOURS" >> "$GITHUB_ENV"
           echo "MODELS=$MODELS" >> "$GITHUB_ENV"
 
+      - name: Restauration des dalles en cache (mode front)
+        if: env.MODE == 'front'
+        uses: actions/cache/restore@v4
+        with:
+          path: output
+          key: tiles-gfs-arpege-v1
+
+      - name: Vérification des dalles en cache (mode front)
+        if: env.MODE == 'front'
+        run: |
+          if [ ! -d output/gfs/maps ] || [ ! -d output/arpege/maps ]; then
+            echo "::error::Dalles absentes du cache — lancez d'abord un run en mode 'full'."
+            exit 1
+          fi
+          echo "Dalles en cache OK (GFS + ARPEGE)."
+
       - name: Exécution du pipeline multi-modèles
+        if: env.MODE != 'front'
         run: python -u pipeline/run_all.py --max-hours "$MAX_HOURS" --models "$MODELS"
+
+      - name: Mise en cache des dalles générées
+        if: env.MODE != 'front'
+        uses: actions/cache/save@v4
+        with:
+          path: output
+          key: tiles-gfs-arpege-v1
 
       - name: Préparation du site statique
         run: |
