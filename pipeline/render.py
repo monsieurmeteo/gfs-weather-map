@@ -197,14 +197,20 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
     import scipy.ndimage
 
     pal = PALETTES.get("geopotentiel_500", PALETTES["temperature"])
-    base_img = apply_palette(z500_grid, pal)
+    base_img = apply_palette(np.nan_to_num(z500_grid, nan=np.nan), pal)
+    if np.isnan(z500_grid).any():
+        base_img[np.isnan(z500_grid), 3] = 0
+
     h, w = z500_grid.shape
     fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
+    fig.patch.set_alpha(0)
     ax = fig.add_axes([0, 0, 1, 1])
     ax.axis("off")
+    ax.set_facecolor((0, 0, 0, 0))
     ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
     if prmsl_grid is not None:
-        smooth_p = scipy.ndimage.gaussian_filter(prmsl_grid, sigma=1.8)
+        p_clean = np.where(np.isnan(prmsl_grid), 1013.25, prmsl_grid)
+        smooth_p = scipy.ndimage.gaussian_filter(p_clean, sigma=1.8)
         gx = np.linspace(0, w, smooth_p.shape[1])
         gy = np.linspace(0, h, smooth_p.shape[0])
         GX, GY = np.meshgrid(gx, gy)
@@ -221,7 +227,7 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
                     matplotlib.patheffects.Normal(),
                 ])
     ensure_dir(os.path.dirname(output_path))
-    fig.savefig(output_path, format="webp", dpi=100, pil_kwargs={"quality": 88})
+    fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 88})
     plt.close(fig)
 
 
@@ -234,14 +240,20 @@ def render_pression_with_isobars(prmsl_grid, output_path):
     import scipy.ndimage
 
     pal = PALETTES.get("pression", PALETTES["temperature"])
-    base_img = apply_palette(prmsl_grid, pal)
+    base_img = apply_palette(np.nan_to_num(prmsl_grid, nan=np.nan), pal)
+    if np.isnan(prmsl_grid).any():
+        base_img[np.isnan(prmsl_grid), 3] = 0
+
     h, w = prmsl_grid.shape
     fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
+    fig.patch.set_alpha(0)
     ax = fig.add_axes([0, 0, 1, 1])
     ax.axis("off")
+    ax.set_facecolor((0, 0, 0, 0))
     ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
     if prmsl_grid is not None:
-        smooth_p = scipy.ndimage.gaussian_filter(prmsl_grid, sigma=1.6)
+        p_clean = np.where(np.isnan(prmsl_grid), 1013.25, prmsl_grid)
+        smooth_p = scipy.ndimage.gaussian_filter(p_clean, sigma=1.6)
         gx = np.linspace(0, w, smooth_p.shape[1])
         gy = np.linspace(0, h, smooth_p.shape[0])
         GX, GY = np.meshgrid(gx, gy)
@@ -259,7 +271,7 @@ def render_pression_with_isobars(prmsl_grid, output_path):
                     matplotlib.patheffects.Normal(),
                 ])
     ensure_dir(os.path.dirname(output_path))
-    fig.savefig(output_path, format="webp", dpi=100, pil_kwargs={"quality": 88})
+    fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 88})
     plt.close(fig)
 
 

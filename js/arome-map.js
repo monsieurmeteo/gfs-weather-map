@@ -2629,13 +2629,13 @@
         function computeMapRect(width, height, t) {
             t = t || transform;
             var s = Math.max(width / 2200.0, height / 1640.0);
-            var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (currentModel === 'gfs');
+            var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (currentModel === 'gfs') || (currentModel === 'arpege');
             
             if (isEurope) {
-                // Vue synoptique Europe Entière & France : affichage plein cadre sans recadrage restreint
+                // Vue synoptique Europe Entière & France : affichage plein cadre avec centrage équilibré
                 var scale = s * t.scale;
                 return {
-                    x: width / 2 + t.x - 1100.0 * scale,
+                    x: width / 2 + t.x - 1180.0 * scale,
                     y: height / 2 + t.y - 820.0 * scale,
                     w: 2200.0 * scale,
                     h: 1640.0 * scale
@@ -2657,8 +2657,8 @@
                 var cx = (FX0 + FX1) / 2; // 1060
                 var cy = (FY0 + FY1) / 2; // 820
                 var bboxRect = {
-                    x: width / 2 - cx * sFrance,
-                    y: height / 2 - cy * sFrance,
+                    x: width / 2 + t.x - cx * sFrance,
+                    y: height / 2 + t.y - cy * sFrance,
                     w: 2200.0 * sFrance,
                     h: 1640.0 * sFrance
                 };
@@ -2727,7 +2727,7 @@
         }
 
         function labelDensity() {
-            var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (currentModel === 'gfs');
+            var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (currentModel === 'gfs') || (currentModel === 'arpege');
             if (transform.scale < 1.35) {
                 return isEurope ?
                     { population: 200000, maximum: 14, size: 12 } :
@@ -2996,21 +2996,15 @@
             if (!viewport) return;
             var w = viewport.clientWidth;
             var h = viewport.clientHeight;
-            if (transform.scale > 1.001) {
-                // Même base que computeMapRect : s = max(w/2200, h/1640)
-                var s = Math.max(w / 2200.0, h / 1640.0);
-                var totalScale = s * transform.scale;
-                var rasterW = 2200.0 * totalScale;
-                var rasterH = 1640.0 * totalScale;
-                // On empêche de sortir du raster (au plus un demi-viewport de débord)
-                var maxX = Math.max(0, (rasterW - w) / 2);
-                var maxY = Math.max(0, (rasterH - h) / 2);
-                transform.x = Math.max(-maxX, Math.min(maxX, transform.x));
-                transform.y = Math.max(-maxY, Math.min(maxY, transform.y));
-            } else {
-                transform.x = 0;
-                transform.y = 0;
-            }
+            var s = Math.max(w / 2200.0, h / 1640.0);
+            var totalScale = s * transform.scale;
+            var rasterW = 2200.0 * totalScale;
+            var rasterH = 1640.0 * totalScale;
+            // Déplacement libre à la souris (pan) avec limites souples
+            var maxX = Math.max(w * 0.9, (rasterW - w) / 2 + w * 0.6);
+            var maxY = Math.max(h * 0.9, (rasterH - h) / 2 + h * 0.6);
+            transform.x = Math.max(-maxX, Math.min(maxX, transform.x));
+            transform.y = Math.max(-maxY, Math.min(maxY, transform.y));
             if (zoomLevel) zoomLevel.textContent = Math.round(transform.scale * 100) + ' %';
             if (zoomOut) zoomOut.disabled = transform.scale <= 1.001;
             if (zoomIn) zoomIn.disabled = transform.scale >= maxScale - 0.001;
