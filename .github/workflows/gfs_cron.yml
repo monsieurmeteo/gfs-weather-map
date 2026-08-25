@@ -59,8 +59,8 @@ jobs:
           MODE="${{ inputs.mode || 'full' }}"
           MAX_HOURS="${{ inputs.max_hours || '120' }}"
           MODELS="${{ inputs.models || 'gfs,arpege' }}"
-          if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 3 ] || [ "$MAX_HOURS" -gt 120 ]; then
-            echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 3-120 ; 6 = 3 échéances rapides)"
+          if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 3 ] || [ "$MAX_HOURS" -gt 384 ]; then
+            echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 3-384 ; 6 = rapide, 102 = ARPEGE, 384 = GFS complet)"
             exit 1
           fi
           case "$MODELS" in
