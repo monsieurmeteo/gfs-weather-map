@@ -4,7 +4,7 @@
   "provider": "NOAA (National Oceanic and Atmospheric Administration)",
   "resolution": "0.25° (~25 km)",
   "run_time": "2026-08-25T06:00:00+00:00",
-  "generated_at": "2026-08-25T15:29:05.457686+00:00",
+  "generated_at": "2026-08-25T15:33:44.916725+00:00",
   "bounds": {
     "south": 30.0,
     "west": -30.0,
