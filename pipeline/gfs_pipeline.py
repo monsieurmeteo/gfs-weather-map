@@ -71,24 +71,24 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
     ax.imshow(base_img, origin="upper", extent=[0, WIDTH, HEIGHT, 0])
     
     if prmsl_grid is not None:
-        gx = np.linspace(0, WIDTH, prmsl_grid.shape[1])
-        gy = np.linspace(0, HEIGHT, prmsl_grid.shape[0])
+        import scipy.ndimage
+        smooth_p = scipy.ndimage.gaussian_filter(prmsl_grid, sigma=1.8)
+        gx = np.linspace(0, WIDTH, smooth_p.shape[1])
+        gy = np.linspace(0, HEIGHT, smooth_p.shape[0])
         GX, GY = np.meshgrid(gx, gy)
         levels = np.arange(960, 1055, 5)
-        # 1. Liseré noir d'ombrage et de contraste
-        ax.contour(GX, GY, prmsl_grid, levels=levels, colors="#000000", linewidths=11.0)
-        # 2. Ligne blanche éclatante doublée (8.0px)
-        cs = ax.contour(GX, GY, prmsl_grid, levels=levels, colors="#ffffff", linewidths=8.0)
-        labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=24, colors="#000000", inline_spacing=22)
-        for lbl in labels:
-            lbl.set_weight("bold")
-            lbl.set_bbox(dict(
-                boxstyle="square,pad=0.25",
-                facecolor="#ffffff",
-                edgecolor="#000000",
-                linewidth=2.0,
-                alpha=0.98
-            ))
+        # 1. Liseré noir fin d'ombre
+        ax.contour(GX, GY, smooth_p, levels=levels, colors="#000000", linewidths=3.6)
+        # 2. Ligne blanche nette et continue
+        cs = ax.contour(GX, GY, smooth_p, levels=levels, colors="#ffffff", linewidths=2.4)
+        labels = ax.clabel(cs, inline=True, fmt="%d", fontsize=16, colors="#ffffff", inline_spacing=15)
+        if labels:
+            for lbl in labels:
+                lbl.set_weight("bold")
+                lbl.set_path_effects([
+                    matplotlib.patheffects.Stroke(linewidth=3, foreground="#000000"),
+                    matplotlib.patheffects.Normal()
+                ])
     
     fig.savefig(output_path, format="webp", dpi=100, pil_kwargs={"quality": 88})
     plt.close(fig)
