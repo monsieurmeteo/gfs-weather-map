@@ -1999,6 +1999,18 @@
 
             regionSelect.addEventListener('change', function (e) {
                 var val = e.target.value || 'europe';
+                if (val === 'europe') {
+                    // Vue Europe : neutre — reste sur le modèle courant s'il est
+                    // déjà en domaine Europe (GFS Europe ou ARPEGE).
+                    if (currentModel === 'gfs_france') {
+                        pendingFocus = { latitude: 49.0, longitude: 8.0, scale: 1.0 };
+                        switchModel('gfs');
+                    } else {
+                        resetView();
+                    }
+                    updateUrl();
+                    return;
+                }
                 var cfg = REGION_CONFIG[val];
                 if (!cfg) {
                     resetView();
@@ -2078,6 +2090,8 @@
                     if (typeof buildLayerMenu === 'function') buildLayerMenu();
                     buildLegend();
                     currentModel = modelKey;
+                    var modelSel2 = document.getElementById('select-model');
+                    if (modelSel2) modelSel2.value = modelKey;
                     renderStep(0);
                     updateUrl();
                     if (typeof applyUrlParams === 'function') applyUrlParams();
@@ -2104,7 +2118,15 @@
         var modelSelect = document.getElementById('select-model');
         if (modelSelect) {
             modelSelect.addEventListener('change', function(e) {
-                switchModel(e.target.value);
+                var v = e.target.value;
+                // Changer de modèle réinitialise la région au domaine par défaut
+                // (évite qu'une région française sélectionnée force un retour
+                // sur GFS France quand on choisit ARPEGE).
+                var regSel = document.getElementById('select-region');
+                if (regSel) {
+                    regSel.value = (v === 'gfs_france') ? 'france' : 'europe';
+                }
+                switchModel(v);
             });
         }
 
@@ -2574,7 +2596,7 @@
         function computeMapRect(width, height, t) {
             t = t || transform;
             var s = Math.max(width / 2200.0, height / 1640.0);
-            var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (model === 'gfs');
+            var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (currentModel === 'gfs');
             
             if (isEurope) {
                 // Vue synoptique Europe Entière & France : affichage plein cadre sans recadrage restreint
