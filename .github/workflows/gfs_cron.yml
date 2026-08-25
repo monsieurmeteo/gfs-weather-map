@@ -40,12 +40,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          git merge -X theirs origin/main || git checkout origin/main -- .github/
           git add output/gfs/maps/
           if git diff --staged --quiet; then
             echo "Aucune modification détectée."
           else
             git commit -m "chore(gfs): mise a jour automatique des cartes GFS Europe & France"
+            git pull --rebase -X theirs origin main || true
             git push origin main
           fi
