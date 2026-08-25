@@ -15,11 +15,12 @@ DOMAINS = {
         "projection": "lambert",
         "lat1": 35.0, "lat2": 65.0, "lat0": 50.0, "lon0": -5.0,
         "x_min": -0.48, "x_max": 0.42,
-        "y_min": -0.24, "y_max": 0.43,
-        "south": 23.0, "west": -55.0, "north": 75.0, "east": 48.0,
+        "y_min": -0.42, "y_max": 0.38,
+        "south": 20.0, "west": -55.0, "north": 75.0, "east": 48.0,
         "width": 2200, "height": 1640,
         "label": "Europe",
     },
+
     "france": {
         "projection": "mercator",
         "south": 39.5, "west": -8.5, "north": 52.5, "east": 13.5,

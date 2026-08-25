@@ -2153,11 +2153,12 @@
             modelSelect.addEventListener('change', function(e) {
                 var v = e.target.value;
                 // Changer de modèle réinitialise la région au domaine par défaut
-                // (évite qu'une région française sélectionnée force un retour
-                // sur GFS France quand on choisit ARPEGE).
                 var regSel = document.getElementById('select-region');
                 if (regSel) {
                     regSel.value = (v === 'gfs_france') ? 'france' : 'europe';
+                    // Masquer "Europe Entière" pour GFS France (domaine France uniquement)
+                    var europeOpt = regSel.querySelector('option[value="europe"]');
+                    if (europeOpt) europeOpt.disabled = (v === 'gfs_france');
                 }
                 switchModel(v);
             });
