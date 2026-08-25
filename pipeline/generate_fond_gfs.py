@@ -15,26 +15,11 @@ import argparse
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
-
-from domains import DOMAINS, mercator_y  # noqa: E402
-
-import shapely.geometry  # noqa: E402
-from shapely.ops import unary_union  # noqa: E402
-from PIL import Image, ImageDraw  # noqa: E402
-
-OCEAN = (143, 163, 184)
-LAND = (237, 234, 226)
-BORDER = (160, 165, 170)
-NATURAL = "#0b1220"   # côtes / frontières nationales (noir franc)
-DEPT = "#7a828e"      # départements (gris fin)
+from domains import DOMAINS, Domain, mercator_y  # noqa: E402
 
 
-def project(d, lon, lat):
-    ny = mercator_y(d["north"])
-    sy = mercator_y(d["south"])
-    u = (lon - d["west"]) / (d["east"] - d["west"])
-    v = (ny - mercator_y(lat)) / (ny - sy)
-    return (u * (d["width"] - 1), v * (d["height"] - 1))
+def project(domain_obj, lon, lat):
+    return domain_obj.project(lon, lat)
 
 
 def iter_rings(geom):
@@ -79,16 +64,27 @@ def load_json(name):
         return json.load(f)
 
 
+import shapely.geometry  # noqa: E402
+from shapely.ops import unary_union  # noqa: E402
+from PIL import Image, ImageDraw  # noqa: E402
+
+OCEAN = (143, 163, 184)
+LAND = (237, 234, 226)
+BORDER = (160, 165, 170)
+NATURAL = "#0b1220"   # côtes / frontières nationales (noir franc)
+DEPT = "#7a828e"      # départements (gris fin)
+
+
 def generate(domain):
-    d = DOMAINS[domain]
-    W, H = d["width"], d["height"]
+    dom = Domain(domain)
+    W, H = dom.width, dom.height
     out_dir = os.path.join(BASE_DIR, "output",
                            "gfs_france" if domain == "france" else "gfs",
                            "maps")
     os.makedirs(out_dir, exist_ok=True)
-    print("Fond %s : %s (lon %g..%g, lat %g..%g, %dx%d)"
-          % (domain, d["label"], d["west"], d["east"], d["south"],
-             d["north"], W, H), flush=True)
+    print("Fond %s : %s (lon %g..%g, lat %g..%g, %dx%d, proj: %s)"
+          % (domain, dom.name, dom.west, dom.east, dom.south,
+             dom.north, W, H, dom.projection), flush=True)
 
     countries = load_json("countries-50m.geojson")
     boundaries = load_json("international-boundaries.geojson")
@@ -105,7 +101,7 @@ def generate(domain):
         if not geom:
             continue
         for ring in iter_rings(geom):
-            pts = [project(d, p[0], p[1]) for p in ring]
+            pts = [project(dom, p[0], p[1]) for p in ring]
             if len(pts) >= 3:
                 draw.polygon(pts, fill=LAND)
                 mask_draw.polygon(pts, fill=255)
@@ -114,15 +110,15 @@ def generate(domain):
         if not geom:
             continue
         for ring in iter_rings(geom):
-            pts = [project(d, p[0], p[1]) for p in ring]
+            pts = [project(dom, p[0], p[1]) for p in ring]
             if len(pts) >= 2:
                 draw.line(pts, fill=BORDER, width=2)
     img.save(os.path.join(out_dir, "fond.webp"), "WEBP", quality=90)
     mask_img.save(os.path.join(out_dir, "mask_france.png"), "PNG")
 
     # 2) frontieres.svg (nationales noires + départements gris)
-    bounds_box = shapely.geometry.box(d["west"] - 0.5, d["south"] - 0.5,
-                                      d["east"] + 0.5, d["north"] + 0.5)
+    bounds_box = shapely.geometry.box(dom.west - 0.5, dom.south - 0.5,
+                                      dom.east + 0.5, dom.north + 0.5)
     france_shapes = []
     depts_d = []
     for feat in depts.get("features", []):
@@ -130,7 +126,7 @@ def generate(domain):
         if not geom:
             continue
         france_shapes.append(shapely.geometry.shape(geom))
-        depts_d.append(polygon_path(iter_rings(geom), d))
+        depts_d.append(polygon_path(iter_rings(geom), dom))
     france_union = unary_union(france_shapes)
     france_mask = france_union.buffer(0.015)
 
@@ -147,19 +143,19 @@ def generate(domain):
             if cleaned.is_empty:
                 continue
             if cleaned.geom_type == "LineString":
-                d_ = line_to_svg(cleaned, d)
+                d_ = line_to_svg(cleaned, dom)
                 if d_:
                     out.append(d_)
             elif cleaned.geom_type == "MultiLineString":
                 for ls in cleaned.geoms:
-                    d_ = line_to_svg(ls, d)
+                    d_ = line_to_svg(ls, dom)
                     if d_:
                         out.append(d_)
         return " ".join(p for p in out if p)
 
     foreign_boundaries_d = extract_lines(boundaries)
     foreign_coastlines_d = extract_lines(coastlines)
-    france_border_d = line_to_svg(france_union.boundary, d)
+    france_border_d = line_to_svg(france_union.boundary, dom)
     national_lines = (foreign_boundaries_d + " " + foreign_coastlines_d
                       + " " + france_border_d).strip()
     depts_combined = " ".join(depts_d)

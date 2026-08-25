@@ -2757,6 +2757,35 @@
             return false;
         }
 
+        function projectCoords(lat, lon) {
+            if (manifest && manifest.bounds && manifest.bounds.projection === 'lambert') {
+                var r_lat1 = 35.0 * Math.PI / 180;
+                var r_lat2 = 65.0 * Math.PI / 180;
+                var r_lat0 = 50.0 * Math.PI / 180;
+                var r_lon0 = 5.0 * Math.PI / 180;
+                var n = Math.log(Math.cos(r_lat1) / Math.cos(r_lat2)) / Math.log(
+                    Math.tan(Math.PI / 4 + r_lat2 / 2) / Math.tan(Math.PI / 4 + r_lat1 / 2)
+                );
+                var F = (Math.cos(r_lat1) * Math.pow(Math.tan(Math.PI / 4 + r_lat1 / 2), n)) / n;
+                var rho0 = F / Math.pow(Math.tan(Math.PI / 4 + r_lat0 / 2), n);
+                var r_lat = lat * Math.PI / 180;
+                var r_lon = lon * Math.PI / 180;
+                var rho = F / Math.pow(Math.tan(Math.PI / 4 + r_lat / 2), n);
+                var theta = n * (r_lon - r_lon0);
+                var x = rho * Math.sin(theta);
+                var y = rho0 - rho * Math.cos(theta);
+                var u = (x - (-0.36)) / (0.35 - (-0.36));
+                var v = (0.35 - y) / (0.35 - (-0.26));
+                return { u: u, v: v };
+            }
+            var bounds = manifest && manifest.bounds ? manifest.bounds : { south: 39.5, west: -8.5, north: 52.5, east: 13.5 };
+            var ny = mercator(Number(bounds.north));
+            var sy = mercator(Number(bounds.south));
+            var u = (lon - Number(bounds.west)) / (Number(bounds.east) - Number(bounds.west));
+            var v = (ny - mercator(lat)) / (ny - sy);
+            return { u: u, v: v };
+        }
+
         function drawLabels(width, height, pixelRatio) {
             if (!labelsContext || !manifest) {
                 return;
@@ -2807,10 +2836,9 @@
                 if (Number(place[1]) < density.population) {
                     break;
                 }
-                var u = (Number(place[3]) - Number(bounds.west)) / longitudeSpan;
-                var v = (northY - mercator(Number(place[2]))) / mercatorSpan;
-                var screenX = labelRect.x + u * labelRect.w;
-                var screenY = labelRect.y + v * labelRect.h;
+                var coords = projectCoords(Number(place[2]), Number(place[3]));
+                var screenX = labelRect.x + coords.u * labelRect.w;
+                var screenY = labelRect.y + coords.v * labelRect.h;
                 if (screenX < -80 || screenX > width + 80 ||
                         screenY < -15 || screenY > height + 15) {
                     continue;

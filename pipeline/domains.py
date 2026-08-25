@@ -8,17 +8,20 @@ fonds utilisent ces domaines. Un seul endroit à modifier.
 """
 import numpy as np
 
-# Domaine Europe : synoptique large style Météociel GFS/ARPEGE Europe
-# (Islande, Scandinavie, Maghreb, mer Noire) — cadrage élargi.
-# Domaine France : identique au site AROME (métropole + Corse + pays voisins),
-# pour des cadrages France/régions PARFAITEMENT identiques au site AROME.
+# Domaine Europe : projection conique conforme de Lambert (style officiel Météociel GFS/ARPEGE Europe)
+# Domaine France : projection Mercator identique au site AROME (métropole + Corse + pays voisins)
 DOMAINS = {
     "europe": {
-        "south": 25.0, "west": -32.0, "north": 72.0, "east": 42.0,
+        "projection": "lambert",
+        "lat1": 35.0, "lat2": 65.0, "lat0": 50.0, "lon0": 5.0,
+        "x_min": -0.36, "x_max": 0.35,
+        "y_min": -0.26, "y_max": 0.35,
+        "south": 25.0, "west": -40.0, "north": 72.0, "east": 42.0,
         "width": 2200, "height": 1640,
         "label": "Europe",
     },
     "france": {
+        "projection": "mercator",
         "south": 39.5, "west": -8.5, "north": 52.5, "east": 13.5,
         "width": 2200, "height": 1640,
         "label": "France",
@@ -37,34 +40,97 @@ def inverse_mercator_y(y):
     return np.degrees(2.0 * np.arctan(np.exp(y)) - np.pi / 2.0)
 
 
+def lambert_conformal_direct(lats, lons, lat1=35.0, lat2=65.0, lat0=50.0, lon0=5.0):
+    r_lat1 = np.radians(lat1)
+    r_lat2 = np.radians(lat2)
+    r_lat0 = np.radians(lat0)
+    r_lon0 = np.radians(lon0)
+    n = np.log(np.cos(r_lat1) / np.cos(r_lat2)) / np.log(
+        np.tan(np.pi / 4.0 + r_lat2 / 2.0) / np.tan(np.pi / 4.0 + r_lat1 / 2.0)
+    )
+    F = (np.cos(r_lat1) * (np.tan(np.pi / 4.0 + r_lat1 / 2.0) ** n)) / n
+    rho0 = F / (np.tan(np.pi / 4.0 + r_lat0 / 2.0) ** n)
+    
+    r_lats = np.radians(lats)
+    r_lons = np.radians(lons)
+    rho = F / (np.tan(np.pi / 4.0 + r_lats / 2.0) ** n)
+    theta = n * (r_lons - r_lon0)
+    x = rho * np.sin(theta)
+    y = rho0 - rho * np.cos(theta)
+    return x, y
+
+
+def lambert_conformal_inverse(xs, ys, lat1=35.0, lat2=65.0, lat0=50.0, lon0=5.0):
+    r_lat1 = np.radians(lat1)
+    r_lat2 = np.radians(lat2)
+    r_lat0 = np.radians(lat0)
+    r_lon0 = np.radians(lon0)
+    n = np.log(np.cos(r_lat1) / np.cos(r_lat2)) / np.log(
+        np.tan(np.pi / 4.0 + r_lat2 / 2.0) / np.tan(np.pi / 4.0 + r_lat1 / 2.0)
+    )
+    F = (np.cos(r_lat1) * (np.tan(np.pi / 4.0 + r_lat1 / 2.0) ** n)) / n
+    rho0 = F / (np.tan(np.pi / 4.0 + r_lat0 / 2.0) ** n)
+    
+    rho = np.sign(n) * np.sqrt(xs ** 2 + (rho0 - ys) ** 2)
+    theta = np.arctan2(xs, rho0 - ys)
+    lons = np.degrees(r_lon0 + theta / n)
+    t = (F / rho) ** (1.0 / n)
+    lats = np.degrees(2.0 * np.arctan(t) - np.pi / 2.0)
+    return lats, lons
+
+
 class Domain:
-    """Grille Mercator précalculée pour un domaine (2200×1640 par défaut)."""
+    """Grille (2200×1640) précalculée pour un domaine."""
 
     def __init__(self, name):
         if name not in DOMAINS:
-            raise ValueError("Domaine inconnu: %s (disponibles: %s)" % (
-                name, ", ".join(DOMAINS)))
+            raise ValueError("Domaine inconnu: %s" % name)
         d = DOMAINS[name]
         self.name = name
+        self.projection = d.get("projection", "mercator")
+        self.width, self.height = d["width"], d["height"]
         self.south, self.west = d["south"], d["west"]
         self.north, self.east = d["north"], d["east"]
-        self.width, self.height = d["width"], d["height"]
         self.bounds = {"south": self.south, "west": self.west,
-                       "north": self.north, "east": self.east}
+                       "north": self.north, "east": self.east,
+                       "projection": self.projection}
 
-        n_y = mercator_y(self.north)
-        s_y = mercator_y(self.south)
-        lons = np.linspace(self.west, self.east, self.width, dtype=np.float32)
-        ys = np.linspace(n_y, s_y, self.height, dtype=np.float32)
-        lats = inverse_mercator_y(ys).astype(np.float32)
-        self.lons, self.lats = np.meshgrid(lons, lats)
+        if self.projection == "lambert":
+            self.lat1, self.lat2 = d["lat1"], d["lat2"]
+            self.lat0, self.lon0 = d["lat0"], d["lon0"]
+            self.x_min, self.x_max = d["x_min"], d["x_max"]
+            self.y_min, self.y_max = d["y_min"], d["y_max"]
+            xs = np.linspace(self.x_min, self.x_max, self.width, dtype=np.float64)
+            ys = np.linspace(self.y_max, self.y_min, self.height, dtype=np.float64)
+            XX, YY = np.meshgrid(xs, ys)
+            self.lats, self.lons = lambert_conformal_inverse(
+                XX, YY, self.lat1, self.lat2, self.lat0, self.lon0
+            )
+        else:
+            n_y = mercator_y(self.north)
+            s_y = mercator_y(self.south)
+            lons = np.linspace(self.west, self.east, self.width, dtype=np.float32)
+            ys = np.linspace(n_y, s_y, self.height, dtype=np.float32)
+            lats = inverse_mercator_y(ys).astype(np.float32)
+            self.lons, self.lats = np.meshgrid(lons, lats)
+
+    def project(self, lon, lat):
+        """Projette (lon, lat) en pixels (x, y) sur le canvas (2200×1640)."""
+        if self.projection == "lambert":
+            x, y = lambert_conformal_direct(
+                lat, lon, self.lat1, self.lat2, self.lat0, self.lon0
+            )
+            u = (x - self.x_min) / (self.x_max - self.x_min)
+            v = (self.y_max - y) / (self.y_max - self.y_min)
+        else:
+            ny = mercator_y(self.north)
+            sy = mercator_y(self.south)
+            u = (lon - self.west) / (self.east - self.west)
+            v = (ny - mercator_y(lat)) / (ny - sy)
+        return (u * (self.width - 1), v * (self.height - 1))
 
     def regrid(self, data, src_lats, src_lons):
-        """Ré-échantillonne un champ natif (lat/lon) sur la grille Mercator.
-
-        data   : array 2D (ny, nx) dans l'ordre latitudes croissantes (sud→nord).
-        src_lats, src_lons : vecteurs 1D associés au champ natif.
-        """
+        """Ré-échantillonne un champ natif (lat/lon) sur la grille du domaine."""
         from scipy.interpolate import RegularGridInterpolator
 
         data = np.asarray(data, dtype=np.float32)
