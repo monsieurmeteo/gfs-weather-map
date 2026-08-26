@@ -13,7 +13,7 @@ on:
       max_hours:
         description: 'Échéance GFS max en heures (48 = test rapide, 384 = GFS 16 jours complet)'
         required: false
-        default: '48'
+        default: '384'
       models:
         description: 'Modèles à lancer : gfs, arpege ou gfs,arpege'
         required: false
@@ -60,7 +60,7 @@ jobs:
         id: vars
         run: |
           MODE="${{ inputs.mode || 'full' }}"
-          MAX_HOURS="${{ inputs.max_hours || '48' }}"
+          MAX_HOURS="${{ inputs.max_hours || '384' }}"
           MODELS="${{ inputs.models || 'gfs,arpege' }}"
           if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 3 ] || [ "$MAX_HOURS" -gt 384 ]; then
             echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 3-384)"
