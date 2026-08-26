@@ -56,7 +56,7 @@ jobs:
         id: vars
         run: |
           MODE="${{ inputs.mode || 'full' }}"
-          MAX_HOURS="${{ inputs.max_hours || '120' }}"
+          MAX_HOURS="${{ inputs.max_hours || '384' }}"
           MODELS="${{ inputs.models || 'gfs,arpege' }}"
           if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 3 ] || [ "$MAX_HOURS" -gt 384 ]; then
             echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 3-384)"
