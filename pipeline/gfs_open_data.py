@@ -72,14 +72,41 @@ def log(msg):
     print("[GFS] " + msg, flush=True)
 
 
-def latest_run(now=None):
-    """Dernier run GFS (00/06/12/18Z) suffisamment mature (≥ 3 h 45)."""
+def latest_run(now=None, need_lead=384):
+    """Dernier run GFS (00/06/12/18Z) mature ET dont l'échéance need_lead
+    est réellement publiée sur NOMADS (GFS publie par vagues : les échéances
+    longues f192-f384 n'arrivent que ~5-6 h après le run — un run mature mais
+    incomplet rendrait les chunks 150-384 vides).
+
+    Repli automatique sur le run précédent (comme ARPEGE select_run).
+    """
     now = now or datetime.datetime.now(datetime.timezone.utc)
-    run_h = (now.hour // 6) * 6
-    run_dt = now.replace(hour=run_h, minute=0, second=0, microsecond=0)
-    if (now - run_dt).total_seconds() < 13500:  # 3 h 45
-        run_dt -= datetime.timedelta(hours=6)
-    return run_dt
+    for _ in range(3):  # au plus 3 runs en arrière (18 h)
+        run_h = (now.hour // 6) * 6
+        run_dt = now.replace(hour=run_h, minute=0, second=0, microsecond=0)
+        if (now - run_dt).total_seconds() < 13500:  # 3 h 45 de maturité min
+            run_dt -= datetime.timedelta(hours=6)
+        if _lead_available(run_dt, need_lead):
+            return run_dt
+        log("Run %s incomplet (f%03d indisponible), repli sur le précédent"
+            % (run_dt.strftime("%Y-%m-%dT%H:%M:%SZ"), need_lead))
+        now = run_dt - datetime.timedelta(seconds=1)  # décale d'un cycle de 6 h
+    raise RuntimeError("Aucun run GFS avec f%03d disponible sur NOMADS"
+                       % need_lead)
+
+
+def _lead_available(run_dt, lead, timeout=30):
+    """HEAD NOMADS : l'échéance lead du run existe-t-elle (fichier présent) ?"""
+    day = run_dt.strftime("%Y%m%d")
+    hh = "%02d" % run_dt.hour
+    url = ("%s?dir=/gfs.%s/%s/atmos&file=gfs.t%sz.pgrb2.0p25.f%03d"
+           "&var_GUST=on&var_APCP=on&lev_10_m_above_ground=on&lev_surface=on"
+           % (NOMADS, day, hh, hh, lead))
+    try:
+        r = requests.head(url, headers=HEADERS, timeout=timeout, verify=True)
+        return r.status_code == 200
+    except Exception:
+        return False
 
 
 def download_lead(run_dt, lead, light=False):
@@ -427,7 +454,10 @@ def run_all(max_hours=384, domain="both", lead_min=0, lead_max=None):
 
     log("Échéances : H+%03d → H+%03d (%d pas)" % (leads[0], leads[-1], len(leads)))
 
-    run_dt = latest_run()
+    # Le run doit être identique pour TOUS les chunks : on vérifie l'échéance
+    # maximale GLOBALE (max_hours), pas le lead_max local du chunk — sinon les
+    # chunks courts choisiraient un run récent et les chunks longs un plus vieux.
+    run_dt = latest_run(need_lead=max_hours)
     log("Run GFS sélectionné : %s" % run_dt.isoformat())
 
     base = os.path.join(BASE_DIR, "output")
