@@ -773,11 +773,12 @@
 
                 <!-- Centre : Sélecteur de Calque Météo + Sélecteur de Région -->
                 <div class="amfm-nav-controls">
-                    <!-- Sélecteur de Modèle (GFS Europe / GFS France / ARPEGE Europe) -->
+                    <!-- Sélecteur de Modèle (GFS / ARPEGE, Europe / France) -->
                     <select id="select-model" class="amfm-select-model" aria-label="Sélection du modèle de prévision">
                         <option value="gfs" selected>🌍 GFS Europe (0,25°)</option>
                         <option value="gfs_france">🇫🇷 GFS France (0,25°)</option>
                         <option value="arpege">🇪🇺 ARPEGE Europe (0,1°)</option>
+                        <option value="arpege_france">🇫🇷 ARPEGE France (0,025°)</option>
                     </select>
 
                     <!-- Sélecteur direct de Calque Météo -->
@@ -956,7 +957,7 @@
                     <div class="amfm-radio-group">
                         <label class="amfm-radio-card">
                             <input type="radio" name="gif-range" value="all" checked>
-                            <span><strong>Tout le run</strong> (H+01 → H+51)</span>
+                            <span><strong>Tout le run</strong> (toutes les échéances)</span>
                         </label>
                         <label class="amfm-radio-card">
                             <input type="radio" name="gif-range" value="24h">

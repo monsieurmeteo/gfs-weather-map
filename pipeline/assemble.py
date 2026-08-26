@@ -103,6 +103,11 @@ def main():
         "provider": "Météo-France — open data (data.gouv.fr)",
         "resolution": "0.1° (~11 km)",
     })
+    assemble_model("arpege_france", FRANCE, {
+        "model_name": "ARPEGE France 0.025°",
+        "provider": "Météo-France — open data (data.gouv.fr)",
+        "resolution": "0.025° (~2,5 km)",
+    })
     print("[assemble] Assemblage terminé avec succès.", flush=True)
 
 

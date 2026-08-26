@@ -81,11 +81,11 @@ jobs:
           generate_fond_gfs.generate('france')
           import shutil, os
           src = '../output/gfs/maps'
-          dst = '../output/arpege/maps'
-          os.makedirs(dst, exist_ok=True)
-          for f in ('fond.webp', 'mask_france.png', 'frontieres.svg'):
-              s = os.path.join(src, f)
-              if os.path.exists(s): shutil.copy(s, dst)
+          for dst in ('../output/arpege/maps', '../output/arpege_france/maps'):
+              os.makedirs(dst, exist_ok=True)
+              for f in ('fond.webp', 'mask_france.png', 'frontieres.svg'):
+                  s = os.path.join(src, f)
+                  if os.path.exists(s): shutil.copy(s, dst)
           print('Fonds OK')
           "
 
@@ -98,7 +98,7 @@ jobs:
           retention-days: 1
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 2 — Matrice 15 Groupes Parallèles (GFS Europe + France + ARPEGE)
+# JOB 2 — Matrice 18 Groupes Parallèles (GFS Europe + France, ARPEGE Europe + France)
 # ─────────────────────────────────────────────────────────────────────────────
   render-chunks:
     runs-on: ubuntu-latest
@@ -173,35 +173,35 @@ jobs:
             lead_min: 252
             lead_max: 384
 
-          # ── ARPEGE Europe (6 groupes équilibrés) ────────────────
+          # ── ARPEGE (6 groupes × 2 domaines : Europe 0,1° + France 0,025°) ──
           - id: arp-eu-00-18
             model: arpege
-            domain: europe
+            domain: both
             lead_min: 0
             lead_max: 18
           - id: arp-eu-21-36
             model: arpege
-            domain: europe
+            domain: both
             lead_min: 21
             lead_max: 36
           - id: arp-eu-39-54
             model: arpege
-            domain: europe
+            domain: both
             lead_min: 39
             lead_max: 54
           - id: arp-eu-57-72
             model: arpege
-            domain: europe
+            domain: both
             lead_min: 57
             lead_max: 72
           - id: arp-eu-75-90
             model: arpege
-            domain: europe
+            domain: both
             lead_min: 75
             lead_max: 90
           - id: arp-eu-93-102
             model: arpege
-            domain: europe
+            domain: both
             lead_min: 93
             lead_max: 102
 
@@ -241,6 +241,7 @@ jobs:
           else
             python -u pipeline/arpege_open_data.py \
               --max-hours "$MAX_HOURS" \
+              --domain "${{ matrix.domain }}" \
               --lead-min "${{ matrix.lead_min }}" \
               --lead-max "${{ matrix.lead_max }}"
           fi
@@ -253,7 +254,7 @@ jobs:
           retention-days: 1
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 3 — Assemblage des 15 Groupes + Déploiement GitHub Pages
+# JOB 3 — Assemblage des 18 Groupes + Déploiement GitHub Pages
 # ─────────────────────────────────────────────────────────────────────────────
   deploy:
     runs-on: ubuntu-latest

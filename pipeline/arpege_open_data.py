@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-arpege_open_data.py — Pipeline ARPEGE Europe 0.1° (Météo-France, open data)
-============================================================================
-  - Données : https://meteofrance-pnt.s3.rbx.io.cloud.ovh.net/pnt/{run}/arpege/01/
+arpege_open_data.py — Pipeline ARPEGE Europe 0.1° & France 0.025° (Météo-France)
+===============================================================================
+  - Données : https://meteofrance-pnt.s3.rbx.io.cloud.ovh.net/pnt/{run}/arpege/{prod}/
     paquets SP1 (surface), SP2 (nuages/CAPE), IP1 (géopotentiel Z500).
-  - Extraction SÉLECTIVE des messages GRIB2 (requêtes HTTP Range, gribscan.py) :
-    ~0,5 Go téléchargés au lieu de ~3,7 Go ; repli automatique en téléchargement
-    complet si l'analyse d'en-têtes échoue.
+    Produits : 01 = Europe 0,1° (~11 km), 02 = France 0,025° (~2,5 km).
+  - Téléchargement direct accéléré (1 requête GET par bloc) puis décodage local.
   - Runs 00/06/12/18Z (maturité ≥ 4 h 30), échéances H+00 → H+102 pas 3 h.
-  - Couche maîtresse : GÉOPOTENTIEL 500 hPa + isobares pression au sol.
+  - Couche maîtresse : GÉOPOTENTIEL 500 hPa + isobares pression au sol (Europe).
+  - --domain both : télécharge une seule fois et rend Europe + France (18 groupes CI).
 """
 import os
 import re
@@ -24,7 +24,7 @@ import numpy as np
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
-from domains import EUROPE  # noqa: E402
+from domains import EUROPE, FRANCE  # noqa: E402
 import gribscan  # noqa: E402
 from render import (  # noqa: E402
     save_webp, write_hkv, write_places, write_manifest,
@@ -34,13 +34,20 @@ from render import (  # noqa: E402
 )
 
 HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
-GRIB_BASE = ("https://meteofrance-pnt.s3.rbx.io.cloud.ovh.net/pnt/{run}/arpege/01/"
-             "{pkg}/arpege__01__{pkg}__{block}__{run}.grib2")
+# Produits S3 Météo-France : 01 = ARPEGE Europe 0,1°, 02 = ARPEGE France 0,025°
+GRIB_PRODUCTS = {"europe": "01", "france": "02"}
 PKGS = ["SP1", "SP2", "IP1"]
 BLOCKS = ["000H012H", "013H024H", "025H036H", "037H048H", "049H060H",
           "061H072H", "073H084H", "085H096H", "097H102H"]
 RUN_MATURITY = 16200  # 4 h 30
 MAX_LEAD = 102
+
+
+def grib_url(run, pkg, block, product="01"):
+    """URL S3 Météo-France d'un bloc GRIB2 ARPEGE (produit 01 ou 02)."""
+    return ("https://meteofrance-pnt.s3.rbx.io.cloud.ovh.net/pnt/{run}/arpege/{prod}/"
+            "{pkg}/arpege__{prod}__{pkg}__{block}__{run}.grib2"
+            .format(run=run, prod=product, pkg=pkg, block=block))
 
 
 def log(msg):
@@ -74,7 +81,7 @@ def select_run(now=None, session=None):
     now = now or datetime.datetime.now(datetime.timezone.utc)
     for _ in range(2):
         run_dt = latest_run(now)
-        url = GRIB_BASE.format(run=run_str(run_dt), pkg="SP1", block="000H012H")
+        url = grib_url(run_str(run_dt), "SP1", "000H012H", GRIB_PRODUCTS["europe"])
         if _head(s, url):
             return run_dt
         log("Run %s indisponible, repli sur le précédent" % run_str(run_dt))
@@ -141,7 +148,7 @@ def _block_range(block):
     return (int(m.group(1)), int(m.group(2)))
 
 
-def collect_fields(session, run_dt, max_lead, lead_min=0, lead_max=None):
+def collect_fields(session, run_dt, max_lead, product="01", lead_min=0, lead_max=None):
     """Télécharge/extrait tous les champs → {lead: {KEY: (vals, lat, lon)}}."""
     all_fields = {}
     rs = run_str(run_dt)
@@ -153,7 +160,7 @@ def collect_fields(session, run_dt, max_lead, lead_min=0, lead_max=None):
             b0, b1 = _block_range(block)
             if b0 > eff_max or b1 < lead_min:
                 continue  # bloc entièrement hors de la portée demandée
-            url = GRIB_BASE.format(run=rs, pkg=pkg, block=block)
+            url = grib_url(rs, pkg, block, product)
             size = _head(session, url)
             if size is None:
                 log("!! %s %s introuvable" % (pkg, block))
@@ -201,10 +208,11 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
         step["probes"][name] = "maps/values/%s/%03d.hkv.gz" % (name, lead)
         state["counts"][name] = state["counts"].get(name, 0) + 1
 
-    # ★ Couche maîtresse : Z500 (m²/s² → dam) + isobares
+    # ★ Couche maîtresse : Z500 (m²/s² → dam) + isobares (Europe uniquement,
+    #    comme GFS France : pas de Z500 sur le domaine France)
     hgt = fields.get("HGT")
     prmsl = fields.get("PRMSL")
-    if hgt is not None and prmsl is not None:
+    if hgt is not None and prmsl is not None and domain.name != "france":
         z = regrid(hgt, lambda v: v / 98.0665)
         p_hpa = regrid(prmsl, lambda v: v / 100.0)
         if z is not None and p_hpa is not None:
@@ -322,13 +330,12 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
     return step
 
 
-def run_model(run_dt, domain, out_dir, max_lead=MAX_LEAD, lead_min=0, lead_max=None):
+def render_domain(all_fields, run_dt, domain, out_dir, model_label, resolution,
+                  lead_min=0, lead_max=None):
+    """Rend toutes les échéances d'un domaine depuis des champs déjà collectés."""
     os.makedirs(out_dir, exist_ok=True)
-    session = requests.Session()
-    session.headers.update(HEADERS)
-    all_fields = collect_fields(session, run_dt, max_lead, lead_min=lead_min, lead_max=lead_max)
-
-    leads = sorted([lh for lh in all_fields if lh >= lead_min and (lead_max is None or lh <= lead_max)])
+    leads = sorted([lh for lh in all_fields
+                    if lh >= lead_min and (lead_max is None or lh <= lead_max)])
     if not leads:
         log("Aucune échéance dans l'intervalle [%s, %s]" % (lead_min, lead_max))
         return 0
@@ -346,9 +353,9 @@ def run_model(run_dt, domain, out_dir, max_lead=MAX_LEAD, lead_min=0, lead_max=N
         raise RuntimeError("Aucune échéance rendue pour ARPEGE (%s)" % out_dir)
     write_places(domain, out_dir)
     write_manifest(out_dir, steps,
-                   {"model_name": "ARPEGE Europe 0.1°",
+                   {"model_name": model_label,
                     "provider": "Météo-France — open data (data.gouv.fr)",
-                    "resolution": "0.1° (~11 km)",
+                    "resolution": resolution,
                     "run_time": run_dt.isoformat()},
                    domain)
     log("Terminé : %d échéances, couches %s" % (
@@ -357,27 +364,46 @@ def run_model(run_dt, domain, out_dir, max_lead=MAX_LEAD, lead_min=0, lead_max=N
     return n_ok
 
 
-def run_all(max_hours=MAX_LEAD, lead_min=0, lead_max=None):
+def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
     max_lead = max(3, min(int(max_hours), MAX_LEAD))
     run_dt = select_run()
     log("Run ARPEGE sélectionné : %s" % run_str(run_dt))
     base = os.path.join(BASE_DIR, "output")
-    run_model(run_dt, EUROPE, os.path.join(base, "arpege", "maps"), max_lead,
-              lead_min=lead_min, lead_max=lead_max)
+    session = requests.Session()
+    session.headers.update(HEADERS)
+    targets = []
+    if domain in ("both", "europe"):
+        targets.append((GRIB_PRODUCTS["europe"], EUROPE,
+                        os.path.join(base, "arpege", "maps"),
+                        "ARPEGE Europe 0.1°", "0.1° (~11 km)"))
+    if domain in ("both", "france"):
+        targets.append((GRIB_PRODUCTS["france"], FRANCE,
+                        os.path.join(base, "arpege_france", "maps"),
+                        "ARPEGE France 0.025°", "0.025° (~2,5 km)"))
+    for product, dom, out_dir, label, res in targets:
+        all_fields = collect_fields(session, run_dt, max_lead, product=product,
+                                    lead_min=lead_min, lead_max=lead_max)
+        render_domain(all_fields, run_dt, dom, out_dir, label, res,
+                      lead_min=lead_min, lead_max=lead_max)
     print("[ARPEGE] Pipeline terminé avec succès.", flush=True)
 
 
 def main():
     import argparse
-    ap = argparse.ArgumentParser(description="Pipeline ARPEGE Europe 0.1°")
+    ap = argparse.ArgumentParser(
+        description="Pipeline ARPEGE Europe 0.1° & France 0.025°")
     ap.add_argument("--max-hours", type=int, default=MAX_LEAD,
                     help="Échéance max ARPEGE en heures (défaut 102)")
+    ap.add_argument("--domain", choices=["both", "europe", "france"],
+                    default="europe",
+                    help="Domaine(s) à générer : europe (défaut), france, both")
     ap.add_argument("--lead-min", type=int, default=0,
                     help="Échéance de début")
     ap.add_argument("--lead-max", type=int, default=None,
                     help="Échéance de fin")
     args = ap.parse_args()
-    run_all(max_hours=args.max_hours, lead_min=args.lead_min, lead_max=args.lead_max)
+    run_all(max_hours=args.max_hours, domain=args.domain,
+            lead_min=args.lead_min, lead_max=args.lead_max)
 
 
 if __name__ == "__main__":

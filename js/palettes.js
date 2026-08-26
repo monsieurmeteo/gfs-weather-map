@@ -593,6 +593,7 @@
                 { value: 604, color: '#400000' },
                 { value: 608, color: '#300000' },
                 { value: 612, color: '#200000' },
+            ]
         },
     };
     PALETTES.temperature_850 = {
