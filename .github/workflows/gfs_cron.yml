@@ -276,8 +276,7 @@ jobs:
       - name: Dépendances Python
         run: pip install -r requirements.txt -q
 
-      - name: Base du dernier déploiement (mode front uniquement)
-        if: needs.build-fond.outputs.mode == 'front'
+      - name: Base du dernier déploiement (préserve les autres modèles)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -312,6 +311,7 @@ jobs:
           pattern: chunk-*
           path: output/
           merge-multiple: true
+          if-no-files-found: ignore
 
       - name: Assemblage des manifests index.json
         run: python -u pipeline/assemble.py
