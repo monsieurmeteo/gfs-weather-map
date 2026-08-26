@@ -2089,7 +2089,7 @@
                 gfs: { path: 'output/gfs', name: 'GFS Europe', badge: '0,25°' },
                 gfs_france: { path: 'output/gfs_france', name: 'GFS France', badge: '0,25°' },
                 arpege: { path: 'output/arpege', name: 'ARPEGE Europe', badge: '0,1°' },
-                arpege_france: { path: 'output/arpege_france', name: 'ARPEGE France', badge: '0,025°' }
+                arpege_france: { path: 'output/arpege_france', name: 'ARPEGE France', badge: '0,1°' }
             };
             var target = modelMap[modelKey] || modelMap.gfs;
             var prevBaseUrl = baseUrl;

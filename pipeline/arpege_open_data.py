@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-arpege_open_data.py — Pipeline ARPEGE Europe 0.1° & France 0.025° (Météo-France)
-===============================================================================
-  - Données : https://meteofrance-pnt.s3.rbx.io.cloud.ovh.net/pnt/{run}/arpege/{prod}/
+arpege_open_data.py — Pipeline ARPEGE Europe 0.1° & France (Météo-France)
+==========================================================================
+  - Données : https://meteofrance-pnt.s3.rbx.io.cloud.ovh.net/pnt/{run}/arpege/01/
     paquets SP1 (surface), SP2 (nuages/CAPE), IP1 (géopotentiel Z500).
-    Produits : 01 = Europe 0,1° (~11 km), 02 = France 0,025° (~2,5 km).
+  - Produit 01 = ARPEGE Europe 0,1° (~11 km) — le plus fin publié par
+    Météo-France pour ARPEGE (le 0,025°/2,5 km n'existe qu'en AROME, pas ARPEGE).
+  - ARPEGE France = même produit 01 re-projeté sur le domaine Mercator France
+    (vue France + régions, ~2,5× plus net que GFS France 0,25°).
   - Téléchargement direct accéléré (1 requête GET par bloc) puis décodage local.
   - Runs 00/06/12/18Z (maturité ≥ 4 h 30), échéances H+00 → H+102 pas 3 h.
   - Couche maîtresse : GÉOPOTENTIEL 500 hPa + isobares pression au sol (Europe).
-  - --domain both : télécharge une seule fois et rend Europe + France (18 groupes CI).
+  - --domain both : un seul téléchargement, rendu Europe + France (18 groupes CI).
 """
 import os
 import re
@@ -34,8 +37,10 @@ from render import (  # noqa: E402
 )
 
 HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
-# Produits S3 Météo-France : 01 = ARPEGE Europe 0,1°, 02 = ARPEGE France 0,025°
-GRIB_PRODUCTS = {"europe": "01", "france": "02"}
+# Produit S3 Météo-France : 01 = ARPEGE Europe 0,1° (~11 km) — le plus fin
+# publié pour ARPEGE. ARPEGE France réutilise ce même produit (re-projection
+# sur le domaine Mercator France) : il n'existe pas d'ARPEGE France 0,025°.
+GRIB_PRODUCTS = {"europe": "01", "france": "01"}
 PKGS = ["SP1", "SP2", "IP1"]
 BLOCKS = ["000H012H", "013H024H", "025H036H", "037H048H", "049H060H",
           "061H072H", "073H084H", "085H096H", "097H102H"]
@@ -371,19 +376,19 @@ def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
     base = os.path.join(BASE_DIR, "output")
     session = requests.Session()
     session.headers.update(HEADERS)
-    targets = []
+    # Un seul téléchargement (produit 01, Europe 0,1°) → Europe + France
+    all_fields = collect_fields(session, run_dt, max_lead,
+                                product=GRIB_PRODUCTS["europe"],
+                                lead_min=lead_min, lead_max=lead_max)
     if domain in ("both", "europe"):
-        targets.append((GRIB_PRODUCTS["europe"], EUROPE,
-                        os.path.join(base, "arpege", "maps"),
-                        "ARPEGE Europe 0.1°", "0.1° (~11 km)"))
+        render_domain(all_fields, run_dt, EUROPE,
+                      os.path.join(base, "arpege", "maps"),
+                      "ARPEGE Europe 0.1°", "0.1° (~11 km)",
+                      lead_min=lead_min, lead_max=lead_max)
     if domain in ("both", "france"):
-        targets.append((GRIB_PRODUCTS["france"], FRANCE,
-                        os.path.join(base, "arpege_france", "maps"),
-                        "ARPEGE France 0.025°", "0.025° (~2,5 km)"))
-    for product, dom, out_dir, label, res in targets:
-        all_fields = collect_fields(session, run_dt, max_lead, product=product,
-                                    lead_min=lead_min, lead_max=lead_max)
-        render_domain(all_fields, run_dt, dom, out_dir, label, res,
+        render_domain(all_fields, run_dt, FRANCE,
+                      os.path.join(base, "arpege_france", "maps"),
+                      "ARPEGE France 0.1°", "0.1° (~11 km)",
                       lead_min=lead_min, lead_max=lead_max)
     print("[ARPEGE] Pipeline terminé avec succès.", flush=True)
 
@@ -391,7 +396,7 @@ def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
 def main():
     import argparse
     ap = argparse.ArgumentParser(
-        description="Pipeline ARPEGE Europe 0.1° & France 0.025°")
+        description="Pipeline ARPEGE Europe 0.1° & France (produit 01)")
     ap.add_argument("--max-hours", type=int, default=MAX_LEAD,
                     help="Échéance max ARPEGE en heures (défaut 102)")
     ap.add_argument("--domain", choices=["both", "europe", "france"],

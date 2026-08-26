@@ -173,7 +173,7 @@ jobs:
             lead_min: 252
             lead_max: 384
 
-          # ── ARPEGE (6 groupes × 2 domaines : Europe 0,1° + France 0,025°) ──
+          # ── ARPEGE (6 groupes × 2 domaines : Europe + France, produit 01 0,1°) ──
           - id: arp-eu-00-18
             model: arpege
             domain: both
