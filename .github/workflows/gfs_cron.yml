@@ -276,20 +276,32 @@ jobs:
       - name: Dépendances Python
         run: pip install -r requirements.txt -q
 
-      - name: Base de données du dernier déploiement (mode front)
-        if: needs.build-fond.outputs.mode == 'front'
+      - name: Base du dernier déploiement (préserve les autres modèles)
         run: |
           set -e
-          LAST=$(gh run list --repo monsieurmeteo/gfs-weather-map --workflow gfs_cron.yml \
-                 --status success --limit 10 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
-          if [ -z "$LAST" ]; then
-            echo "::error::Aucun run réussi précédent pour restaurer les dalles (mode front)"
+          mkdir -p /tmp/base
+          RESTORED=""
+          # Seuls les artefacts des workflows météo (nom 'Build & Deploy' + contenu output/)
+          # sont acceptés : les github-pages d'autres automatisations sont ignorés.
+          for RUN_ID in $(gh run list --repo monsieurmeteo/gfs-weather-map \
+                --status success --limit 20 --json databaseId,workflowName --jq \
+                '.[] | select(.workflowName | test("Build & Deploy")) | .databaseId' 2>/dev/null || true); do
+            if gh run download "$RUN_ID" --repo monsieurmeteo/gfs-weather-map \
+                 -n github-pages -D /tmp/base >/dev/null 2>&1; then
+              if tar -tf /tmp/base/artifact.tar 2>/dev/null | grep -q "output/"; then
+                RESTORED="$RUN_ID"
+                break
+              fi
+              rm -rf /tmp/base
+              mkdir -p /tmp/base
+            fi
+          done
+          if [ -z "$RESTORED" ]; then
+            echo "::error::Aucun artefact github-pages météo récent à restaurer — déploiement annulé (l'ancien site reste en ligne)"
             exit 1
           fi
-          mkdir -p /tmp/base
-          gh run download "$LAST" --repo monsieurmeteo/gfs-weather-map -n github-pages -D /tmp/base
           tar -xf /tmp/base/artifact.tar -C .
-          echo "Dalles restaurées depuis le run $LAST (mode front : seule l'UI change)"
+          echo "Base restaurée depuis le run $RESTORED (GFS/ARPEGE seront superposés)"
 
       - name: Téléchargement de TOUS les chunks (fusion automatique)
         uses: actions/download-artifact@v4

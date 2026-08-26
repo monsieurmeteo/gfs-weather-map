@@ -832,7 +832,7 @@
             } else {
                 // Comportement AROME : en vue "France entière" (zoom 1), cadrer
                 // la boîte France (Météo-NPDC) au lieu de l'étaler sur tout le canvas
-                var isFranceExport = (currentModel === 'gfs_france' || currentModel === 'arpege_france') || (manifest && manifest.bounds && manifest.bounds.projection === 'mercator');
+                var isFranceExport = (currentModel.indexOf('_france') !== -1) || (manifest && manifest.bounds && manifest.bounds.projection === 'mercator');
                 if (isFranceExport && transform.scale <= 1.15) {
                     // Vue France entière : boîte Météo-NPDC (West: -5.8°, East: +10.2°, North: 51.6°, South: 41.1°)
                     outW = 2200;
@@ -922,7 +922,7 @@
             if (vectorDefinition && vectorDefinition.paths && vectorDefinition.paths.length) {
                 context.save();
                 context.transform(hScale, 0, 0, vScale, offX, offY);
-                var isFrance = (currentModel === 'gfs_france' || currentModel === 'arpege_france') || (manifest && manifest.bounds && manifest.bounds.projection === 'mercator');
+                var isFrance = (currentModel.indexOf('_france') !== -1) || (manifest && manifest.bounds && manifest.bounds.projection === 'mercator');
                 if (isFrance) {
                     // Copie conforme du moteur AROME : noir franc #05080c, hdStrokeFactor 2.4, départements 100% visibles
                     var hdStrokeFactor = 2.4;
@@ -2063,27 +2063,37 @@
 
             regionSelect.addEventListener('change', function (e) {
                 var val = e.target.value || 'europe';
-                // "Europe Entière" : gfs_france → gfs, arpege_france → arpege, sinon recentrer
+                // Familles de modèles : variante Europe et variante France par modèle
+                var MODEL_FAMILY = {
+                    gfs: { eu: 'gfs', fr: 'gfs_france' },
+                    gfs_france: { eu: 'gfs', fr: 'gfs_france' },
+                    arpege: { eu: 'arpege', fr: 'arpege_france' },
+                    arpege_france: { eu: 'arpege', fr: 'arpege_france' },
+                    icon_eu: { eu: 'icon_eu', fr: 'icon_eu_france' },
+                    icon_eu_france: { eu: 'icon_eu', fr: 'icon_eu_france' },
+                    aifs: { eu: 'aifs', fr: 'aifs_france' },
+                    aifs_france: { eu: 'aifs', fr: 'aifs_france' }
+                };
+                var family = MODEL_FAMILY[currentModel] || { eu: 'gfs', fr: 'gfs_france' };
+                var onFranceModel = (currentModel === family.fr);
+                // "Europe Entière" : depuis une variante France → modèle Europe de la famille
                 if (val === 'europe') {
-                    if (currentModel === 'gfs_france') {
+                    if (onFranceModel) {
                         transform = { scale: 1, x: 0, y: 0 };
-                        switchModel('gfs');
-                    } else if (currentModel === 'arpege_france') {
-                        transform = { scale: 1, x: 0, y: 0 };
-                        switchModel('arpege');
+                        switchModel(family.eu);
                     } else {
-                        // ARPEGE ou GFS : recentrer sur l'Europe sans changer de modèle
+                        // Déjà sur un modèle Europe : recentrer sans changer de modèle
                         resetView();
                     }
                     updateUrl();
                     return;
                 }
-                // "France Entière" : ARPEGE → ARPEGE France (haute résolution), sinon gfs_france
+                // "France Entière" : depuis un modèle Europe avec variante France → bascule
                 if (val === 'france') {
-                    if (currentModel === 'arpege') {
+                    if (currentModel === family.eu && family.fr) {
                         transform = { scale: 1, x: 0, y: 0 };
-                        switchModel('arpege_france');
-                    } else if (currentModel === 'arpege_france' || currentModel === 'gfs_france') {
+                        switchModel(family.fr);
+                    } else if (currentModel === family.fr) {
                         resetView();
                     } else {
                         transform = { scale: 1, x: 0, y: 0 };
@@ -2098,11 +2108,11 @@
                     updateUrl();
                     return;
                 }
-                // Régions : sur ARPEGE, les régions françaises passent sur ARPEGE France
-                // et les pays sur ARPEGE Europe ; sinon on suit cfg.model (gfs / gfs_france)
-                var onArpege = (currentModel === 'arpege' || currentModel === 'arpege_france');
-                var targetModel = onArpege ? ((cfg.model === 'gfs_france') ? 'arpege_france' : 'arpege')
-                                            : (cfg.model || 'gfs');
+                // Régions : les régions françaises passent sur la variante France de la
+                // famille courante (si elle existe), les pays sur la variante Europe
+                var targetModel = (cfg.model === 'gfs_france')
+                    ? (family.fr || 'gfs_france')
+                    : (family.eu || 'gfs');
                 var focus = {
                     latitude: cfg.latitude,
                     longitude: cfg.longitude,
@@ -2142,7 +2152,11 @@
                 gfs: { path: 'output/gfs', name: 'GFS Europe', badge: '0,25°' },
                 gfs_france: { path: 'output/gfs_france', name: 'GFS France', badge: '0,25°' },
                 arpege: { path: 'output/arpege', name: 'ARPEGE Europe', badge: '0,1°' },
-                arpege_france: { path: 'output/arpege_france', name: 'ARPEGE France', badge: '0,1°' }
+                arpege_france: { path: 'output/arpege_france', name: 'ARPEGE France', badge: '0,1°' },
+                icon_eu: { path: 'output/icon_eu', name: 'ICON-EU Europe', badge: '7 km' },
+                icon_eu_france: { path: 'output/icon_eu_france', name: 'ICON-EU France', badge: '7 km' },
+                aifs: { path: 'output/aifs', name: 'ECMWF AIFS Europe', badge: '0,25°' },
+                aifs_france: { path: 'output/aifs_france', name: 'ECMWF AIFS France', badge: '0,25°' }
             };
             var target = modelMap[modelKey] || modelMap.gfs;
             var prevBaseUrl = baseUrl;
@@ -2195,7 +2209,7 @@
                             scheduleRender();
                         };
                     }
-                    var isFranceOnly = (modelKey === 'gfs_france' || modelKey === 'arpege_france');
+                    var isFranceOnly = (modelKey.indexOf('_france') !== -1);
                     var dSel = document.getElementById('direct-layer-select');
                     if (dSel) {
                         // Couches disponibles = celles réellement rendues par le modèle (Z500/T850 compris sur France)
@@ -2253,7 +2267,7 @@
                 transform = { scale: 1, x: 0, y: 0 };
                 var regSel = document.getElementById('select-region');
                 if (regSel) {
-                    regSel.value = (v === 'gfs_france' || v === 'arpege_france') ? 'france' : 'europe';
+                    regSel.value = (v.indexOf('_france') !== -1) ? 'france' : 'europe';
                 }
                 switchModel(v);
             });
@@ -2674,7 +2688,7 @@
                 pixelRatio * mapRect.x,
                 pixelRatio * mapRect.y
             );
-            var isFrance = (currentModel === 'gfs_france' || currentModel === 'arpege_france') || (manifest && manifest.bounds && manifest.bounds.projection === 'mercator');
+            var isFrance = (currentModel.indexOf('_france') !== -1) || (manifest && manifest.bounds && manifest.bounds.projection === 'mercator');
             if (isFrance) {
                 // Copie conforme du moteur AROME interactif
                 vectorDefinition.paths.forEach(function (entry) {

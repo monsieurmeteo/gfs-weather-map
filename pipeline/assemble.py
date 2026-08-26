@@ -108,6 +108,26 @@ def main():
         "provider": "Météo-France — open data (data.gouv.fr)",
         "resolution": "0.1° (~11 km)",
     })
+    assemble_model("icon_eu", EUROPE, {
+        "model_name": "ICON-EU 7 km Europe",
+        "provider": "DWD — open data (opendata.dwd.de)",
+        "resolution": "7 km (~0.0625°)",
+    })
+    assemble_model("icon_eu_france", FRANCE, {
+        "model_name": "ICON-EU 7 km France",
+        "provider": "DWD — open data (opendata.dwd.de)",
+        "resolution": "7 km (~0.0625°)",
+    })
+    assemble_model("aifs", EUROPE, {
+        "model_name": "ECMWF AIFS 0.25° Europe",
+        "provider": "ECMWF — open data (data.ecmwf.int)",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("aifs_france", FRANCE, {
+        "model_name": "ECMWF AIFS 0.25° France",
+        "provider": "ECMWF — open data (data.ecmwf.int)",
+        "resolution": "0.25° (~25 km)",
+    })
     print("[assemble] Assemblage terminé avec succès.", flush=True)
 
 
