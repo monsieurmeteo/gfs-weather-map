@@ -11,9 +11,9 @@ on:
         required: false
         default: 'full'
       max_hours:
-        description: 'Échéance GFS max en heures (6 = rapide, 384 = GFS 16 jours complet)'
+        description: 'Échéance GFS max en heures (48 = test rapide, 384 = GFS 16 jours complet)'
         required: false
-        default: '384'
+        default: '48'
       models:
         description: 'Modèles à lancer : gfs, arpege ou gfs,arpege'
         required: false
@@ -29,12 +29,12 @@ concurrency:
   cancel-in-progress: false
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 1 — Validation + Fonds de carte partagés
+# JOB 1 — Fonds de carte partagés
 # ─────────────────────────────────────────────────────────────────────────────
 jobs:
   build-fond:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     outputs:
       mode: ${{ steps.vars.outputs.mode }}
       max_hours: ${{ steps.vars.outputs.max_hours }}
@@ -60,20 +60,12 @@ jobs:
         id: vars
         run: |
           MODE="${{ inputs.mode || 'full' }}"
-          MAX_HOURS="${{ inputs.max_hours || '384' }}"
+          MAX_HOURS="${{ inputs.max_hours || '48' }}"
           MODELS="${{ inputs.models || 'gfs,arpege' }}"
           if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 3 ] || [ "$MAX_HOURS" -gt 384 ]; then
             echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 3-384)"
             exit 1
           fi
-          case "$MODELS" in
-            gfs|arpege|"gfs,arpege"|"arpege,gfs") ;;
-            *) echo "::error::models invalide: '$MODELS'"; exit 1 ;;
-          esac
-          case "$MODE" in
-            full|front) ;;
-            *) echo "::error::mode invalide: '$MODE'"; exit 1 ;;
-          esac
           echo "mode=$MODE"           >> "$GITHUB_OUTPUT"
           echo "max_hours=$MAX_HOURS" >> "$GITHUB_OUTPUT"
           echo "models=$MODELS"       >> "$GITHUB_OUTPUT"
@@ -101,20 +93,103 @@ jobs:
         if: steps.vars.outputs.mode != 'front'
         uses: actions/upload-artifact@v4
         with:
-          name: fonds-de-carte
+          name: chunk-fonds
           path: output/
           retention-days: 1
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 2 — GFS Europe  (parallèle avec Jobs 3 et 4)
+# JOB 2 — Matrice 15 Groupes Parallèles (GFS Europe + France + ARPEGE)
 # ─────────────────────────────────────────────────────────────────────────────
-  build-gfs-europe:
+  render-chunks:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 30
     needs: build-fond
-    if: |
-      needs.build-fond.outputs.mode != 'front' &&
-      (contains(needs.build-fond.outputs.models, 'gfs') || github.event_name == 'schedule')
+    if: needs.build-fond.outputs.mode != 'front'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ── GFS Europe (6 groupes) ──────────────────────────────
+          - id: gfs-eu-00-36
+            model: gfs
+            domain: europe
+            lead_min: 0
+            lead_max: 36
+          - id: gfs-eu-39-72
+            model: gfs
+            domain: europe
+            lead_min: 39
+            lead_max: 72
+          - id: gfs-eu-75-108
+            model: gfs
+            domain: europe
+            lead_min: 75
+            lead_max: 108
+          - id: gfs-eu-111-144
+            model: gfs
+            domain: europe
+            lead_min: 111
+            lead_max: 144
+          - id: gfs-eu-150-240
+            model: gfs
+            domain: europe
+            lead_min: 150
+            lead_max: 240
+          - id: gfs-eu-252-384
+            model: gfs
+            domain: europe
+            lead_min: 252
+            lead_max: 384
+
+          # ── GFS France (6 groupes) ──────────────────────────────
+          - id: gfs-fr-00-36
+            model: gfs
+            domain: france
+            lead_min: 0
+            lead_max: 36
+          - id: gfs-fr-39-72
+            model: gfs
+            domain: france
+            lead_min: 39
+            lead_max: 72
+          - id: gfs-fr-75-108
+            model: gfs
+            domain: france
+            lead_min: 75
+            lead_max: 108
+          - id: gfs-fr-111-144
+            model: gfs
+            domain: france
+            lead_min: 111
+            lead_max: 144
+          - id: gfs-fr-150-240
+            model: gfs
+            domain: france
+            lead_min: 150
+            lead_max: 240
+          - id: gfs-fr-252-384
+            model: gfs
+            domain: france
+            lead_min: 252
+            lead_max: 384
+
+          # ── ARPEGE Europe (3 groupes) ───────────────────────────
+          - id: arp-eu-00-36
+            model: arpege
+            domain: europe
+            lead_min: 0
+            lead_max: 36
+          - id: arp-eu-39-72
+            model: arpege
+            domain: europe
+            lead_min: 39
+            lead_max: 72
+          - id: arp-eu-75-102
+            model: arpege
+            domain: europe
+            lead_min: 75
+            lead_max: 102
+
     steps:
       - uses: actions/checkout@v4
 
@@ -135,176 +210,63 @@ jobs:
           sudo apt-get install -y -qq libeccodes0 libeccodes-tools
           pip install -r requirements.txt -q
 
-      - name: Récupération des fonds
-        uses: actions/download-artifact@v4
-        with:
-          name: fonds-de-carte
-          path: output/
-
-      - name: Pipeline GFS — Europe uniquement
+      - name: Pipeline (${{ matrix.id }})
         run: |
-          python -u pipeline/run_all.py \
-            --max-hours "${{ needs.build-fond.outputs.max_hours }}" \
-            --models gfs \
-            --domain europe \
-            --skip-fonds
+          MAX_HOURS="${{ needs.build-fond.outputs.max_hours }}"
+          if [ "${{ matrix.lead_min }}" -gt "$MAX_HOURS" ]; then
+            echo "Tranche hors limite max demandée ($MAX_HOURS h) — ignoré"
+            exit 0
+          fi
+          if [ "${{ matrix.model }}" = "gfs" ]; then
+            python -u pipeline/gfs_open_data.py \
+              --max-hours "$MAX_HOURS" \
+              --domain "${{ matrix.domain }}" \
+              --lead-min "${{ matrix.lead_min }}" \
+              --lead-max "${{ matrix.lead_max }}"
+          else
+            python -u pipeline/arpege_open_data.py \
+              --max-hours "$MAX_HOURS" \
+              --lead-min "${{ matrix.lead_min }}" \
+              --lead-max "${{ matrix.lead_max }}"
+          fi
 
-      - name: Upload dalles GFS Europe
+      - name: Upload chunk (${{ matrix.id }})
         uses: actions/upload-artifact@v4
         with:
-          name: dalles-gfs-europe
-          path: output/gfs/
+          name: chunk-${{ matrix.id }}
+          path: output/
           retention-days: 1
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 3 — GFS France  (parallèle avec Jobs 2 et 4)
-# ─────────────────────────────────────────────────────────────────────────────
-  build-gfs-france:
-    runs-on: ubuntu-latest
-    timeout-minutes: 150
-    needs: build-fond
-    if: |
-      needs.build-fond.outputs.mode != 'front' &&
-      (contains(needs.build-fond.outputs.models, 'gfs') || github.event_name == 'schedule')
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: pip-
-
-      - name: Dépendances système + Python
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libeccodes0 libeccodes-tools
-          pip install -r requirements.txt -q
-
-      - name: Récupération des fonds
-        uses: actions/download-artifact@v4
-        with:
-          name: fonds-de-carte
-          path: output/
-
-      - name: Pipeline GFS — France uniquement
-        run: |
-          python -u pipeline/run_all.py \
-            --max-hours "${{ needs.build-fond.outputs.max_hours }}" \
-            --models gfs \
-            --domain france \
-            --skip-fonds
-
-      - name: Upload dalles GFS France
-        uses: actions/upload-artifact@v4
-        with:
-          name: dalles-gfs-france
-          path: output/gfs_france/
-          retention-days: 1
-
-# ─────────────────────────────────────────────────────────────────────────────
-# JOB 4 — ARPEGE Europe  (parallèle avec Jobs 2 et 3)
-# ─────────────────────────────────────────────────────────────────────────────
-  build-arpege:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    needs: build-fond
-    if: |
-      needs.build-fond.outputs.mode != 'front' &&
-      (contains(needs.build-fond.outputs.models, 'arpege') || github.event_name == 'schedule')
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: pip-
-
-      - name: Dépendances système + Python
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libeccodes0 libeccodes-tools
-          pip install -r requirements.txt -q
-
-      - name: Récupération des fonds
-        uses: actions/download-artifact@v4
-        with:
-          name: fonds-de-carte
-          path: output/
-
-      - name: Pipeline ARPEGE
-        run: |
-          python -u pipeline/run_all.py \
-            --max-hours "${{ needs.build-fond.outputs.max_hours }}" \
-            --models arpege \
-            --skip-fonds
-
-
-      - name: Upload dalles ARPEGE
-        uses: actions/upload-artifact@v4
-        with:
-          name: dalles-arpege
-          path: output/arpege/
-          retention-days: 1
-
-# ─────────────────────────────────────────────────────────────────────────────
-# JOB 5 — Assemblage + Déploiement GitHub Pages
+# JOB 3 — Assemblage des 15 Groupes + Déploiement GitHub Pages
 # ─────────────────────────────────────────────────────────────────────────────
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [build-fond, build-gfs-europe, build-gfs-france, build-arpege]
-    if: |
-      always() && (
-        needs.build-gfs-europe.result == 'success' ||
-        needs.build-gfs-france.result == 'success'  ||
-        needs.build-arpege.result     == 'success'  ||
-        needs.build-fond.outputs.mode == 'front'
-      )
+    needs: [build-fond, render-chunks]
+    if: always() && (needs.render-chunks.result == 'success' || needs.build-fond.outputs.mode == 'front')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Récupération fonds
-        if: needs.build-fond.outputs.mode != 'front'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dépendances Python
+        run: pip install -r requirements.txt -q
+
+      - name: Téléchargement de TOUS les chunks (fusion automatique)
         uses: actions/download-artifact@v4
         with:
-          name: fonds-de-carte
+          pattern: chunk-*
           path: output/
+          merge-multiple: true
 
-      - name: Récupération dalles GFS Europe
-        if: needs.build-gfs-europe.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: dalles-gfs-europe
-          path: output/gfs/
-
-      - name: Récupération dalles GFS France
-        if: needs.build-gfs-france.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: dalles-gfs-france
-          path: output/gfs_france/
-
-      - name: Récupération dalles ARPEGE
-        if: needs.build-arpege.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: dalles-arpege
-          path: output/arpege/
+      - name: Assemblage des manifests index.json
+        run: python -u pipeline/assemble.py
 
       - name: Préparation du site statique
         run: |
