@@ -164,7 +164,7 @@ jobs:
           fi
           python -u pipeline/icon_open_data.py \
             --max-hours "$MAX_HOURS" \
-            --domain both \
+            --domain france \
             --lead-min "${{ matrix.lead_min }}" \
             --lead-max "${{ matrix.lead_max }}"
       - name: Upload chunk (${{ matrix.id }})
@@ -222,6 +222,13 @@ jobs:
           path: output/
           merge-multiple: true
           if-no-files-found: ignore
+      - name: ICON-EU France uniquement (purge Europe restaurée)
+        run: |
+          # ICON-EU ne couvre pas tout le domaine Europe (manque l'ouest
+          # Atlantique et le sud) → France uniquement. On retire l'Europe
+          # ICON restaurée pour ne pas laisser des données périmées.
+          rm -rf output/icon_eu
+          echo "Europe ICON purgée (France uniquement)"
       - name: Assemblage des manifests index.json
         run: python -u pipeline/assemble.py
       - name: Préparation du site statique
