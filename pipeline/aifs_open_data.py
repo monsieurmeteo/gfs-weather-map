@@ -36,23 +36,29 @@ BASE_URL = "https://data.ecmwf.int/forecasts"
 RUN_MATURITY = 21600  # 6 h
 MAX_LEAD = 360
 
-# Alias cfgrib AIFS/IFS → clés canoniques
+# Alias shortName AIFS/IFS (eccodes) → clés canoniques
 ALIASES = {
-    "t2m": "T2M", "2t": "T2M",
-    "d2m": "DPT", "2d": "DPT",
-    "r": "RH",
-    "u10": "U10", "10u": "U10",
-    "v10": "V10", "10v": "V10",
-    "fg10": "GUST", "10fg": "GUST", "i10fg": "GUST",
-    "tp": "APCP",
-    "cape": "CAPE", "mcape": "MUCAPE",
+    "2t": "T2M",
+    "2d": "DPT",
+    "10u": "U10",
+    "10v": "V10",
+    "tp": "APCP",          # précipitation totale cumulée (kg/m² = mm)
+    "cp": "APCP_CONV",     # précipitation convective (non utilisée seule)
+    "sf": "SNOWFALL",      # chutes de neige cumulées
     "msl": "PRMSL",
     "sp": "PRES",
     "tcc": "TCDC",
-    "z": "HGT",
-    "t": "T850",
+    "lcc": "LCC",
+    "mcc": "MCC",
+    "hcc": "HCC",
+    "cape": "CAPE", "mcape": "MUCAPE",
     "sd": "SNOD",
+    "t": "T",              # température à niveaux isobariques (T850 sélectionné)
+    "z": "Z",              # géopotentiel m²/s² (Z500 sélectionné)
 }
+
+# Niveaux isobariques cibles pour les champs multi-niveaux
+LEVEL_TARGETS = {"T": 850, "Z": 500}
 
 
 def log(msg):
@@ -69,8 +75,12 @@ def latest_run(now=None):
 
 
 def compute_leads(max_hours=MAX_LEAD):
-    max_h = max(3, min(int(max_hours), MAX_LEAD))
-    leads = list(range(0, min(max_h, 121), 3))
+    """AIFS publie par pas de 6 h (0-120), 6 h (126-240), 12 h (252-360).
+
+    Les fichiers 3 h n'existent pas (404) — pas de 6 h partout.
+    """
+    max_h = max(6, min(int(max_hours), MAX_LEAD))
+    leads = list(range(0, min(max_h, 121), 6))
     if max_h > 120:
         leads.extend(range(126, min(max_h, 241), 6))
     if max_h > 240:
@@ -101,34 +111,60 @@ def _fetch(url, retries=3):
 
 
 def decode_file(path, lead):
-    """Décode un GRIB AIFS (1 échéance) → {KEY: (values 2D, lat, lon)}."""
-    import cfgrib
+    """Décode un GRIB AIFS (1 échéance) → {KEY: (values 2D, lat, lon)}.
+
+    Utilise eccodes DIRECTEMENT (pas cfgrib) : le fichier contient ~122
+    messages par échéance, mais cfgrib.open_datasets n'en restitue qu'une
+    fraction (filtres par défaut) → vent/pluie/nuages étaient perdus.
+    """
+    from eccodes import (codes_grib_new_from_file, codes_get,
+                         codes_get_array, codes_release)
     out = {}
-    for ds in cfgrib.open_datasets(path):
-        v = list(ds.data_vars)[0]
-        short = (ds[v].attrs.get("GRIB_shortName") or v).lower()
-        key = ALIASES.get(short)
-        if key is None:
-            continue
-        if "isobaricInhPa" in ds[v].coords:
-            levs = np.atleast_1d(ds[v].isobaricInhPa.values)
-            for idx, lev_val in enumerate(levs):
-                lev_f = float(lev_val)
-                if key == "HGT" and lev_f == 500.0:
-                    out["HGT"] = _to2d(ds[v].values[idx], ds)
-                elif key == "T850" and lev_f == 850.0:
-                    out["T850"] = _to2d(ds[v].values[idx], ds)
-                elif key == "RH" and lev_f == 850.0:
-                    out["RH850"] = _to2d(ds[v].values[idx], ds)
-            continue
-        if key == "RH" and short == "r":
-            continue  # r sans niveau isobarique = inutile (RH de surface absent)
-        arr = ds[v].values
-        while arr.ndim > 2 and arr.shape[0] == 1:
-            arr = arr[0]
-        if arr.ndim != 2:
-            continue
-        out[key] = _to2d(arr, ds)
+    with open(path, "rb") as f:
+        while True:
+            gid = codes_grib_new_from_file(f)
+            if gid is None:
+                break
+            try:
+                short = codes_get(gid, "shortName").lower()
+                key = ALIASES.get(short)
+                if key is None:
+                    continue
+                ni = int(codes_get(gid, "Ni"))
+                nj = int(codes_get(gid, "Nj"))
+                vals = np.asarray(codes_get_array(gid, "values"),
+                                  dtype=np.float32)
+                # eccodes renvoie lat/lon en vecteurs aplatis (nj*ni) :
+                # on restructure en 2D puis on extrait lat[:,0] et lon[0,:]
+                # (convention identique au pipeline ARPEGE).
+                lat2 = np.asarray(codes_get_array(gid, "latitudes"),
+                                  dtype=np.float64).reshape(nj, ni)
+                lon2 = np.asarray(codes_get_array(gid, "longitudes"),
+                                  dtype=np.float64).reshape(nj, ni)
+                lat = lat2[:, 0]
+                lon = lon2[0, :]
+
+                # Champs multi-niveaux (t, z) : garder uniquement le niveau cible
+                if key in LEVEL_TARGETS:
+                    lev = int(codes_get(gid, "level"))
+                    if lev != LEVEL_TARGETS[key]:
+                        continue
+                    if key == "T":
+                        out["T850"] = (vals.reshape(nj, ni), lat, lon)
+                    elif key == "Z":
+                        out["HGT"] = (vals.reshape(nj, ni), lat, lon)
+                    continue
+
+                # Champs 2D normaux
+                if vals.size == ni * nj:
+                    arr = vals.reshape(nj, ni)
+                else:
+                    continue
+                out[key] = (arr, lat, lon)
+            except Exception:
+                pass
+            finally:
+                codes_release(gid)
     return out
 
 
@@ -213,34 +249,41 @@ def render_lead_par(fields, lead, run_dt, domain, out_dir):
             step["probes"]["temperature_850"] = "maps/values/temperature_850/%03d.hkv.gz" % lead
 
     t2m = fields.get("T2M")
-    rh = fields.get("RH")
+    dpt = fields.get("DPT")
     u10 = fields.get("U10")
     v10 = fields.get("V10")
 
+    # AIFS ne fournit pas la RH 2 m : on la calcule depuis T2M + point de rosée
+    rh_g = None
     if t2m is not None:
         t_c = regrid(t2m, lambda v: v - 273.15)
         save("temperature", t_c)
         td_c = None
-        if rh is not None:
-            rh_g = regrid(rh)
-            if rh_g is not None:
-                td_c = dew_point_c(t_c, rh_g)
+        if dpt is not None:
+            td_raw = regrid(dpt)
+            if td_raw is not None:
+                td_c = td_raw - 273.15
                 save("point_rosee", td_c)
                 save("humidex", humidex_c(t_c, td_c))
+                # Magnus : RH ≈ 100 * exp(17.625*Td/(243.04+Td)) / exp(17.625*T/(243.04+T))
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    es_t = np.exp(17.625 * t_c / (243.04 + t_c))
+                    es_td = np.exp(17.625 * td_c / (243.04 + td_c))
+                    rh_g = np.clip(100.0 * es_td / es_t, 0.0, 100.0)
         if u10 is not None and v10 is not None:
             spd = np.sqrt(u10[0].astype(np.float32) ** 2
                           + v10[0].astype(np.float32) ** 2) * 3.6
             wind_kmh = domain.regrid(spd, u10[1], u10[2])
             if wind_kmh is not None:
-                if rh is not None and td_c is not None:
+                if rh_g is not None and td_c is not None:
                     felt = heat_index_c(t_c, rh_g)
                     felt = wind_chill_c(felt, wind_kmh)
                 else:
                     felt = wind_chill_c(t_c, wind_kmh)
                 save("temperature_ressentie", felt)
 
-    if rh is not None:
-        save("humidite", regrid(rh))
+    if rh_g is not None:
+        save("humidite", rh_g)
 
     if u10 is not None and v10 is not None:
         spd = np.sqrt(u10[0].astype(np.float32) ** 2
@@ -256,6 +299,24 @@ def render_lead_par(fields, lead, run_dt, domain, out_dir):
     tcdc = fields.get("TCDC")
     if tcdc is not None:
         save("nebulosite", regrid(tcdc))
+
+    # Nuages par étage AIFS (lcc/mcc/hcc)
+    clouds = []
+    for ck, layer in (("LCC", "nuages_bas"),
+                      ("MCC", "nuages_moyens"),
+                      ("HCC", "nuages_eleves")):
+        f = fields.get(ck)
+        if f is not None:
+            g = regrid(f)
+            if g is not None:
+                clouds.append(g)
+                save(layer, g)
+    if clouds and tcdc is None:
+        save("nebulosite", np.maximum.reduce(clouds))
+
+    snod = fields.get("SNOD")
+    if snod is not None:
+        save("neige_au_sol", regrid(snod, lambda v: v * 100.0))
 
     cape = fields.get("CAPE")
     if cape is not None:
