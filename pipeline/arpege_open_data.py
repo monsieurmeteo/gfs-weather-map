@@ -159,29 +159,14 @@ def collect_fields(session, run_dt, max_lead, lead_min=0, lead_max=None):
                 log("!! %s %s introuvable" % (pkg, block))
                 continue
             t0 = time.time()
-            # Pour IP1 (1560 messages), le scan sélectif fait trop de requêtes HTTP (250s).
-            # Un téléchargement direct en 1 seule requête GET prend 3 secondes sur GitHub Actions !
-            if pkg == "IP1":
-                try:
-                    fields = fetch_block_full(session, url, eff_max, log, lead_min=lead_min)
-                    mode = "direct (rapide)"
-                    n_full_mb += size // (1024 * 1024)
-                except Exception as e:
-                    log("!! %s %s : téléchargement échoué (%s)" % (pkg, block, e))
-                    continue
-            else:
-                try:
-                    fields = gribscan.fetch_block(session, url, size, eff_max, log=log)
-                    mode = "sélectif"
-                except Exception as e:
-                    log("!! %s %s : extraction sélective échouée (%s)" % (pkg, block, e))
-                    try:
-                        fields = fetch_block_full(session, url, eff_max, log, lead_min=lead_min)
-                        mode = "complet (repli)"
-                        n_full_mb += size // (1024 * 1024)
-                    except Exception as e2:
-                        log("!! %s %s : repli échoué (%s)" % (pkg, block, e2))
-                        continue
+            # Téléchargement direct ultra-rapide en 1 seule requête GET (3-5s par bloc au lieu de 60s en HTTP Range)
+            try:
+                fields = fetch_block_full(session, url, eff_max, log, lead_min=lead_min)
+                mode = "direct (rapide)"
+                n_full_mb += size // (1024 * 1024)
+            except Exception as e:
+                log("!! %s %s : téléchargement échoué (%s)" % (pkg, block, e))
+                continue
             n_blocks += 1
             for lead, flds in fields.items():
                 all_fields.setdefault(lead, {}).update(flds)

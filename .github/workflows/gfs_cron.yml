@@ -173,21 +173,36 @@ jobs:
             lead_min: 252
             lead_max: 384
 
-          # ── ARPEGE Europe (3 groupes) ───────────────────────────
-          - id: arp-eu-00-36
+          # ── ARPEGE Europe (6 groupes équilibrés) ────────────────
+          - id: arp-eu-00-18
             model: arpege
             domain: europe
             lead_min: 0
+            lead_max: 18
+          - id: arp-eu-21-36
+            model: arpege
+            domain: europe
+            lead_min: 21
             lead_max: 36
-          - id: arp-eu-39-72
+          - id: arp-eu-39-54
             model: arpege
             domain: europe
             lead_min: 39
+            lead_max: 54
+          - id: arp-eu-57-72
+            model: arpege
+            domain: europe
+            lead_min: 57
             lead_max: 72
-          - id: arp-eu-75-102
+          - id: arp-eu-75-90
             model: arpege
             domain: europe
             lead_min: 75
+            lead_max: 90
+          - id: arp-eu-93-102
+            model: arpege
+            domain: europe
+            lead_min: 93
             lead_max: 102
 
     steps:
