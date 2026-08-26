@@ -133,8 +133,12 @@ def _decode_grib(grib_bytes, want_var=None, want_level=None):
             pass
 
 
-def collect_lead(run_dt, lead):
-    """Télécharge et décode TOUTES les variables d'une échéance → dict canonique."""
+def collect_lead(run_dt, lead, light=False):
+    """Télécharge et décode TOUTES les variables d'une échéance → dict canonique.
+
+    light=True : uniquement GUST (vmax_10m) + APCP (tot_prec) — échauffement
+    des couches cumulatives sans télécharger les 16 autres variables.
+    """
     day = run_dt.strftime("%Y%m%d%H")
     hh = "%02d" % run_dt.hour
     lead3 = "%03d" % lead
@@ -170,10 +174,15 @@ def collect_lead(run_dt, lead):
             except Exception:
                 continue
 
-    for var, key, _ in SFC_VARS:
-        jobs.append((get_sfc, (var, key)))
-    for var, key, level in PL_VARS:
-        jobs.append((get_pl, (var, key, level)))
+    if light:
+        # Échauffement : seulement la rafale et la pluie cumulée
+        for var, key in (("vmax_10m", "GUST"), ("tot_prec", "APCP")):
+            jobs.append((get_sfc, (var, key)))
+    else:
+        for var, key, _ in SFC_VARS:
+            jobs.append((get_sfc, (var, key)))
+        for var, key, level in PL_VARS:
+            jobs.append((get_pl, (var, key, level)))
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         futures = [pool.submit(fn, *args) for fn, args in jobs]
@@ -420,12 +429,13 @@ def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
         log("Aucune échéance dans l'intervalle [%s, %s]" % (lead_min, lead_max))
         return
 
-    # Échauffement cumulatif : échéances antérieures (GUST + tot_prec uniquement)
+    # Échauffement cumulatif : échéances antérieures (GUST + tot_prec UNIQUEMENT,
+    # mode léger — pas les 16 autres variables, sinon coût énorme en re-téléchargements)
     state_warm = {"max_gust": None, "cum_precip": None}
     prior = [lh for lh in all_leads if lh < lead_min]
     for lh in prior:
         try:
-            fields = collect_lead(run_dt, lh)
+            fields = collect_lead(run_dt, lh, light=True)
             warmup_from_cached(fields, EUROPE, state_warm)
         except Exception:
             pass

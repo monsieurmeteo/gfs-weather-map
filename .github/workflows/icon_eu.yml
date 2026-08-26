@@ -92,22 +92,52 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # 00-36 = 37 échéances horaires (~48 s/lead) → dépassait le timeout :
-          # divisé en 00-24 (25 leads) + 27-36 (4 leads, warmup automatique).
-          - id: icn-00-24
+          # 15 groupes parallèles — leads 0-48 horaires + 51-120 pas 3h.
+          # Warmup cumulatif en mode léger (GUST+APCP) pour chaque chunk.
+          - id: icn-00-03
             lead_min: 0
-            lead_max: 24
-          - id: icn-27-36
-            lead_min: 27
-            lead_max: 36
-          - id: icn-39-72
-            lead_min: 39
-            lead_max: 72
-          - id: icn-75-108
-            lead_min: 75
-            lead_max: 108
-          - id: icn-111-120
-            lead_min: 111
+            lead_max: 3
+          - id: icn-04-07
+            lead_min: 4
+            lead_max: 7
+          - id: icn-08-11
+            lead_min: 8
+            lead_max: 11
+          - id: icn-12-15
+            lead_min: 12
+            lead_max: 15
+          - id: icn-16-19
+            lead_min: 16
+            lead_max: 19
+          - id: icn-20-23
+            lead_min: 20
+            lead_max: 23
+          - id: icn-24-27
+            lead_min: 24
+            lead_max: 27
+          - id: icn-28-31
+            lead_min: 28
+            lead_max: 31
+          - id: icn-32-35
+            lead_min: 32
+            lead_max: 35
+          - id: icn-36-39
+            lead_min: 36
+            lead_max: 39
+          - id: icn-40-43
+            lead_min: 40
+            lead_max: 43
+          - id: icn-44-48
+            lead_min: 44
+            lead_max: 48
+          - id: icn-51-60
+            lead_min: 51
+            lead_max: 60
+          - id: icn-63-84
+            lead_min: 63
+            lead_max: 84
+          - id: icn-87-120
+            lead_min: 87
             lead_max: 120
     steps:
       - uses: actions/checkout@v4
