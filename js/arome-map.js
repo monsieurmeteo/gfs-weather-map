@@ -830,23 +830,45 @@
                 offX = mapRect.x * ratio;
                 offY = mapRect.y * ratio;
             } else {
-                // Vue Standard 4:3 (2200x1640) : reproduction exacte et fidèle de la vue actuelle (Europe, France ou Région)
-                outW = 2200;
-                outH = 1640;
-                var viewRect = computeMapRect(vw, vh);
-                var u0 = (0 - viewRect.x) / viewRect.w;
-                var u1 = (vw - viewRect.x) / viewRect.w;
-                var v0 = (0 - viewRect.y) / viewRect.h;
-                var v1 = (vh - viewRect.y) / viewRect.h;
-                var vueW = Math.max(0.01, u1 - u0);
-                var vueH = Math.max(0.01, v1 - v0);
-                var k = Math.max(outW / (vueW * 2200.0), outH / (vueH * 1640.0));
-                hScale = k;
-                vScale = k;
-                var uc = (u0 + u1) / 2;
-                var vc = (v0 + v1) / 2;
-                offX = outW / 2 - uc * 2200.0 * k;
-                offY = outH / 2 - vc * 1640.0 * k;
+                // Comportement AROME : en vue "France entière" (zoom 1), cadrer
+                // la boîte France (Météo-NPDC) au lieu de l'étaler sur tout le canvas
+                var isFranceExport = (currentModel === 'gfs_france' || currentModel === 'arpege_france') || (manifest && manifest.bounds && manifest.bounds.projection === 'mercator');
+                if (isFranceExport && transform.scale <= 1.15) {
+                    // Vue France entière : boîte Météo-NPDC (West: -5.8°, East: +10.2°, North: 51.6°, South: 41.1°)
+                    outW = 2200;
+                    outH = 1640;
+                    var fx0 = 270;  // Ouest Bretagne
+                    var fx1 = 1870; // Est Corse
+                    var fy0 = 125;  // Nord Mer du Nord / Sud Angleterre
+                    var fy1 = 1460; // Sud Bonifacio
+                    var fw = fx1 - fx0; // 1600
+                    var fh = fy1 - fy0; // 1335
+                    var scale = Math.min(outW / fw, outH / fh);
+                    hScale = scale;
+                    vScale = scale;
+                    var cx = (fx0 + fx1) / 2; // 1070
+                    var cy = (fy0 + fy1) / 2; // 792.5
+                    offX = outW / 2 - cx * scale;
+                    offY = outH / 2 - cy * scale;
+                } else {
+                    // Vue Standard 4:3 (2200x1640) : reproduction exacte et fidèle de la vue actuelle (Europe, France ou Région)
+                    outW = 2200;
+                    outH = 1640;
+                    var viewRect = computeMapRect(vw, vh);
+                    var u0 = (0 - viewRect.x) / viewRect.w;
+                    var u1 = (vw - viewRect.x) / viewRect.w;
+                    var v0 = (0 - viewRect.y) / viewRect.h;
+                    var v1 = (vh - viewRect.y) / viewRect.h;
+                    var vueW = Math.max(0.01, u1 - u0);
+                    var vueH = Math.max(0.01, v1 - v0);
+                    var k = Math.max(outW / (vueW * 2200.0), outH / (vueH * 1640.0));
+                    hScale = k;
+                    vScale = k;
+                    var uc = (u0 + u1) / 2;
+                    var vc = (v0 + v1) / 2;
+                    offX = outW / 2 - uc * 2200.0 * k;
+                    offY = outH / 2 - vc * 1640.0 * k;
+                }
             }
 
             var output = document.createElement('canvas');
@@ -1126,6 +1148,8 @@
                         for (var pi = 0; pi < places.length; pi += 1) {
                             var place = places[pi];
                             if (!Array.isArray(place) || place.length < 4) { continue; }
+                            // Densité AROME : seules les agglomérations au-dessus du seuil (évite la foule de communes)
+                            if (Number(place[1]) < popMin) { continue; }
                             var proj = projectCoords(Number(place[2]), Number(place[3]));
                             var u = proj.u;
                             var v = proj.v;
