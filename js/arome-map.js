@@ -2820,10 +2820,10 @@
 
         function projectCoords(lat, lon) {
             if (manifest && manifest.bounds && manifest.bounds.projection === 'lambert') {
-                var r_lat1 = 35.0 * Math.PI / 180;
-                var r_lat2 = 65.0 * Math.PI / 180;
+                var r_lat1 = 30.0 * Math.PI / 180;
+                var r_lat2 = 60.0 * Math.PI / 180;
                 var r_lat0 = 50.0 * Math.PI / 180;
-                var r_lon0 = 5.0 * Math.PI / 180;
+                var r_lon0 = -5.0 * Math.PI / 180;
                 var n = Math.log(Math.cos(r_lat1) / Math.cos(r_lat2)) / Math.log(
                     Math.tan(Math.PI / 4 + r_lat2 / 2) / Math.tan(Math.PI / 4 + r_lat1 / 2)
                 );
@@ -2835,8 +2835,8 @@
                 var theta = n * (r_lon - r_lon0);
                 var x = rho * Math.sin(theta);
                 var y = rho0 - rho * Math.cos(theta);
-                var u = (x - (-0.44)) / (0.4856 - (-0.44)); // sync avec domains.py x_min=-0.44, x_max=0.4856
-                var v = (0.35 - y) / (0.35 - (-0.34)); // sync avec domains.py y_max=0.35, y_min=-0.34
+                var u = (x - (-0.42)) / (0.438536 - (-0.42)); // sync avec domains.py x_min=-0.42, x_max=0.438536
+                var v = (0.28 - y) / (0.28 - (-0.36)); // sync avec domains.py y_max=0.28, y_min=-0.36
                 return { u: u, v: v };
             }
             var bounds = manifest && manifest.bounds ? manifest.bounds : { south: 39.5, west: -8.5, north: 52.5, east: 13.5 };

@@ -13,10 +13,10 @@ import numpy as np
 DOMAINS = {
     "europe": {
         "projection": "lambert",
-        "lat1": 35.0, "lat2": 65.0, "lat0": 50.0, "lon0": 5.0,
-        "x_min": -0.44, "x_max": 0.4856,
-        "y_min": -0.34, "y_max": 0.35,
-        "south": 24.0, "west": -30.0, "north": 70.0, "east": 45.0,
+        "lat1": 30.0, "lat2": 60.0, "lat0": 50.0, "lon0": -5.0,
+        "x_min": -0.42, "x_max": 0.438536,
+        "y_min": -0.36, "y_max": 0.28,
+        "south": 20.0, "west": -55.0, "north": 75.0, "east": 50.0,
         "width": 2200, "height": 1640,
         "label": "Europe",
     },
@@ -143,10 +143,15 @@ class Domain:
         if src_lons[0] > src_lons[-1]:
             src_lons = src_lons[::-1]
             data = data[:, ::-1]
+        
+        # Clamping des coordonnées aux limites de la grille source pour une couverture 100% sans bordures grises
+        pts_lat = np.clip(self.lats.ravel(), src_lats[0], src_lats[-1])
+        pts_lon = np.clip(self.lons.ravel(), src_lons[0], src_lons[-1])
+        pts = np.column_stack((pts_lat, pts_lon))
+        
         interp = RegularGridInterpolator(
             (src_lats, src_lons), data, method="linear",
-            bounds_error=False, fill_value=np.nan)
-        pts = np.column_stack((self.lats.ravel(), self.lons.ravel()))
+            bounds_error=False, fill_value=None)
         return interp(pts).reshape((self.height, self.width)).astype(np.float32)
 
 
