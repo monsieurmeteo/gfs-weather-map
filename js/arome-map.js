@@ -2017,18 +2017,24 @@
 
             regionSelect.addEventListener('change', function (e) {
                 var val = e.target.value || 'europe';
+                // "Europe Entière" : si on est sur gfs_france → gfs, sinon juste resetView
                 if (val === 'europe') {
                     if (currentModel === 'gfs_france') {
                         transform = { scale: 1, x: 0, y: 0 };
                         switchModel('gfs');
                     } else {
+                        // ARPEGE ou GFS : recentrer sur l'Europe sans changer de modèle
                         resetView();
                     }
                     updateUrl();
                     return;
                 }
+                // "France Entière" : passer en gfs_france SAUF si on est sur ARPEGE
                 if (val === 'france') {
-                    if (currentModel !== 'gfs_france') {
+                    if (currentModel === 'arpege') {
+                        // Rester sur ARPEGE, juste recentrer
+                        resetView();
+                    } else if (currentModel !== 'gfs_france') {
                         transform = { scale: 1, x: 0, y: 0 };
                         switchModel('gfs_france');
                     } else {
@@ -2043,6 +2049,7 @@
                     updateUrl();
                     return;
                 }
+                // Pour les régions : ARPEGE reste sur ARPEGE, sinon on suit cfg.model
                 var targetModel = (currentModel === 'arpege') ? 'arpege' : (cfg.model || 'gfs');
                 var focus = {
                     latitude: cfg.latitude,
@@ -2057,6 +2064,7 @@
                 }
                 updateUrl();
             });
+
         }
 
         // Raccordement direct et robuste des menus déroulants
@@ -2067,7 +2075,10 @@
             });
         }
 
+        var switchToken = 0; // ponytail: guard anti-double-switch — pas de AbortController pour IE11
+
         function switchModel(modelKey) {
+            var token = ++switchToken; // invalide tout fetch précédent
             var modelMap = {
                 gfs: { path: 'output/gfs', name: 'GFS Europe', badge: '0,25°' },
                 gfs_france: { path: 'output/gfs_france', name: 'GFS France', badge: '0,25°' },
@@ -2090,6 +2101,9 @@
 
             fetchJson(baseUrl + '/maps/index.json')
                 .then(function(payload) {
+                    // Un switch plus récent a été lancé entre-temps → ignorer
+                    if (token !== switchToken) return;
+
                     if (!payload || !payload.layers || !Array.isArray(payload.steps)) {
                         throw new Error('manifeste invalide');
                     }
