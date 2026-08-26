@@ -445,9 +445,51 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path, style="synoptiq
                             matplotlib.patheffects.Normal(),
                         ])
         ensure_dir(os.path.dirname(output_path))
+        # Légende Z500 intégrée (30 rectangles 492→612 dam) — mode synoptique/détail
+        if style in ("synoptique", "detail"):
+            _draw_z500_legend(ax, w, h)
         fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 88})
     finally:
         plt.close(fig)
+
+
+def _draw_z500_legend(ax, w, h):
+    """Légende horizontale en bas : 30 rectangles adjacents (classes de 4 dam)
+    + bornes 492→612, couleurs identiques à la palette geopotentiel_500."""
+    import matplotlib.patches as mpatches
+    import matplotlib.patheffects as pe
+
+    levels = list(range(492, 616, 4))  # 492..612 → 31 bornes → 30 classes
+    colors = [
+        "#400040", "#600060", "#AA00AA", "#801080", "#600040",
+        "#303366", "#003399", "#0000CC", "#0000FF", "#0055FF",
+        "#0099FF", "#33CCFF", "#66FFFF", "#66FF99", "#66FF66",
+        "#66FF00", "#BFFA0E", "#FFFF09", "#FFFF86", "#FDE851",
+        "#FFCC00", "#FF9900", "#FF6900", "#FF4D33", "#FF3000",
+        "#FF0000", "#CC0000", "#990000", "#6C0000", "#4F0000",
+    ]
+    n = len(colors)               # 30 classes
+    lw = w * 0.90                 # largeur barre : 90 % de la carte
+    lx0 = (w - lw) / 2.0
+    ly0 = h - 104                 # bas de la barre (marge 24 px en bas)
+    bh = 34                       # hauteur des rectangles
+    sw = lw / n                   # largeur d'un rectangle
+
+    # Fond sombre semi-transparent derrière la légende
+    ax.add_patch(mpatches.Rectangle((lx0 - 20, ly0 - 12), lw + 40, bh + 58,
+                                    facecolor=(7 / 255.0, 11 / 255.0, 20 / 255.0, 0.55),
+                                    edgecolor="none"))
+    # 30 rectangles adjacents
+    for i in range(n):
+        ax.add_patch(mpatches.Rectangle((lx0 + i * sw, ly0), sw + 0.4, bh,
+                                        facecolor=colors[i], edgecolor="none"))
+    # Bornes au-dessus des rectangles (492, 496, ... 612)
+    for i, v in enumerate(levels):
+        x = lx0 + i * sw
+        ax.text(x, ly0 + bh + 4, "%d" % v, fontsize=12, ha="center",
+                va="bottom", color="#ffffff", fontweight="bold",
+                path_effects=[pe.Stroke(linewidth=2.2, foreground="#000000"),
+                              pe.Normal()])
 
 
 def render_pression_with_isobars(prmsl_grid, output_path):

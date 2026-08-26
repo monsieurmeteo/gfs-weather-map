@@ -1068,8 +1068,10 @@
             context.fillText(dateText, cartLeft + 24, cartTop + 140);
 
             // Légende colorimétrique officielle en bas
+            // (Z500 : légende intégrée dans l'image elle-même → pas de surimpression)
             var legendY = 0, legendX = 0, legendW = 0, legendH = 0;
-            if (layer && typeof window.getLayerPalette === 'function' && typeof window.paletteTicks === 'function') {
+            var z500HasEmbeddedLegend = (currentLayer === 'geopotentiel_500' || currentLayer === 'geopotentiel_500_meteociel');
+            if (layer && !z500HasEmbeddedLegend && typeof window.getLayerPalette === 'function' && typeof window.paletteTicks === 'function') {
                 try {
                     // Légende toujours à l'intérieur de la zone carte (jamais sur le fond noir)
                     legendW = Math.min(1100, Math.max(200, mapRect.right - mapRect.left - 48));
@@ -1151,6 +1153,10 @@
             occupied.push({ left: output.width - margin - 390, right: output.width, top: 0, bottom: bannerY + bannerH + 16 });
             if (legendW > 0 && legendY > 0) {
                 occupied.push({ left: legendX - 25, right: legendX + legendW + 25, top: legendY - 15, bottom: output.height });
+            } else if (z500HasEmbeddedLegend && manifest && manifest.height) {
+                // Légende Z500 intégrée dans l'image (bas ~104 px) → zone protégée équivalente
+                var zLegTop = output.height - Math.round(104 * output.height / manifest.height);
+                occupied.push({ left: 0, right: output.width, top: zLegTop, bottom: output.height });
             }
             // Villes sur la carte (respecte citiesVisible et se masque automatiquement si valuesVisible est actif)
             if (citiesVisible && !valuesVisible && manifest && manifest.bounds && places && places.length) {

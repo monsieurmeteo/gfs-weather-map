@@ -614,7 +614,14 @@
     function paletteTicks(key) {
         var pal = getLayerPalette(key); var stops = pal.stops;
         var low = (pal.transparent_below !== null && pal.transparent_below !== undefined) ? pal.transparent_below : stops[0].value;
-        var max = stops[stops.length - 1].value; var ticks = [];
+        var max = stops[stops.length - 1].value;
+        // Z500 : toutes les bornes de classes (492, 496, ... 612) — style Météociel
+        if (key === 'geopotentiel_500' || key === 'geopotentiel_500_meteociel') {
+            var zticks = [];
+            for (var zi = 0; zi < stops.length; zi += 1) zticks.push(stops[zi].value);
+            return zticks;
+        }
+        var ticks = [];
         for (var i = 0; i < 5; i += 1) ticks.push(formatTickValue(low + (max - low) * i / 4));
         return ticks;
     }
