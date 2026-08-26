@@ -1,5 +1,4 @@
 # Dépendances épinglées (testées ensemble, Python 3.11)
-# Note : ecmwf-opendata 1.x exige Python < 3.12 → le projet tourne en 3.11.
 requests==2.34.2
 numpy==2.4.6
 pillow==12.2.0
@@ -9,4 +8,3 @@ cfgrib==0.9.15.1
 xarray==2026.4.0
 eccodes==2.47.0
 shapely==2.1.2
-ecmwf-opendata>=1.9,<1.11

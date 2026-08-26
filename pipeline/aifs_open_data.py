@@ -3,18 +3,21 @@
 """
 aifs_open_data.py — Pipeline ECMWF AIFS 0.25° (modèle IA, open data)
 ====================================================================
-  - Source : open data ECMWF (data.ecmwf.int) via le paquet ecmwf-opendata.
-  - model="aifs-single" (data-driven), resol="0p25", runs 00/12Z.
-  - Échéances H+00 → H+360 (15 jours) : pas 3 h → 6 h → 12 h.
+  - Source : https://data.ecmwf.int/forecasts/{date}/{hh}z/aifs-single/0p25/oper/
+    fichiers GRIB2 par échéance : {run}-{lead}h-oper-fc.grib2 (téléchargement direct).
+  - Runs 00/12Z, échéances H+00 → H+360 (15 jours) : pas 3 h → 6 h → 12 h.
   - Domaines : Europe (Lambert) + France (Mercator) — --domain both/europe/france.
   - Couches : comme les autres modèles (Z500, T850, pression, températures,
     vent, rafales, nuages, humidité, MUCAPE, pluie, neige au sol…).
 """
 import os
+import re
 import sys
+import time
 import datetime
 import tempfile
 
+import requests
 import numpy as np
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,28 +31,27 @@ from render import (  # noqa: E402
     dew_point_c, heat_index_c, wind_chill_c, humidex_c,
 )
 
+HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
+BASE_URL = "https://data.ecmwf.int/forecasts"
 RUN_MATURITY = 21600  # 6 h
 MAX_LEAD = 360
-
-SFC_PARAMS = ["2t", "2d", "10u", "10v", "msl", "sp", "tp", "tcc", "cape", "10fg"]
-PL_PARAMS = ["z", "t", "r"]
-PL_LEVELS = [500, 850]
 
 # Alias cfgrib AIFS/IFS → clés canoniques
 ALIASES = {
     "t2m": "T2M", "2t": "T2M",
     "d2m": "DPT", "2d": "DPT",
-    "r2": "RH", "r": "RH",
+    "r": "RH",
     "u10": "U10", "10u": "U10",
     "v10": "V10", "10v": "V10",
-    "fg10": "GUST", "10fg": "GUST",
+    "fg10": "GUST", "10fg": "GUST", "i10fg": "GUST",
     "tp": "APCP",
     "cape": "CAPE", "mcape": "MUCAPE",
     "msl": "PRMSL",
     "sp": "PRES",
     "tcc": "TCDC",
-    "gh": "HGT", "z": "HGT",
+    "z": "HGT",
     "t": "T850",
+    "sd": "SNOD",
 }
 
 
@@ -76,31 +78,36 @@ def compute_leads(max_hours=MAX_LEAD):
     return sorted(set(leads))
 
 
-def _retrieve(client, run_dt, levtype, params, levels, leads, tmp):
-    """Récupère un fichier GRIB AIFS (sfc ou pl) pour la liste d'échéances."""
-    kwargs = {
-        "model": "aifs-single",
-        "resol": "0p25",
-        "levtype": levtype,
-        "param": params,
-        "step": leads,
-        "date": run_dt.strftime("%Y-%m-%d"),
-        "time": "%02d:00" % run_dt.hour,
-        "target": tmp,
-    }
-    if levtype == "pl":
-        kwargs["levelist"] = levels
-    client.retrieve(**kwargs)
-    return tmp
+def _file_url(run_dt, lead):
+    return ("%s/%s/%02dz/aifs-single/0p25/oper/%s-%dh-oper-fc.grib2"
+            % (BASE_URL, run_dt.strftime("%Y%m%d"), run_dt.hour,
+               run_dt.strftime("%Y%m%d%H%M%S"), lead))
 
 
-def decode_file(path, lead_list):
-    """Décode un GRIB AIFS → {lead: {KEY: (values 2D, lat 1D, lon 1D)}}."""
+def _fetch(url, retries=3):
+    last = None
+    for attempt in range(1, retries + 1):
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=120, verify=True)
+            if r.status_code == 200 and len(r.content) > 500:
+                return r.content
+            if r.status_code == 404:
+                raise RuntimeError("404 introuvable: %s" % url)
+            last = "HTTP %s" % r.status_code
+        except Exception as e:
+            last = "%s" % e
+        time.sleep(2 * attempt)
+    raise RuntimeError("Téléchargement %s impossible (%s)" % (url, last))
+
+
+def decode_file(path, lead):
+    """Décode un GRIB AIFS (1 échéance) → {KEY: (values 2D, lat, lon)}."""
     import cfgrib
     out = {}
     for ds in cfgrib.open_datasets(path):
         v = list(ds.data_vars)[0]
-        key = ALIASES.get(v.lower())
+        short = (ds[v].attrs.get("GRIB_shortName") or v).lower()
+        key = ALIASES.get(short)
         if key is None:
             continue
         if "isobaricInhPa" in ds[v].coords:
@@ -108,35 +115,20 @@ def decode_file(path, lead_list):
             for idx, lev_val in enumerate(levs):
                 lev_f = float(lev_val)
                 if key == "HGT" and lev_f == 500.0:
-                    out.setdefault(0, {})["HGT"] = _to2d(ds[v].values[idx], ds)
+                    out["HGT"] = _to2d(ds[v].values[idx], ds)
                 elif key == "T850" and lev_f == 850.0:
-                    out.setdefault(0, {})["T850"] = _to2d(ds[v].values[idx], ds)
+                    out["T850"] = _to2d(ds[v].values[idx], ds)
+                elif key == "RH" and lev_f == 850.0:
+                    out["RH850"] = _to2d(ds[v].values[idx], ds)
             continue
-        if "step" in ds[v].coords:
-            steps = np.atleast_1d(ds[v].step.values)
-            vals = ds[v].values
-            for idx, st in enumerate(steps):
-                lead = int(st) if np.isscalar(st) else int(st)
-                try:
-                    lead = int(float(np.atleast_1d(st)[0]))
-                except Exception:
-                    lead = 0
-                arr = vals[idx] if vals.ndim > 2 else vals
-                if arr.ndim != 2:
-                    continue
-                if key == "HGT":
-                    continue  # traité via pressure-level
-                if key == "T850":
-                    continue
-                out.setdefault(lead, {})[key] = _to2d(arr, ds)
-        else:
-            arr = ds[v].values
-            while arr.ndim > 2 and arr.shape[0] == 1:
-                arr = arr[0]
-            if arr.ndim == 2:
-                lead = int(float(np.atleast_1d(ds.step.values)[0])) \
-                    if "step" in ds.coords else 0
-                out.setdefault(lead, {})[key] = _to2d(arr, ds)
+        if key == "RH" and short == "r":
+            continue  # r sans niveau isobarique = inutile (RH de surface absent)
+        arr = ds[v].values
+        while arr.ndim > 2 and arr.shape[0] == 1:
+            arr = arr[0]
+        if arr.ndim != 2:
+            continue
+        out[key] = _to2d(arr, ds)
     return out
 
 
@@ -147,7 +139,6 @@ def _to2d(arr, ds):
     lat = np.asarray(ds.latitude.values, dtype=np.float64)
     lon = np.asarray(ds.longitude.values, dtype=np.float64)
     if arr.ndim == 1:
-        # grille scalaire dégénérée : reshaped via lat/lon
         try:
             arr = arr.reshape(lat.shape[0], lon.shape[0])
         except Exception:
@@ -155,38 +146,19 @@ def _to2d(arr, ds):
     return (arr, lat, lon)
 
 
-def collect_fields(client, run_dt, leads):
-    """Récupère et décode tous les champs des échéances demandées."""
-    all_fields = {}
-    with tempfile.TemporaryDirectory() as td:
-        sfc_path = os.path.join(td, "aifs_sfc.grib2")
+def collect_lead(run_dt, lead):
+    url = _file_url(run_dt, lead)
+    data = _fetch(url)
+    tmp = os.path.join(tempfile.gettempdir(), "aifs_tmp.grib2")
+    with open(tmp, "wb") as f:
+        f.write(data)
+    try:
+        return decode_file(tmp, lead)
+    finally:
         try:
-            _retrieve(client, run_dt, "sfc", SFC_PARAMS, None, leads, sfc_path)
-        except Exception as e:
-            log("!! récupération sfc échouée (%s)" % e)
-            sfc_path = None
-        pl_path = os.path.join(td, "aifs_pl.grib2")
-        try:
-            _retrieve(client, run_dt, "pl", PL_PARAMS, PL_LEVELS, leads, pl_path)
-        except Exception as e:
-            log("!! récupération pl échouée (%s)" % e)
-            pl_path = None
-
-        if sfc_path:
-            try:
-                fields = decode_file(sfc_path, leads)
-                for lead, flds in fields.items():
-                    all_fields.setdefault(lead, {}).update(flds)
-            except Exception as e:
-                log("!! décodage sfc échoué (%s)" % e)
-        if pl_path:
-            try:
-                fields = decode_file(pl_path, leads)
-                for lead, flds in fields.items():
-                    all_fields.setdefault(lead, {}).update(flds)
-            except Exception as e:
-                log("!! décodage pl échoué (%s)" % e)
-    return all_fields
+            os.remove(tmp)
+        except OSError:
+            pass
 
 
 def render_lead_par(fields, lead, run_dt, domain, out_dir):
@@ -377,7 +349,6 @@ def render_domain(all_fields, run_dt, domain, out_dir, model_label, resolution,
 
 
 def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
-    from ecmwf.opendata import Client
     max_lead = max(3, min(int(max_hours), MAX_LEAD))
     run_dt = latest_run()
     log("Run AIFS sélectionné : %s" % run_dt.isoformat())
@@ -388,32 +359,36 @@ def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
         log("Aucune échéance dans l'intervalle [%s, %s]" % (lead_min, lead_max))
         return
 
-    client = Client()
     # Échauffement cumulatif : échéances antérieures (rafales + pluie)
     state_warm = {"max_gust": None, "cum_precip": None}
     prior = [lh for lh in all_leads if lh < lead_min]
-    if prior:
+    for lh in prior:
         try:
-            warm = collect_fields(client, run_dt, prior)
-            for lh in sorted(warm):
-                f = warm[lh]
-                gust = f.get("GUST")
-                apcp = f.get("APCP")
-                if gust is not None:
-                    val, lat, lon = gust
-                    g = EUROPE.regrid(val * 3.6, lat, lon)
-                    if g is not None:
-                        state_warm["max_gust"] = (g if state_warm["max_gust"] is None
-                                                  else np.maximum(state_warm["max_gust"], g))
-                if apcp is not None:
-                    val, lat, lon = apcp
-                    a = EUROPE.regrid(val, lat, lon)
-                    if a is not None:
-                        state_warm["cum_precip"] = a
+            f = collect_lead(run_dt, lh)
+            gust = f.get("GUST")
+            apcp = f.get("APCP")
+            if gust is not None:
+                val, lat, lon = gust
+                g = EUROPE.regrid(val * 3.6, lat, lon)
+                if g is not None:
+                    state_warm["max_gust"] = (g if state_warm["max_gust"] is None
+                                              else np.maximum(state_warm["max_gust"], g))
+            if apcp is not None:
+                val, lat, lon = apcp
+                a = EUROPE.regrid(val, lat, lon)
+                if a is not None:
+                    state_warm["cum_precip"] = a
         except Exception as e:
-            log("!! échauffement ignoré (%s)" % e)
+            log("  échauffement H+%03d ignoré (%s)" % (lh, e))
 
-    all_fields = collect_fields(client, run_dt, chunk_leads)
+    all_fields = {}
+    for lh in chunk_leads:
+        try:
+            all_fields[lh] = collect_lead(run_dt, lh)
+            log("  H+%03d : %d champs" % (lh, len(all_fields[lh])))
+        except Exception as e:
+            log("!! H+%03d ignoré (%s)" % (lh, e))
+
     base = os.path.join(BASE_DIR, "output")
     if domain in ("both", "europe"):
         render_domain(all_fields, run_dt, EUROPE,
