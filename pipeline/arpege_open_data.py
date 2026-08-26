@@ -125,6 +125,16 @@ def fetch_block_full(session, url, max_lead, logf, lead_min=0):
                 lead = end if step != end else step
                 if not (lead_min <= lead <= max_lead and lead % 3 == 0):
                     continue
+                # Diagnostic : table des paramètres réels (shortName/unités)
+                try:
+                    sn = codes_get(gid, "shortName")
+                    un = codes_get(gid, "units")
+                    if key == "GUST" or "gust" in str(sn).lower() or \
+                            (cat == 2 and num in (22, 23, 24)) or lead == 0:
+                        logf("  [PARAM] cat=%d num=%d lev=%d -> %s (shortName=%s, units=%s)"
+                             % (cat, num, level, key, sn, un))
+                except Exception:
+                    pass
                 ni = int(codes_get(gid, "Ni"))
                 nj = int(codes_get(gid, "Nj"))
                 vals = np.asarray(codes_get_array(gid, "values"),
