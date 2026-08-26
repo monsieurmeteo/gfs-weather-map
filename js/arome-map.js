@@ -2783,11 +2783,13 @@
             var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (currentModel === 'gfs') || (currentModel === 'arpege');
             if (transform.scale < 1.35) {
                 return isEurope ?
-                    { population: 200000, maximum: 14, size: 12 } :
+                    { population: 500000, maximum: 22, size: 12 } :
                     { population: 95000, maximum: 32, size: 12 };
             }
             if (transform.scale < 2.25) {
-                return { population: 45000, maximum: 45, size: 12 };
+                return isEurope ?
+                    { population: 150000, maximum: 40, size: 12 } :
+                    { population: 45000, maximum: 45, size: 12 };
             }
             if (transform.scale < 3.75) {
                 return { population: 15000, maximum: 60, size: 12 };
@@ -2835,8 +2837,8 @@
                 var theta = n * (r_lon - r_lon0);
                 var x = rho * Math.sin(theta);
                 var y = rho0 - rho * Math.cos(theta);
-                var u = (x - (-0.42)) / (0.438536 - (-0.42)); // sync avec domains.py x_min=-0.42, x_max=0.438536
-                var v = (0.28 - y) / (0.28 - (-0.36)); // sync avec domains.py y_max=0.28, y_min=-0.36
+                var u = (x - (-0.5902)) / (0.5902 - (-0.5902)); // sync avec domains.py x_min=-0.5902, x_max=0.5902
+                var v = (0.4600 - y) / (0.4600 - (-0.4200)); // sync avec domains.py y_max=0.4600, y_min=-0.4200
                 return { u: u, v: v };
             }
             var bounds = manifest && manifest.bounds ? manifest.bounds : { south: 39.5, west: -8.5, north: 52.5, east: 13.5 };

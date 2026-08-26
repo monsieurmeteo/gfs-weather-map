@@ -120,33 +120,49 @@ def write_hkv(grid, dst, probe_w=440, probe_h=328):
         f.write(q.tobytes())
 
 
-# ── Communes (places, pour la couche villes) ────────────────────────────────
+# ── Communes & Villes Européennes (places) ──────────────────────────────────
 def write_places(domain, out_dir):
-    """Génère maps/communes.json filtré au domaine (tri par population).
-
-    Format attendu par le front : {"places": [[nom, pop, lat, lon], ...]}
-    Source : config/communes-compact.json (34 746 communes).
-    """
+    """Génère maps/communes.json filtré au domaine (tri par population)."""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    src = os.path.join(base_dir, "config", "communes-compact.json")
-    if not os.path.exists(src):
-        return False
-    with open(src, encoding="utf-8") as f:
-        rows = json.load(f)  # [code, nom, cps[], dept, pop, lat, lon]
+    src_fr = os.path.join(base_dir, "config", "communes-compact.json")
+    src_eu = os.path.join(base_dir, "config", "cities_europe.json")
+    
+    out = []
     w, e = domain.west, domain.east
     s, n = domain.south, domain.north
-    out = []
-    for r in rows:
-        try:
-            lat, lon = float(r[5]), float(r[6])
-        except (IndexError, TypeError, ValueError):
-            continue
-        if w <= lon <= e and s <= lat <= n:
-            out.append([r[1], int(r[4]), lat, lon])
+
+    # Villes européennes majeures pour le domaine Europe
+    if os.path.exists(src_eu) and domain.projection == "lambert":
+        with open(src_eu, encoding="utf-8") as f:
+            cities_eu = json.load(f)
+            for c in cities_eu:
+                out.append(c)
+
+    if os.path.exists(src_fr):
+        with open(src_fr, encoding="utf-8") as f:
+            rows = json.load(f)
+        for r in rows:
+            try:
+                lat, lon = float(r[5]), float(r[6])
+                pop = int(r[4])
+            except (IndexError, TypeError, ValueError):
+                continue
+            if w <= lon <= e and s <= lat <= n:
+                out.append([r[1], pop, lat, lon])
+
+    # Dédoublonnage et tri décroissant par population
+    seen = set()
+    unique_out = []
     out.sort(key=lambda p: -p[1])
+    for p in out:
+        key = p[0].lower()
+        if key not in seen:
+            seen.add(key)
+            unique_out.append(p)
+
     ensure_dir(out_dir)
     with open(os.path.join(out_dir, "communes.json"), "w", encoding="utf-8") as f:
-        json.dump({"places": out}, f, ensure_ascii=False)
+        json.dump({"places": unique_out}, f, ensure_ascii=False)
     return True
 
 
