@@ -141,16 +141,17 @@ def _block_range(block):
     return (int(m.group(1)), int(m.group(2)))
 
 
-def collect_fields(session, run_dt, max_lead):
+def collect_fields(session, run_dt, max_lead, lead_min=0, lead_max=None):
     """Télécharge/extrait tous les champs → {lead: {KEY: (vals, lat, lon)}}."""
     all_fields = {}
     rs = run_str(run_dt)
     n_full_mb = 0
     n_blocks = 0
+    eff_max = min(max_lead, lead_max) if lead_max is not None else max_lead
     for pkg in PKGS:
         for block in BLOCKS:
-            b0, _ = _block_range(block)
-            if b0 > max_lead:
+            b0, b1 = _block_range(block)
+            if b0 > eff_max or b1 < lead_min:
                 continue  # bloc entièrement hors de la portée demandée
             url = GRIB_BASE.format(run=rs, pkg=pkg, block=block)
             size = _head(session, url)
@@ -327,13 +328,17 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
     return step
 
 
-def run_model(run_dt, domain, out_dir, max_lead=MAX_LEAD):
+def run_model(run_dt, domain, out_dir, max_lead=MAX_LEAD, lead_min=0, lead_max=None):
     os.makedirs(out_dir, exist_ok=True)
     session = requests.Session()
     session.headers.update(HEADERS)
-    all_fields = collect_fields(session, run_dt, max_lead)
+    all_fields = collect_fields(session, run_dt, max_lead, lead_min=lead_min, lead_max=lead_max)
 
-    leads = sorted(all_fields)
+    leads = sorted([lh for lh in all_fields if lh >= lead_min and (lead_max is None or lh <= lead_max)])
+    if not leads:
+        log("Aucune échéance dans l'intervalle [%s, %s]" % (lead_min, lead_max))
+        return 0
+
     steps = []
     state = {"counts": {}, "max_gust": None, "tp_prev": None}
     n_ok = 0
@@ -345,8 +350,6 @@ def run_model(run_dt, domain, out_dir, max_lead=MAX_LEAD):
 
     if n_ok == 0:
         raise RuntimeError("Aucune échéance rendue pour ARPEGE (%s)" % out_dir)
-    if "geopotentiel_500" not in state["counts"]:
-        raise RuntimeError("Z500 absent du run ARPEGE — vérifier IP1")
     write_places(domain, out_dir)
     write_manifest(out_dir, steps,
                    {"model_name": "ARPEGE Europe 0.1°",
@@ -360,12 +363,13 @@ def run_model(run_dt, domain, out_dir, max_lead=MAX_LEAD):
     return n_ok
 
 
-def run_all(max_hours=MAX_LEAD):
-    max_lead = max(3, min(int(max_hours), MAX_LEAD))  # 6 = 3 échéances (mode ajustement)
+def run_all(max_hours=MAX_LEAD, lead_min=0, lead_max=None):
+    max_lead = max(3, min(int(max_hours), MAX_LEAD))
     run_dt = select_run()
     log("Run ARPEGE sélectionné : %s" % run_str(run_dt))
     base = os.path.join(BASE_DIR, "output")
-    run_model(run_dt, EUROPE, os.path.join(base, "arpege", "maps"), max_lead)
+    run_model(run_dt, EUROPE, os.path.join(base, "arpege", "maps"), max_lead,
+              lead_min=lead_min, lead_max=lead_max)
     print("[ARPEGE] Pipeline terminé avec succès.", flush=True)
 
 
@@ -374,8 +378,12 @@ def main():
     ap = argparse.ArgumentParser(description="Pipeline ARPEGE Europe 0.1°")
     ap.add_argument("--max-hours", type=int, default=MAX_LEAD,
                     help="Échéance max ARPEGE en heures (défaut 102)")
+    ap.add_argument("--lead-min", type=int, default=0,
+                    help="Échéance de début")
+    ap.add_argument("--lead-max", type=int, default=None,
+                    help="Échéance de fin")
     args = ap.parse_args()
-    run_all(max_hours=args.max_hours)
+    run_all(max_hours=args.max_hours, lead_min=args.lead_min, lead_max=args.lead_max)
 
 
 if __name__ == "__main__":

@@ -335,27 +335,34 @@ def run_model(run_dt, domain, out_dir, max_hours, leads):
     return n_ok
 
 
-def compute_leads(max_hours):
+def compute_leads(max_hours=384, lead_min=0, lead_max=None):
     """Génère la liste des échéances GFS officielles jusqu'à 384 h (16 jours).
     - 0 → 120 h  : pas fin de 3 h (court terme)
     - 126 → 240 h : pas de 6 h (moyen terme)
     - 252 → 384 h : pas de 12 h (long terme)
     """
     max_h = max(3, min(int(max_hours), 384))
-    if max_h <= 120:
-        return list(range(0, max_h + 1, 3))
-    leads = list(range(0, 121, 3))
+    leads = list(range(0, min(max_h, 120) + 1, 3))
     if max_h > 120:
         h_mid = min(max_h, 240)
         leads.extend(range(126, h_mid + 1, 6))
     if max_h > 240:
         leads.extend(range(252, max_h + 1, 12))
-    return leads
+
+    if lead_min is not None:
+        leads = [lh for lh in leads if lh >= int(lead_min)]
+    if lead_max is not None:
+        leads = [lh for lh in leads if lh <= int(lead_max)]
+    return sorted(list(set(leads)))
 
 
-def run_all(max_hours=384, domain="both"):
-    leads = compute_leads(max_hours)
-    log("Échéances : H+00 → H+%03d (%d pas)" % (leads[-1], len(leads)))
+def run_all(max_hours=384, domain="both", lead_min=0, lead_max=None):
+    leads = compute_leads(max_hours, lead_min=lead_min, lead_max=lead_max)
+    if not leads:
+        log("Aucune échéance à traiter dans l'intervalle [%s, %s]" % (lead_min, lead_max))
+        return
+
+    log("Échéances : H+%03d → H+%03d (%d pas)" % (leads[0], leads[-1], len(leads)))
 
     run_dt = latest_run()
     log("Run GFS sélectionné : %s" % run_dt.isoformat())
@@ -377,8 +384,13 @@ def main():
                     help="Échéance max GFS en heures (24-384, défaut 384)")
     ap.add_argument("--domain", choices=["both", "europe", "france"], default="both",
                     help="Domaine à générer : both (défaut), europe, france")
+    ap.add_argument("--lead-min", type=int, default=0,
+                    help="Échéance de début (ex: 0, 39, 75...)")
+    ap.add_argument("--lead-max", type=int, default=None,
+                    help="Échéance de fin (ex: 36, 72, 108...)")
     args = ap.parse_args()
-    run_all(max_hours=args.max_hours, domain=args.domain)
+    run_all(max_hours=args.max_hours, domain=args.domain,
+            lead_min=args.lead_min, lead_max=args.lead_max)
 
 
 if __name__ == "__main__":
