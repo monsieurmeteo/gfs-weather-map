@@ -29,6 +29,7 @@ import gribscan  # noqa: E402
 from render import (  # noqa: E402
     save_webp, write_hkv, write_places, write_manifest,
     render_z500_with_isobars, render_pression_with_isobars,
+    render_temperature850_with_isotherms, ensure_dir,
     dew_point_c, heat_index_c, wind_chill_c, humidex_c,
 )
 
@@ -249,7 +250,15 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
     t850 = fields.get("T850")
     if t850 is not None:
         t850_c = regrid(t850, lambda v: v - 273.15)
-        save("temperature_850", t850_c)
+        if t850_c is not None:
+            dst_t850 = os.path.join(out_dir, "temperature_850", "%03d.webp" % lead)
+            ensure_dir(os.path.dirname(dst_t850))
+            render_temperature850_with_isotherms(t850_c, dst_t850)
+            step["files"]["temperature_850"] = "maps/temperature_850/%03d.webp" % lead
+            write_hkv(t850_c, os.path.join(out_dir, "values", "temperature_850",
+                                            "%03d.hkv.gz" % lead))
+            step["probes"]["temperature_850"] = "maps/values/temperature_850/%03d.hkv.gz" % lead
+            state["counts"]["temperature_850"] = state["counts"].get("temperature_850", 0) + 1
 
     if rh is not None:
         save("humidite", regrid(rh))

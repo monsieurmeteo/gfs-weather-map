@@ -188,6 +188,85 @@ def write_manifest(out_dir, steps, meta, domain):
     return m
 
 
+
+# ── T850 + isothermes ────────────────────────────────────────────────────────
+def render_temperature850_with_isotherms(t850_grid, output_path):
+    """T850 coloré (palette temperature_850) + isothermes tous les 4°C style Météociel.
+    Isotherme 0°C en noir épais — niveau de congélation bien visible.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import matplotlib.patheffects
+    import scipy.ndimage
+
+    pal = PALETTES.get("temperature_850", PALETTES["temperature"])
+    base_img = apply_palette(np.nan_to_num(t850_grid, nan=np.nan), pal)
+    if np.isnan(t850_grid).any():
+        base_img[np.isnan(t850_grid), 3] = 0
+
+    h, w = t850_grid.shape
+    fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
+    try:
+        fig.patch.set_alpha(0)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis("off")
+        ax.set_facecolor((0, 0, 0, 0))
+        ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
+
+        nan_mask = np.isnan(t850_grid)
+        if nan_mask.any():
+            weights = scipy.ndimage.gaussian_filter((~nan_mask).astype(float), sigma=1.5)
+            vals = scipy.ndimage.gaussian_filter(np.where(nan_mask, 0.0, t850_grid), sigma=1.5)
+            with np.errstate(invalid="ignore", divide="ignore"):
+                smooth_t = np.where(weights > 0.1, vals / np.maximum(weights, 1e-6), np.nan)
+            smooth_t = np.ma.masked_invalid(smooth_t)
+        else:
+            smooth_t = scipy.ndimage.gaussian_filter(t850_grid, sigma=1.5)
+
+        gx = np.linspace(0, w, t850_grid.shape[1])
+        gy = np.linspace(0, h, t850_grid.shape[0])
+        GX, GY = np.meshgrid(gx, gy)
+
+        # Isothermes fines tous les 4°C (-40 à +40°C)
+        levels_4 = np.arange(-40, 44, 4)
+        # Halo blanc pour contraste
+        ax.contour(GX, GY, smooth_t, levels=levels_4,
+                   colors="#ffffff", linewidths=3.0, alpha=0.65)
+        cs4 = ax.contour(GX, GY, smooth_t, levels=levels_4,
+                         colors="#222222", linewidths=1.3, alpha=0.85)
+        labels4 = ax.clabel(cs4, inline=True, fmt="%d", fontsize=16,
+                            colors="#111111", inline_spacing=6)
+        if labels4:
+            for lbl in labels4:
+                lbl.set_weight("bold")
+                lbl.set_path_effects([
+                    matplotlib.patheffects.Stroke(linewidth=3.5, foreground="#ffffff"),
+                    matplotlib.patheffects.Normal(),
+                ])
+
+        # Isotherme 0°C — niveau de congélation, noir épais bien visible
+        ax.contour(GX, GY, smooth_t, levels=[0],
+                   colors="#ffffff", linewidths=7.0)
+        cs0 = ax.contour(GX, GY, smooth_t, levels=[0],
+                         colors="#000000", linewidths=3.5)
+        labels0 = ax.clabel(cs0, inline=True, fmt="0°C", fontsize=18,
+                            colors="#000000", inline_spacing=10)
+        if labels0:
+            for lbl in labels0:
+                lbl.set_weight("black")
+                lbl.set_path_effects([
+                    matplotlib.patheffects.Stroke(linewidth=4.5, foreground="#ffffff"),
+                    matplotlib.patheffects.Normal(),
+                ])
+
+        ensure_dir(os.path.dirname(output_path))
+        fig.savefig(output_path, format="webp", dpi=100, transparent=True,
+                    pil_kwargs={"quality": 88})
+    finally:
+        plt.close(fig)
+
+
 # ── Z500 + isobares ─────────────────────────────────────────────────────────
 def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
     """Z500 coloré (palette geopotentiel_500) + isobares PRMSL (noir/blanc)."""
