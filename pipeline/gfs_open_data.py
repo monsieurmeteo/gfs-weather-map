@@ -128,26 +128,28 @@ def decode_grib(grib_bytes):
                 # TCDC : ignorer les niveaux isobariques parasites
                 if key == "TCDC" and "isobaricInhPa" in ds[v].coords:
                     continue
+                lat = ds[v].latitude.values
+                lon = ds[v].longitude.values
+
+                # Traitement des niveaux isobariques (HGT Z500, TMP T850)
+                if "isobaricInhPa" in ds[v].coords:
+                    levs = np.atleast_1d(ds[v].isobaricInhPa.values)
+                    for idx, lev_val in enumerate(levs):
+                        lev_f = float(lev_val)
+                        if key == "HGT" and lev_f == 500.0:
+                            val_2d = ds[v].values[idx] if ds[v].ndim == 3 else ds[v].values
+                            cached["HGT"] = (val_2d.astype(np.float32), lat, lon)
+                        elif key == "T2M" and lev_f == 850.0:
+                            val_2d = ds[v].values[idx] if ds[v].ndim == 3 else ds[v].values
+                            cached["T850"] = (val_2d.astype(np.float32), lat, lon)
+                    continue
+
                 val = ds[v].values
                 # Réduction des dimensions de niveau si singleton
                 while val.ndim > 2 and val.shape[0] == 1:
                     val = val[0]
                 if val.ndim != 2:
                     continue
-                lat = ds[v].latitude.values
-                lon = ds[v].longitude.values
-                # HGT : ne garder que le niveau 500 hPa
-                if key == "HGT" and "isobaricInhPa" in ds[v].coords:
-                    lev = float(ds[v].isobaricInhPa.values)
-                    if lev != 500.0:
-                        continue
-                # TMP : niveau 850 hPa vs 2 m
-                if key == "T2M" and "isobaricInhPa" in ds[v].coords:
-                    lev = float(ds[v].isobaricInhPa.values)
-                    if lev == 850.0:
-                        key = "T850"
-                    else:
-                        continue
                 # Première occurrence conservée (évite les doublons tcc)
                 if key not in cached:
                     cached[key] = (val.astype(np.float32), lat, lon)
