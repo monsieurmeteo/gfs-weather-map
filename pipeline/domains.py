@@ -13,10 +13,10 @@ import numpy as np
 DOMAINS = {
     "europe": {
         "projection": "lambert",
-        "lat1": 35.0, "lat2": 65.0, "lat0": 50.0, "lon0": 4.0,
-        "x_min": -0.24, "x_max": 0.28,
-        "y_min": -0.38, "y_max": 0.30,
-        "south": 24.0, "west": -30.0, "north": 70.0, "east": 43.0,
+        "lat1": 35.0, "lat2": 65.0, "lat0": 50.0, "lon0": 5.0,
+        "x_min": -0.44, "x_max": 0.4856,
+        "y_min": -0.34, "y_max": 0.35,
+        "south": 24.0, "west": -30.0, "north": 70.0, "east": 45.0,
         "width": 2200, "height": 1640,
         "label": "Europe",
     },
