@@ -82,8 +82,11 @@ def latest_run(now=None):
     return run_dt
 
 
-def download_lead(run_dt, lead):
-    """Télécharge le GRIB filtré d'une échéance (3 tentatives, TLS vérifié)."""
+def download_lead(run_dt, lead, light=False):
+    """Télécharge le GRIB filtré d'une échéance (3 tentatives, TLS vérifié).
+
+    light=True : uniquement GUST + APCP (échauffement des couches cumulatives).
+    """
     day = run_dt.strftime("%Y%m%d")
     hh = "%02d" % run_dt.hour
     params = {
@@ -93,9 +96,15 @@ def download_lead(run_dt, lead):
         "leftlon": "-55", "rightlon": "48",
         "toplat": "75", "bottomlat": "20",
     }
-    for v in GFS_REQ_VARS:
-        params["var_" + v] = "on"
-    params.update(GFS_LEVS)
+    if light:
+        params["var_GUST"] = "on"
+        params["var_APCP"] = "on"
+        params["lev_10_m_above_ground"] = "on"
+        params["lev_surface"] = "on"
+    else:
+        for v in GFS_REQ_VARS:
+            params["var_" + v] = "on"
+        params.update(GFS_LEVS)
 
     last_err = None
     for attempt in range(1, 4):
@@ -303,13 +312,59 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
     return step
 
 
-def run_model(run_dt, domain, out_dir, max_hours, leads):
-    """Exécute le rendu complet d'un modèle (un domaine)."""
+def warmup_from_cached(cached, domain, state):
+    """Applique une échéance antérieure (GUST/APCP) à l'état cumulatif."""
+    gust = layer_field("GUST", cached)
+    apcp = layer_field("APCP", cached)
+    if gust is not None:
+        val, lat, lon = gust
+        g = domain.regrid(val * 3.6, lat, lon)
+        if g is not None:
+            state["max_gust"] = (g.copy() if state["max_gust"] is None
+                                 else np.maximum(state["max_gust"], g))
+    if apcp is not None:
+        val, lat, lon = apcp
+        a = domain.regrid(val, lat, lon)
+        if a is not None:
+            state["cum_precip"] = (a.copy() if state["cum_precip"] is None
+                                   else state["cum_precip"] + a)
+    return state
+
+
+def warmup_cumulative(run_dt, prior_leads, domain):
+    """État cumulatif réel (max_gust, cum_precip) avant le premier lead du lot."""
+    state = {"max_gust": None, "cum_precip": None}
+    for lh in prior_leads:
+        try:
+            grib = download_lead(run_dt, lh, light=True)
+            cached = decode_grib(grib)
+        except Exception as e:
+            log("  échauffement H+%03d ignoré (%s)" % (lh, e))
+            continue
+        warmup_from_cached(cached, domain, state)
+    if state["max_gust"] is not None or state["cum_precip"] is not None:
+        log("  échauffement cumulatif : %d échéances antérieures traitées"
+            % len(prior_leads))
+    return state
+
+
+def run_model(run_dt, domain, out_dir, max_hours, leads, lead_min=0):
+    """Exécute le rendu complet d'un modèle (un domaine).
+
+    lead_min > 0 : échauffement du cumul (rafales_cumul / pluie_cumul) avec les
+    échéances antérieures (téléchargement léger GUST+APCP), pour que les couches
+    cumulatives restent correctes malgré le découpage en chunks parallèles.
+    """
     ensure = os.makedirs
     ensure(out_dir, exist_ok=True)
     steps = []
     state = {"counts": {}, "max_gust": None, "cum_precip": None}
     n_ok = 0
+    if int(lead_min) > 0:
+        prior_leads = [lh for lh in compute_leads(max_hours) if lh < int(lead_min)]
+        if prior_leads:
+            state = warmup_cumulative(run_dt, prior_leads, domain)
+            state["counts"] = {}
     for lh in leads:
         try:
             grib = download_lead(run_dt, lh)
@@ -378,10 +433,10 @@ def run_all(max_hours=384, domain="both", lead_min=0, lead_max=None):
     base = os.path.join(BASE_DIR, "output")
     if domain in ("both", "europe"):
         run_model(run_dt, EUROPE, os.path.join(base, "gfs", "maps"),
-                  leads[-1], leads)
+                  leads[-1], leads, lead_min=lead_min)
     if domain in ("both", "france"):
         run_model(run_dt, FRANCE, os.path.join(base, "gfs_france", "maps"),
-                  leads[-1], leads)
+                  leads[-1], leads, lead_min=lead_min)
     print("[GFS] Pipeline terminé avec succès.", flush=True)
 
 

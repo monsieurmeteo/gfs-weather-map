@@ -3533,9 +3533,9 @@
                 if (!wasMultiTouch && Math.hypot(dx, dy) < 8 && dt < 600) {
                     if (toolMode === 'diagram') {
                         openDiagramAt(event.clientX, event.clientY);
-                    } else {
-                        pinProbeAt(event.clientX, event.clientY);
                     }
+                    // Le clic n'épingle plus de cadre de valeur : le survol
+                    // de la souris affiche déjà la valeur (demande utilisateur)
                 }
             }
         }
