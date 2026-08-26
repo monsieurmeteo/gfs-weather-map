@@ -80,12 +80,15 @@ jobs:
           generate_fond_gfs.generate('europe')
           generate_fond_gfs.generate('france')
           import shutil, os
-          src = '../output/gfs/maps'
-          for dst in ('../output/arpege/maps', '../output/arpege_france/maps'):
-              os.makedirs(dst, exist_ok=True)
-              for f in ('fond.webp', 'mask_france.png', 'frontieres.svg'):
-                  s = os.path.join(src, f)
-                  if os.path.exists(s): shutil.copy(s, dst)
+          # generate('europe') écrit déjà les fonds Europe dans gfs/maps ET arpege/maps.
+          # generate('france') écrit les fonds France (Mercator) dans gfs_france/maps :
+          # on les copie vers arpege_france/maps (jamais les fonds Europe !).
+          src_fr = '../output/gfs_france/maps'
+          dst_fr = '../output/arpege_france/maps'
+          os.makedirs(dst_fr, exist_ok=True)
+          for f in ('fond.webp', 'mask_france.png', 'frontieres.svg'):
+              s = os.path.join(src_fr, f)
+              if os.path.exists(s): shutil.copy(s, dst_fr)
           print('Fonds OK')
           "
 
