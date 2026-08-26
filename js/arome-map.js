@@ -1905,6 +1905,15 @@
             var barEl = app.querySelector('[data-amfm-legend-bar]');
             var ticksEl = app.querySelector('[data-amfm-legend-ticks]');
 
+            // Z500 : la légende (30 rectangles 492→612 dam) est INTÉGRÉE dans
+            // l'image elle-même → masquer le panneau pour ne pas la recouvrir.
+            var z500Embedded = (currentLayer === 'geopotentiel_500' ||
+                                currentLayer === 'geopotentiel_500_meteociel');
+            legend.hidden = z500Embedded;
+            if (z500Embedded) {
+                return;
+            }
+
             if (labelEl && layer) labelEl.textContent = layer.label || 'Échelle';
             if (unitEl && layer) unitEl.textContent = layer.unit || '';
 
