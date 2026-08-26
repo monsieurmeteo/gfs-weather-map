@@ -219,9 +219,7 @@ jobs:
       - name: Téléchargement des chunks ICON-EU
         uses: actions/download-artifact@v4
         with:
-          pattern: |
-            chunk-fonds
-            chunk-icn-*
+          pattern: chunk-*
           path: output/
           merge-multiple: true
       - name: Assemblage des manifests index.json

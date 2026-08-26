@@ -190,9 +190,7 @@ jobs:
       - name: Téléchargement des chunks AIFS
         uses: actions/download-artifact@v4
         with:
-          pattern: |
-            chunk-fonds
-            chunk-afs-*
+          pattern: chunk-*
           path: output/
           merge-multiple: true
       - name: Assemblage des manifests index.json
