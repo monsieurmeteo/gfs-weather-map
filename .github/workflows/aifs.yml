@@ -160,7 +160,8 @@ jobs:
           python-version: '3.11'
       - name: Dépendances Python
         run: pip install -r requirements.txt -q
-      - name: Base du dernier déploiement (préserve les autres modèles)
+      - name: Base du dernier déploiement (mode front uniquement)
+        if: needs.build-fond.outputs.mode == 'front'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
