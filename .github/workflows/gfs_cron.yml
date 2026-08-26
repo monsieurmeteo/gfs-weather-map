@@ -1,4 +1,4 @@
-name: "ARPEGE — Build & Deploy"
+name: "Météo Multi-modèles GFS & ARPEGE — Build & Deploy"
 
 on:
   schedule:
@@ -11,9 +11,13 @@ on:
         required: false
         default: 'full'
       max_hours:
-        description: 'Échéance ARPEGE max en heures (48 = test rapide, 102 = complet)'
+        description: 'Échéance GFS max en heures (48 = test rapide, 384 = GFS 16 jours complet)'
         required: false
-        default: '102'
+        default: '384'
+      models:
+        description: 'Modèles à lancer : gfs, arpege ou gfs,arpege'
+        required: false
+        default: 'gfs,arpege'
 
 permissions:
   contents: read
@@ -22,9 +26,12 @@ permissions:
   actions: read
 
 concurrency:
-  group: "pages-arpege"
+  group: "pages"
   cancel-in-progress: false
 
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 — Fonds de carte partagés
+# ─────────────────────────────────────────────────────────────────────────────
 jobs:
   build-fond:
     runs-on: ubuntu-latest
@@ -32,6 +39,7 @@ jobs:
     outputs:
       mode: ${{ steps.vars.outputs.mode }}
       max_hours: ${{ steps.vars.outputs.max_hours }}
+      models: ${{ steps.vars.outputs.models }}
     steps:
       - uses: actions/checkout@v4
 
@@ -53,15 +61,17 @@ jobs:
         id: vars
         run: |
           MODE="${{ inputs.mode || 'full' }}"
-          MAX_HOURS="${{ inputs.max_hours || '102' }}"
-          if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 3 ] || [ "$MAX_HOURS" -gt 102 ]; then
-            echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 3-102 pour ARPEGE)"
+          MAX_HOURS="${{ inputs.max_hours || '384' }}"
+          MODELS="${{ inputs.models || 'gfs,arpege' }}"
+          if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 3 ] || [ "$MAX_HOURS" -gt 384 ]; then
+            echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 3-384)"
             exit 1
           fi
           echo "mode=$MODE"           >> "$GITHUB_OUTPUT"
           echo "max_hours=$MAX_HOURS" >> "$GITHUB_OUTPUT"
+          echo "models=$MODELS"       >> "$GITHUB_OUTPUT"
 
-      - name: Générer les fonds (Europe + France)
+      - name: Générer les fonds (europe + france + arpege)
         if: steps.vars.outputs.mode != 'front'
         run: |
           cd pipeline
@@ -80,7 +90,7 @@ jobs:
           for f in ('fond.webp', 'mask_france.png', 'frontieres.svg'):
               s = os.path.join(src_fr, f)
               if os.path.exists(s): shutil.copy(s, dst_fr)
-          print('Fonds ARPEGE OK')
+          print('Fonds OK')
           "
 
       - name: Upload fonds (artefact partagé)
@@ -91,6 +101,9 @@ jobs:
           path: output/
           retention-days: 1
 
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 — Matrice 18 Groupes Parallèles (GFS Europe + France, ARPEGE Europe + France)
+# ─────────────────────────────────────────────────────────────────────────────
   render-chunks:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -100,7 +113,71 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ARPEGE (6 groupes × 2 domaines : Europe + France, produit 01 0,1°)
+          # ── GFS Europe (6 groupes) ──────────────────────────────
+          - id: gfs-eu-00-36
+            model: gfs
+            domain: europe
+            lead_min: 0
+            lead_max: 36
+          - id: gfs-eu-39-72
+            model: gfs
+            domain: europe
+            lead_min: 39
+            lead_max: 72
+          - id: gfs-eu-75-108
+            model: gfs
+            domain: europe
+            lead_min: 75
+            lead_max: 108
+          - id: gfs-eu-111-144
+            model: gfs
+            domain: europe
+            lead_min: 111
+            lead_max: 144
+          - id: gfs-eu-150-240
+            model: gfs
+            domain: europe
+            lead_min: 150
+            lead_max: 240
+          - id: gfs-eu-252-384
+            model: gfs
+            domain: europe
+            lead_min: 252
+            lead_max: 384
+
+          # ── GFS France (6 groupes) ──────────────────────────────
+          - id: gfs-fr-00-36
+            model: gfs
+            domain: france
+            lead_min: 0
+            lead_max: 36
+          - id: gfs-fr-39-72
+            model: gfs
+            domain: france
+            lead_min: 39
+            lead_max: 72
+          - id: gfs-fr-75-108
+            model: gfs
+            domain: france
+            lead_min: 75
+            lead_max: 108
+          - id: gfs-fr-111-144
+            model: gfs
+            domain: france
+            lead_min: 111
+            lead_max: 144
+          - id: gfs-fr-150-240
+            model: gfs
+            domain: france
+            lead_min: 150
+            lead_max: 240
+          - id: gfs-fr-252-384
+            model: gfs
+            domain: france
+            lead_min: 252
+            lead_max: 384
+
+          # ── ARPEGE (6 groupes × 2 domaines : Europe + France, produit 01 0,1°) ──
           - id: arp-eu-00-18
             model: arpege
             domain: both
@@ -159,11 +236,19 @@ jobs:
             echo "Tranche hors limite max demandée ($MAX_HOURS h) — ignoré"
             exit 0
           fi
-          python -u pipeline/arpege_open_data.py \
-            --max-hours "$MAX_HOURS" \
-            --domain "${{ matrix.domain }}" \
-            --lead-min "${{ matrix.lead_min }}" \
-            --lead-max "${{ matrix.lead_max }}"
+          if [ "${{ matrix.model }}" = "gfs" ]; then
+            python -u pipeline/gfs_open_data.py \
+              --max-hours "$MAX_HOURS" \
+              --domain "${{ matrix.domain }}" \
+              --lead-min "${{ matrix.lead_min }}" \
+              --lead-max "${{ matrix.lead_max }}"
+          else
+            python -u pipeline/arpege_open_data.py \
+              --max-hours "$MAX_HOURS" \
+              --domain "${{ matrix.domain }}" \
+              --lead-min "${{ matrix.lead_min }}" \
+              --lead-max "${{ matrix.lead_max }}"
+          fi
 
       - name: Upload chunk (${{ matrix.id }})
         uses: actions/upload-artifact@v4
@@ -172,6 +257,9 @@ jobs:
           path: output/
           retention-days: 1
 
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 3 — Assemblage des 18 Groupes + Déploiement GitHub Pages
+# ─────────────────────────────────────────────────────────────────────────────
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -190,32 +278,25 @@ jobs:
       - name: Dépendances Python
         run: pip install -r requirements.txt -q
 
-      - name: Base du dernier déploiement (garde les autres modèles à jour)
+      - name: Base de données du dernier déploiement (mode front)
+        if: needs.build-fond.outputs.mode == 'front'
         run: |
           set -e
-          mkdir -p /tmp/base
-          RESTORED=""
-          for RUN_ID in $(gh run list --repo monsieurmeteo/gfs-weather-map \
-                --status success --limit 10 --json databaseId --jq '.[].databaseId' 2>/dev/null || true); do
-            if gh run download "$RUN_ID" --repo monsieurmeteo/gfs-weather-map \
-                 -n github-pages -D /tmp/base >/dev/null 2>&1; then
-              RESTORED="$RUN_ID"
-              break
-            fi
-          done
-          if [ -z "$RESTORED" ]; then
-            echo "::error::Aucun artefact github-pages récent à restaurer — déploiement annulé (l'ancien site reste en ligne)"
+          LAST=$(gh run list --repo monsieurmeteo/gfs-weather-map --workflow gfs_cron.yml \
+                 --status success --limit 10 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
+          if [ -z "$LAST" ]; then
+            echo "::error::Aucun run réussi précédent pour restaurer les dalles (mode front)"
             exit 1
           fi
+          mkdir -p /tmp/base
+          gh run download "$LAST" --repo monsieurmeteo/gfs-weather-map -n github-pages -D /tmp/base
           tar -xf /tmp/base/artifact.tar -C .
-          echo "Base restaurée depuis le run $RESTORED (ARPEGE sera superposé)"
+          echo "Dalles restaurées depuis le run $LAST (mode front : seule l'UI change)"
 
-      - name: Téléchargement des chunks ARPEGE
+      - name: Téléchargement de TOUS les chunks (fusion automatique)
         uses: actions/download-artifact@v4
         with:
-          pattern: |
-            chunk-fonds
-            chunk-arp-*
+          pattern: chunk-*
           path: output/
           merge-multiple: true
 
