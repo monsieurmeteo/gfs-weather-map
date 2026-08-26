@@ -10,7 +10,7 @@ les messages utiles. Pour ARPEGE EURAT01 (SP1/SP2/IP1), le volume passe de
 Paramètres Météo-France (discipline 0) constatés sur les produits ARPEGE 0,1° :
   (0,0,2)  2t        → T2M      (0,2,2)@10 10u → U10
   (0,1,1)@2 2r       → RH       (0,2,3)@10 10v → V10
-  (0,1,52)@0 tp      → APCP     (0,2,23)@10 max_10efg → GUST
+  (0,1,52)@0 tp      → APCP     (0,2,22)@10 max_i10fg → GUST
   (0,1,60)@0 sd      → SNOD     (0,3,1)@0   prmsl → PRMSL
   (0,1,64)@0 (local) → CAPE     (0,3,4)@500 z    → HGT (Z500)
   (0,6,3/4/5)@0 lcc/mcc/hcc → nuages
@@ -105,7 +105,7 @@ def key_of(cat, num, level):
         return "U10"
     if (cat, num) == (2, 3) and level == 10:
         return "V10"
-    if (cat, num) == (2, 23) and level == 10:
+    if (cat, num) == (2, 22) and level == 10:
         return "GUST"
     if (cat, num) == (3, 1) and level == 0:
         return "PRMSL"

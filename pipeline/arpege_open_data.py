@@ -144,7 +144,7 @@ def fetch_block_full(session, url, max_lead, logf, lead_min=0):
                                   dtype=np.float32).reshape(nj, ni)
                 # Diagnostic valeurs brutes : rafale vs composantes de vent
                 try:
-                    if key in ("GUST", "U10", "V10") and lead == 0 and _dbg_v.get(key) is None:
+                    if key in ("GUST", "U10", "V10") and _dbg_v.get(key) is None:
                         _dbg_v[key] = True
                         vf = vals[np.isfinite(vals)]
                         logf("  [VALEURS] %s : min %.2f max %.2f (m/s) | units=%s"
