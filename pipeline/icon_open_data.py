@@ -18,6 +18,7 @@ import re
 import sys
 import bz2
 import time
+import uuid
 import datetime
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
@@ -59,8 +60,9 @@ SFC_VARS = [
     ("ps", "PRES", 1.0),
     ("relhum_2m", "RH", 1.0),
 ]
-# Pressure-level : (nom, clé, niveau, fichier possiblement par niveau)
-PL_VARS = [("t", "T850", 850), ("z", "HGT", 500)]
+# Pressure-level : (nom URL DWD, clé canonique, niveau).
+# DWD nomme le géopotentiel 'fi' (pas 'z') : fichier par niveau ex. 500_FI.
+PL_VARS = [("t", "T850", 850), ("fi", "HGT", 500)]
 
 
 def log(msg):
@@ -104,13 +106,18 @@ def _fetch(url, retries=3):
 def _decode_grib(grib_bytes, want_var=None, want_level=None):
     """Décode un GRIB ICON (1 variable) → (values 2D, lat 1D, lon 1D) ou None."""
     import cfgrib
-    tmp = os.path.join(tempfile.gettempdir(), "icon_tmp.grib2")
+    # Fichier temporel UNIQUE par appel : les 8 threads du pool décodent en
+    # parallèle — un nom fixe provoquerait des FileNotFoundError/corruptions.
+    tmp = os.path.join(tempfile.gettempdir(),
+                       "icon_tmp_%s.grib2" % uuid.uuid4().hex[:12])
     with open(tmp, "wb") as f:
         f.write(grib_bytes)
     try:
         ds = cfgrib.open_dataset(tmp)
         v = list(ds.data_vars)[0]
-        if want_level is not None and "isobaricInhPa" in ds[v].coords:
+        # isobaricInhPa DIMENSION = fichier multi-niveaux → slicer le niveau voulu.
+        # Coordonnée scalaire (fichier par niveau, ex. 850_T) = déjà 2D.
+        if want_level is not None and "isobaricInhPa" in ds[v].dims:
             levs = np.atleast_1d(ds[v].isobaricInhPa.values)
             idx = np.argmin(np.abs(levs - want_level))
             return (ds[v].values[idx].astype(np.float32),
