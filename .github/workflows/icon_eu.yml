@@ -92,8 +92,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - id: icn-00-36
+          # 00-36 = 37 échéances horaires (~48 s/lead) → dépassait le timeout :
+          # divisé en 00-24 (25 leads) + 27-36 (4 leads, warmup automatique).
+          - id: icn-00-24
             lead_min: 0
+            lead_max: 24
+          - id: icn-27-36
+            lead_min: 27
             lead_max: 36
           - id: icn-39-72
             lead_min: 39
