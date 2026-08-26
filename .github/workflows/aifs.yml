@@ -85,7 +85,7 @@ jobs:
 
   render-chunks:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     needs: build-fond
     if: needs.build-fond.outputs.mode != 'front'
     strategy:
