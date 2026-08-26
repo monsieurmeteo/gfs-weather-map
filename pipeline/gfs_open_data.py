@@ -353,7 +353,7 @@ def compute_leads(max_hours):
     return leads
 
 
-def run_all(max_hours=384):
+def run_all(max_hours=384, domain="both"):
     leads = compute_leads(max_hours)
     log("Échéances : H+00 → H+%03d (%d pas)" % (leads[-1], len(leads)))
 
@@ -361,10 +361,12 @@ def run_all(max_hours=384):
     log("Run GFS sélectionné : %s" % run_dt.isoformat())
 
     base = os.path.join(BASE_DIR, "output")
-    run_model(run_dt, EUROPE, os.path.join(base, "gfs", "maps"),
-              leads[-1], leads)
-    run_model(run_dt, FRANCE, os.path.join(base, "gfs_france", "maps"),
-              leads[-1], leads)
+    if domain in ("both", "europe"):
+        run_model(run_dt, EUROPE, os.path.join(base, "gfs", "maps"),
+                  leads[-1], leads)
+    if domain in ("both", "france"):
+        run_model(run_dt, FRANCE, os.path.join(base, "gfs_france", "maps"),
+                  leads[-1], leads)
     print("[GFS] Pipeline terminé avec succès.", flush=True)
 
 
@@ -373,8 +375,10 @@ def main():
     ap = argparse.ArgumentParser(description="Pipeline GFS 0.25° Europe & France")
     ap.add_argument("--max-hours", type=int, default=384,
                     help="Échéance max GFS en heures (24-384, défaut 384)")
+    ap.add_argument("--domain", choices=["both", "europe", "france"], default="both",
+                    help="Domaine à générer : both (défaut), europe, france")
     args = ap.parse_args()
-    run_all(max_hours=args.max_hours)
+    run_all(max_hours=args.max_hours, domain=args.domain)
 
 
 if __name__ == "__main__":

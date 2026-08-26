@@ -3,7 +3,6 @@ name: "Météo Multi-modèles GFS & ARPEGE — Build & Deploy"
 on:
   schedule:
     # 4 fois/jour, après mise à disposition des runs 00Z/06Z/12Z/18Z
-    # (GFS prêt ~3h45, ARPEGE ~4h30 → 05:30/11:30/17:30/23:30 UTC)
     - cron: '30 5,11,17,23 * * *'
   workflow_dispatch:
     inputs:
@@ -12,7 +11,7 @@ on:
         required: false
         default: 'full'
       max_hours:
-        description: 'Échéance GFS max en heures (6 = rapide, 102 = ARPEGE, 384 = GFS 16 jours complet)'
+        description: 'Échéance GFS max en heures (6 = rapide, 384 = GFS 16 jours complet)'
         required: false
         default: '384'
       models:
@@ -30,7 +29,7 @@ concurrency:
   cancel-in-progress: false
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 1 — Fonds de carte partagés (Europe + France)
+# JOB 1 — Validation + Fonds de carte partagés
 # ─────────────────────────────────────────────────────────────────────────────
 jobs:
   build-fond:
@@ -47,10 +46,15 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-
+
       - name: Dépendances Python
-        run: |
-          python -m pip install --upgrade pip -q
-          pip install -r requirements.txt -q
+        run: pip install -r requirements.txt -q
 
       - name: Validation + export des variables
         id: vars
@@ -68,18 +72,18 @@ jobs:
           esac
           case "$MODE" in
             full|front) ;;
-            *) echo "::error::mode invalide: '$MODE' (full ou front)"; exit 1 ;;
+            *) echo "::error::mode invalide: '$MODE'"; exit 1 ;;
           esac
-          echo "mode=$MODE"       >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE"           >> "$GITHUB_OUTPUT"
           echo "max_hours=$MAX_HOURS" >> "$GITHUB_OUTPUT"
-          echo "models=$MODELS"   >> "$GITHUB_OUTPUT"
+          echo "models=$MODELS"       >> "$GITHUB_OUTPUT"
 
-      - name: Générer les fonds (europe + france → arpege aussi)
+      - name: Générer les fonds (europe + france + arpege)
         if: steps.vars.outputs.mode != 'front'
         run: |
           cd pipeline
           python -c "
-          import sys; sys.path.insert(0,'.')
+          import sys; sys.path.insert(0, '.')
           import generate_fond_gfs
           generate_fond_gfs.generate('europe')
           generate_fond_gfs.generate('france')
@@ -87,7 +91,7 @@ jobs:
           src = '../output/gfs/maps'
           dst = '../output/arpege/maps'
           os.makedirs(dst, exist_ok=True)
-          for f in ('fond.webp','mask_france.png','frontieres.svg'):
+          for f in ('fond.webp', 'mask_france.png', 'frontieres.svg'):
               s = os.path.join(src, f)
               if os.path.exists(s): shutil.copy(s, dst)
           print('Fonds OK')
@@ -102,9 +106,9 @@ jobs:
           retention-days: 1
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 2 — GFS Europe + France  (parallèle avec ARPEGE)
+# JOB 2 — GFS Europe  (parallèle avec Jobs 3 et 4)
 # ─────────────────────────────────────────────────────────────────────────────
-  build-gfs:
+  build-gfs-europe:
     runs-on: ubuntu-latest
     timeout-minutes: 150
     needs: build-fond
@@ -118,11 +122,18 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Dépendances système (eccodes)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-
 
-      - name: Dépendances Python
-        run: python -m pip install --upgrade pip -q && pip install -r requirements.txt -q
+      - name: Dépendances système + Python
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+          pip install -r requirements.txt -q
 
       - name: Récupération des fonds
         uses: actions/download-artifact@v4
@@ -130,19 +141,64 @@ jobs:
           name: fonds-de-carte
           path: output/
 
-      - name: Pipeline GFS (Europe + France)
+      - name: Pipeline GFS — Europe uniquement
         run: |
           python -u pipeline/run_all.py \
             --max-hours "${{ needs.build-fond.outputs.max_hours }}" \
             --models gfs \
+            --domain europe \
             --skip-fonds
 
-      - name: Upload dalles GFS
+      - name: Upload dalles GFS Europe
         uses: actions/upload-artifact@v4
         with:
-          name: dalles-gfs
+          name: dalles-gfs-europe
           path: output/gfs/
           retention-days: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 3 — GFS France  (parallèle avec Jobs 2 et 4)
+# ─────────────────────────────────────────────────────────────────────────────
+  build-gfs-france:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    needs: build-fond
+    if: |
+      needs.build-fond.outputs.mode != 'front' &&
+      (contains(needs.build-fond.outputs.models, 'gfs') || github.event_name == 'schedule')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-
+
+      - name: Dépendances système + Python
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+          pip install -r requirements.txt -q
+
+      - name: Récupération des fonds
+        uses: actions/download-artifact@v4
+        with:
+          name: fonds-de-carte
+          path: output/
+
+      - name: Pipeline GFS — France uniquement
+        run: |
+          python -u pipeline/run_all.py \
+            --max-hours "${{ needs.build-fond.outputs.max_hours }}" \
+            --models gfs \
+            --domain france \
+            --skip-fonds
 
       - name: Upload dalles GFS France
         uses: actions/upload-artifact@v4
@@ -152,7 +208,7 @@ jobs:
           retention-days: 1
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 3 — ARPEGE Europe  (parallèle avec GFS)
+# JOB 4 — ARPEGE Europe  (parallèle avec Jobs 2 et 3)
 # ─────────────────────────────────────────────────────────────────────────────
   build-arpege:
     runs-on: ubuntu-latest
@@ -168,11 +224,18 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Dépendances système (eccodes)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-
 
-      - name: Dépendances Python
-        run: python -m pip install --upgrade pip -q && pip install -r requirements.txt -q
+      - name: Dépendances système + Python
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+          pip install -r requirements.txt -q
 
       - name: Récupération des fonds
         uses: actions/download-artifact@v4
@@ -195,13 +258,19 @@ jobs:
           retention-days: 1
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 4 — Assemblage + Déploiement GitHub Pages
+# JOB 5 — Assemblage + Déploiement GitHub Pages
 # ─────────────────────────────────────────────────────────────────────────────
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [build-fond, build-gfs, build-arpege]
-    if: always() && (needs.build-gfs.result == 'success' || needs.build-arpege.result == 'success' || needs.build-fond.outputs.mode == 'front')
+    needs: [build-fond, build-gfs-europe, build-gfs-france, build-arpege]
+    if: |
+      always() && (
+        needs.build-gfs-europe.result == 'success' ||
+        needs.build-gfs-france.result == 'success'  ||
+        needs.build-arpege.result     == 'success'  ||
+        needs.build-fond.outputs.mode == 'front'
+      )
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -215,15 +284,15 @@ jobs:
           name: fonds-de-carte
           path: output/
 
-      - name: Récupération dalles GFS
-        if: needs.build-gfs.result == 'success'
+      - name: Récupération dalles GFS Europe
+        if: needs.build-gfs-europe.result == 'success'
         uses: actions/download-artifact@v4
         with:
-          name: dalles-gfs
+          name: dalles-gfs-europe
           path: output/gfs/
 
       - name: Récupération dalles GFS France
-        if: needs.build-gfs.result == 'success'
+        if: needs.build-gfs-france.result == 'success'
         uses: actions/download-artifact@v4
         with:
           name: dalles-gfs-france

@@ -30,10 +30,13 @@ def sync_fond(src_maps, dst_maps):
 
 def main():
     ap = argparse.ArgumentParser(description="Pipeline météo multi-modèles")
-    ap.add_argument("--max-hours", type=int, default=120,
-                    help="Échéance GFS max (24-120, défaut 120)")
+    ap.add_argument("--max-hours", type=int, default=384,
+                    help="Échéance GFS max (24-384, défaut 384)")
     ap.add_argument("--models", default="gfs,arpege",
                     help="Modèles à lancer : gfs,arpege (défaut: les deux)")
+    ap.add_argument("--domain", default="both",
+                    choices=["both", "europe", "france"],
+                    help="Domaine GFS : both (défaut), europe, france")
     ap.add_argument("--skip-fonds", action="store_true",
                     help="Ne pas régénérer les fonds de carte")
     args = ap.parse_args()
@@ -52,7 +55,7 @@ def main():
 
     if "gfs" in models:
         import gfs_open_data
-        gfs_open_data.run_all(max_hours=args.max_hours)
+        gfs_open_data.run_all(max_hours=args.max_hours, domain=args.domain)
 
     if "arpege" in models:
         import arpege_open_data
