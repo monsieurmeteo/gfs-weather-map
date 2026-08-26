@@ -2823,7 +2823,7 @@
                 var r_lat1 = 35.0 * Math.PI / 180;
                 var r_lat2 = 65.0 * Math.PI / 180;
                 var r_lat0 = 50.0 * Math.PI / 180;
-                var r_lon0 = -5.0 * Math.PI / 180;
+                var r_lon0 = 4.0 * Math.PI / 180;
                 var n = Math.log(Math.cos(r_lat1) / Math.cos(r_lat2)) / Math.log(
                     Math.tan(Math.PI / 4 + r_lat2 / 2) / Math.tan(Math.PI / 4 + r_lat1 / 2)
                 );
@@ -2834,8 +2834,9 @@
                 var rho = F / Math.pow(Math.tan(Math.PI / 4 + r_lat / 2), n);
                 var theta = n * (r_lon - r_lon0);
                 var x = rho * Math.sin(theta);
-                var u = (x - (-0.40)) / (0.48 - (-0.40)); // sync avec domains.py x_min=-0.40, x_max=0.48
-                var v = (0.38 - y) / (0.38 - (-0.42)); // sync avec domains.py y_max=0.38, y_min=-0.42
+                var y = rho0 - rho * Math.cos(theta);
+                var u = (x - (-0.24)) / (0.28 - (-0.24)); // sync avec domains.py x_min=-0.24, x_max=0.28
+                var v = (0.30 - y) / (0.30 - (-0.38)); // sync avec domains.py y_max=0.30, y_min=-0.38
                 return { u: u, v: v };
             }
             var bounds = manifest && manifest.bounds ? manifest.bounds : { south: 39.5, west: -8.5, north: 52.5, east: 13.5 };
