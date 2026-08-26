@@ -1160,7 +1160,6 @@
             if (valuesVisible && manifest && manifest.layers && manifest.layers[currentLayer]) {
                 try {
                     var vLayer = manifest.layers[currentLayer];
-                    // Calage dense avec grands chiffres ultra lisibles pour la carte nationale et régionale
                     var stepGrid = hScale < 1.35 ? 88 : (hScale < 2.5 ? 78 : 66);
                     var valFontSize = hScale < 1.35 ? 30 : 32;
                     context.font = '800 ' + valFontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -1168,7 +1167,7 @@
                     context.textBaseline = 'middle';
                     context.lineJoin = 'round';
 
-                    // Sampler local
+                    // Sampler couleur local (fallback si pas de probe HKV)
                     var localSampler = samplerContext;
                     if (customImage && customImage.complete && customImage.naturalWidth) {
                         var tempS = document.createElement('canvas');
@@ -1186,10 +1185,8 @@
                             var gu = (gx - offX) / (2200 * hScale);
                             if (gu < 0 || gu > 1) continue;
 
-                            // Exclusion totale des valeurs en mer (ne garder que les terres)
                             if (!isLand(gu, gv)) continue;
 
-                            // Protection anti-collision ajustée pour les grands chiffres
                             var gRect = { left: gx - 20, right: gx + 20, top: gy - 16, bottom: gy + 16 };
                             var gClash = false;
                             for (var oi = 0; oi < occupied.length; oi += 1) {
@@ -1201,8 +1198,10 @@
                             }
                             if (gClash) continue;
 
-                            var gVal = null;
-                            if (localSampler) {
+                            // Priorité 1 : probe HKV (même logique que drawValues à l'écran)
+                            var gVal = sampleProbe(currentProbe, gu, gv);
+                            // Priorité 2 : décodage couleur depuis le canvas pixel
+                            if (gVal === null && localSampler) {
                                 var px = Math.min(Math.max(0, Math.round(gu * (localSampler.canvas.width - 1))), localSampler.canvas.width - 1);
                                 var py = Math.min(Math.max(0, Math.round(gv * (localSampler.canvas.height - 1))), localSampler.canvas.height - 1);
                                 var pix = localSampler.getImageData(px, py, 1, 1).data;
@@ -1227,6 +1226,7 @@
                     }
                 } catch (vErr) {}
             }
+
 
             return output;
         }
