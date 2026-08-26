@@ -273,7 +273,7 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
     if pres is not None:
         save("pression_surface", regrid(pres, lambda v: v / 100.0))
 
-    if hgt is not None and prmsl is not None and domain.name != "france":
+    if hgt is not None and prmsl is not None:
         z = regrid(hgt, lambda v: v / 10.0)
         p_hpa = regrid(prmsl, lambda v: v / 100.0)
         dst = os.path.join(out_dir, "geopotentiel_500", "%03d.webp" % lead)

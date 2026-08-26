@@ -2188,10 +2188,11 @@
                     var isFranceOnly = (modelKey === 'gfs_france' || modelKey === 'arpege_france');
                     var dSel = document.getElementById('direct-layer-select');
                     if (dSel) {
+                        // Couches disponibles = celles réellement rendues par le modèle (Z500/T850 compris sur France)
                         var z500Opt = dSel.querySelector('option[value="geopotentiel_500"]');
-                        if (z500Opt) z500Opt.disabled = isFranceOnly;
+                        if (z500Opt) z500Opt.disabled = !(manifest.layers && manifest.layers['geopotentiel_500']);
                         var t850Opt = dSel.querySelector('option[value="temperature_850"]');
-                        if (t850Opt) t850Opt.disabled = isFranceOnly;
+                        if (t850Opt) t850Opt.disabled = !(manifest.layers && manifest.layers['temperature_850']);
                     }
                     var regSel = document.getElementById('select-region');
                     if (regSel) {
@@ -2202,10 +2203,7 @@
                         }
                     }
 
-                    if (isFranceOnly && currentLayer === 'geopotentiel_500' && manifest.layers['pression']) {
-                        currentLayer = 'pression';
-                        if (dSel) dSel.value = 'pression';
-                    } else if (!manifest.layers[currentLayer]) {
+                    if (!manifest.layers[currentLayer]) {
                         currentLayer = manifest.layers['geopotentiel_500'] ? 'geopotentiel_500' : (Object.keys(manifest.layers)[0] || 'temperature');
                         if (dSel) dSel.value = currentLayer;
                     }

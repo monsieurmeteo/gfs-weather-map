@@ -213,11 +213,10 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
         step["probes"][name] = "maps/values/%s/%03d.hkv.gz" % (name, lead)
         state["counts"][name] = state["counts"].get(name, 0) + 1
 
-    # ★ Couche maîtresse : Z500 (m²/s² → dam) + isobares (Europe uniquement,
-    #    comme GFS France : pas de Z500 sur le domaine France)
+    # ★ Couche maîtresse : Z500 (m²/s² → dam) + isobares (Europe ET France)
     hgt = fields.get("HGT")
     prmsl = fields.get("PRMSL")
-    if hgt is not None and prmsl is not None and domain.name != "france":
+    if hgt is not None and prmsl is not None:
         z = regrid(hgt, lambda v: v / 98.0665)
         p_hpa = regrid(prmsl, lambda v: v / 100.0)
         if z is not None and p_hpa is not None:
