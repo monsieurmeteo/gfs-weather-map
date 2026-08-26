@@ -1,4 +1,4 @@
-name: "Météo Multi-modèles GFS & ARPEGE — Build & Deploy"
+﻿name: "Météo Multi-modèles GFS & ARPEGE — Build & Deploy"
 
 on:
   # Pas de planification automatique : déclenchement externe (API / autre programme)
@@ -43,7 +43,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -212,7 +212,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -271,7 +271,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Dépendances Python
         run: pip install -r requirements.txt -q
