@@ -246,9 +246,10 @@ jobs:
       - name: Pipeline ARPEGE
         run: |
           python -u pipeline/run_all.py \
-            --max-hours 102 \
+            --max-hours "${{ needs.build-fond.outputs.max_hours }}" \
             --models arpege \
             --skip-fonds
+
 
       - name: Upload dalles ARPEGE
         uses: actions/upload-artifact@v4
