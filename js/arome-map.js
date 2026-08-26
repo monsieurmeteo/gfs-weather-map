@@ -871,6 +871,18 @@
                 }
             }
 
+            // Zone réellement couverte par la carte dans le canvas d'export
+            // (évite que titre / logo / légende débordent sur le fond noir)
+            var mapRect = {
+                left: Math.max(0, offX),
+                right: Math.min(outW, offX + 2200 * hScale),
+                top: Math.max(0, offY),
+                bottom: Math.min(outH, offY + 1640 * vScale)
+            };
+            if (mapRect.right <= mapRect.left || mapRect.bottom <= mapRect.top) {
+                mapRect = { left: 0, right: outW, top: 0, bottom: outH };
+            }
+
             var output = document.createElement('canvas');
             output.width = outW;
             output.height = outH;
@@ -952,8 +964,9 @@
             if (logoImage && logoImage.complete && logoImage.naturalWidth) {
                 var logoTargetW = 380;
                 var logoTargetH = Math.round(logoTargetW * logoImage.naturalHeight / logoImage.naturalWidth);
-                var lx = output.width - margin - logoTargetW;
-                var ly = bannerY + (bannerH - logoTargetH) / 2;
+                // Logo toujours à l'intérieur de la zone carte (jamais sur le fond noir)
+                var lx = Math.min(output.width - margin - logoTargetW, mapRect.right - margin - logoTargetW);
+                var ly = Math.max(mapRect.top + 8, bannerY + (bannerH - logoTargetH) / 2);
                 context.shadowColor = 'rgba(0, 0, 0, 0.75)';
                 context.shadowBlur = 12;
                 context.shadowOffsetX = 2;
@@ -1019,12 +1032,18 @@
             var w3 = context.measureText(dateText).width;
             var bannerW = Math.max(w1, w2, w3) + 48;
 
+            // Cartouche toujours à l'intérieur de la zone carte (jamais sur le fond noir)
+            var cartLeft = Math.max(margin, mapRect.left + margin);
+            var cartTop = Math.max(bannerY, mapRect.top + bannerY);
+            bannerW = Math.min(bannerW, Math.max(120, mapRect.right - cartLeft - margin));
+            bannerH = Math.min(bannerH, Math.max(60, mapRect.bottom - cartTop - margin));
+
             context.fillStyle = 'rgba(7, 11, 20, 0.92)';
             context.beginPath();
             if (typeof context.roundRect === 'function') {
-                context.roundRect(margin, bannerY, bannerW, bannerH, 16);
+                context.roundRect(cartLeft, cartTop, bannerW, bannerH, 16);
             } else {
-                context.rect(margin, bannerY, bannerW, bannerH);
+                context.rect(cartLeft, cartTop, bannerW, bannerH);
             }
             context.fill();
             context.strokeStyle = 'rgba(0, 210, 255, 0.8)';
@@ -1036,27 +1055,28 @@
             context.font = '700 38px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
             context.textAlign = 'left';
             context.textBaseline = 'alphabetic';
-            context.fillText(paramTitle, margin + 24, bannerY + 48);
+            context.fillText(paramTitle, cartLeft + 24, cartTop + 48);
 
             // 2. Modèle météo & Run (en dessous, cyan éclatant)
             context.fillStyle = '#00d2ff';
             context.font = '700 26px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-            context.fillText(modelAndRun, margin + 24, bannerY + 88);
+            context.fillText(modelAndRun, cartLeft + 24, cartTop + 88);
 
             // 3. Date & Échéance (en dessous, GRAND, blanc éclatant avec accent cyan)
             context.fillStyle = '#ffffff';
             context.font = '800 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-            context.fillText(dateText, margin + 24, bannerY + 140);
+            context.fillText(dateText, cartLeft + 24, cartTop + 140);
 
             // Légende colorimétrique officielle en bas
             var legendY = 0, legendX = 0, legendW = 0, legendH = 0;
             if (layer && typeof window.getLayerPalette === 'function' && typeof window.paletteTicks === 'function') {
                 try {
-                    legendW = 1100;
+                    // Légende toujours à l'intérieur de la zone carte (jamais sur le fond noir)
+                    legendW = Math.min(1100, Math.max(200, mapRect.right - mapRect.left - 48));
                     legendH = 96;
                     var legendBottom = 24;
-                    legendX = (output.width - legendW) / 2;
-                    legendY = output.height - legendH - legendBottom;
+                    legendX = mapRect.left + (mapRect.right - mapRect.left - legendW) / 2;
+                    legendY = Math.max(mapRect.top, mapRect.bottom - legendH - legendBottom);
 
                     context.fillStyle = 'rgba(7, 11, 20, 0.95)';
                     context.beginPath();
@@ -1075,7 +1095,7 @@
                     context.font = '700 30px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
                     context.textAlign = 'center';
                     context.textBaseline = 'alphabetic';
-                    context.fillText(prettyLabel + (prettyUnit ? ' (' + prettyUnit + ')' : ''), output.width / 2, legendY + 30);
+                    context.fillText(prettyLabel + (prettyUnit ? ' (' + prettyUnit + ')' : ''), legendX + legendW / 2, legendY + 30);
 
                     // Barre
                     var pal = window.getLayerPalette(currentLayer);
@@ -1121,7 +1141,6 @@
             if (legendW > 0 && legendY > 0) {
                 occupied.push({ left: legendX - 25, right: legendX + legendW + 25, top: legendY - 15, bottom: output.height });
             }
-
             // Villes sur la carte (respecte citiesVisible et se masque automatiquement si valuesVisible est actif)
             if (citiesVisible && !valuesVisible && manifest && manifest.bounds && places && places.length) {
                 try {

@@ -23,6 +23,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: "pages"
@@ -276,6 +277,21 @@ jobs:
 
       - name: Dépendances Python
         run: pip install -r requirements.txt -q
+
+      - name: Base de données du dernier déploiement (mode front)
+        if: needs.build-fond.outputs.mode == 'front'
+        run: |
+          set -e
+          LAST=$(gh run list --repo monsieurmeteo/gfs-weather-map --workflow gfs_cron.yml \
+                 --status success --limit 10 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
+          if [ -z "$LAST" ]; then
+            echo "::error::Aucun run réussi précédent pour restaurer les dalles (mode front)"
+            exit 1
+          fi
+          mkdir -p /tmp/base
+          gh run download "$LAST" --repo monsieurmeteo/gfs-weather-map -n github-pages -D /tmp/base
+          tar -xf /tmp/base/artifact.tar -C .
+          echo "Dalles restaurées depuis le run $LAST (mode front : seule l'UI change)"
 
       - name: Téléchargement de TOUS les chunks (fusion automatique)
         uses: actions/download-artifact@v4
