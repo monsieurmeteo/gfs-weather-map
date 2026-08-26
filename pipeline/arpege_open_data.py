@@ -59,6 +59,9 @@ def log(msg):
     print("[ARPEGE] " + msg, flush=True)
 
 
+_dbg_v = {}  # diagnostic valeurs brutes (une seule fois par clé)
+
+
 def run_str(run_dt):
     return run_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -139,6 +142,16 @@ def fetch_block_full(session, url, max_lead, logf, lead_min=0):
                 nj = int(codes_get(gid, "Nj"))
                 vals = np.asarray(codes_get_array(gid, "values"),
                                   dtype=np.float32).reshape(nj, ni)
+                # Diagnostic valeurs brutes : rafale vs composantes de vent
+                try:
+                    if key in ("GUST", "U10", "V10") and lead == 0 and _dbg_v.get(key) is None:
+                        _dbg_v[key] = True
+                        vf = vals[np.isfinite(vals)]
+                        logf("  [VALEURS] %s : min %.2f max %.2f (m/s) | units=%s"
+                             % (key, float(vf.min()), float(vf.max()),
+                                codes_get(gid, "units")))
+                except Exception:
+                    pass
                 lat2 = np.asarray(codes_get_array(gid, "latitudes"),
                                   dtype=np.float64).reshape(nj, ni)
                 lon2 = np.asarray(codes_get_array(gid, "longitudes"),
