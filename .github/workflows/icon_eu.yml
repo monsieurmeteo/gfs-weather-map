@@ -1,4 +1,4 @@
-﻿name: "ICON-EU — Build & Deploy"
+name: "ICON-EU — Build & Deploy"
 
 on:
   workflow_dispatch:
@@ -155,6 +155,8 @@ jobs:
       - name: Dépendances Python
         run: pip install -r requirements.txt -q
       - name: Base du dernier déploiement (préserve les autres modèles)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -e
           mkdir -p /tmp/base

@@ -10,26 +10,43 @@ permissions:
 jobs:
   diag:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      - name: Diagnostique restauration base
+      - name: Diagnostique restauration base (boucle fixée)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -x
           gh --version
-          echo "--- gh run list brut (sans filtre) ---"
-          gh run list --repo monsieurmeteo/gfs-weather-map \
-                --status success --limit 5 --json databaseId,workflowName
-          echo "--- jq filtre ---"
-          gh run list --repo monsieurmeteo/gfs-weather-map \
-                --status success --limit 20 --json databaseId,workflowName --jq \
-                '.[] | select(.workflowName | test("Build & Deploy")) | .databaseId'
-          echo "--- gh api runs (champ name) ---"
-          gh api repos/monsieurmeteo/gfs-weather-map/actions/runs?status=success\&per_page=5 --jq '.workflow_runs[] | {id, name, display_title}'
-          echo "--- telechargement test depuis le dernier bon run ---"
           mkdir -p /tmp/base
-          gh run download 32977422230 --repo monsieurmeteo/gfs-weather-map \
-               -n github-pages -D /tmp/base 2>&1 | head -20
-          ls -la /tmp/base | head -10
-          echo "FIN DIAG"
+          RESTORED=""
+          for RUN_ID in $(gh run list --repo monsieurmeteo/gfs-weather-map \
+                --status success --limit 20 --json databaseId,workflowName --jq \
+                '.[] | select(.workflowName | test("Build & Deploy")) | .databaseId' 2>&1 | head -25); do
+            echo "### essai run $RUN_ID"
+            if gh run download "$RUN_ID" --repo monsieurmeteo/gfs-weather-map \
+                 -n github-pages -D /tmp/base 2>&1 | tail -3; then
+              echo "### contenu /tmp/base :"
+              ls -la /tmp/base | head -15
+              if [ -d /tmp/base/output ]; then
+                RESTORED="$RUN_ID"
+                echo "### OUTPUT TROUVÉ pour $RUN_ID"
+                break
+              fi
+              rm -rf /tmp/base
+              mkdir -p /tmp/base
+            fi
+          done
+          echo "RESTORED=$RESTORED"
+          if [ -z "$RESTORED" ]; then
+            echo "::error::Aucun artefact github-pages météo récent à restaurer"
+            exit 1
+          fi
+          cp -r /tmp/base/. .
+          echo "Base restaurée depuis le run $RESTORED"
+          echo "### vérification :"
+          ls | head -20
+          du -sh output 2>/dev/null
+          echo "FIN DIAG OK"

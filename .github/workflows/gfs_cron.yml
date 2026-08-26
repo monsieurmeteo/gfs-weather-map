@@ -1,4 +1,4 @@
-﻿name: "Météo Multi-modèles GFS & ARPEGE — Build & Deploy"
+name: "Météo Multi-modèles GFS & ARPEGE — Build & Deploy"
 
 on:
   # Pas de planification automatique : déclenchement externe (API / autre programme)
@@ -277,6 +277,8 @@ jobs:
         run: pip install -r requirements.txt -q
 
       - name: Base du dernier déploiement (préserve les autres modèles)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -e
           mkdir -p /tmp/base
