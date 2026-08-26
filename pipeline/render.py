@@ -367,17 +367,17 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path, style="dense"):
                 # ── Style dense (défaut) : isobares fines 1 hPa + épaisses 5 hPa ──
                 levels_1hpa = np.arange(935, 1065, 1)
 
-                # Isobares fines 1 hPa (halo noir + ligne blanche)
+                # Isobares fines 1 hPa : ligne NOIRE (halo blanc pour détacher du fond)
                 ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
-                           colors="#000000", linewidths=2.8, alpha=0.5)
+                           colors="#ffffff", linewidths=3.0, alpha=0.85)
                 ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
-                           colors="#ffffff", linewidths=1.2, alpha=0.75)
+                           colors="#000000", linewidths=1.4, alpha=0.9)
 
                 # Isobares épaisses 5 hPa + labels blancs
                 ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
-                           colors="#000000", linewidths=5.0)
+                           colors="#ffffff", linewidths=5.5)
                 cs5 = ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
-                                 colors="#ffffff", linewidths=2.5)
+                                 colors="#000000", linewidths=2.8)
                 labels = ax.clabel(cs5, inline=True, fmt="%d", fontsize=18,
                                    colors="#ffffff", inline_spacing=8)
                 if labels:
@@ -434,20 +434,19 @@ def render_pression_with_isobars(prmsl_grid, output_path):
             levels_1hpa = np.arange(935, 1065, 1)
             levels_5hpa = np.arange(935, 1065, 5)
 
-            # Halo blanc pour les lignes fines (1 hPa)
+            # Halo blanc pour les lignes fines (1 hPa) + ligne NOIRE
             ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
-                       colors="#ffffff", linewidths=2.5, alpha=0.6)
-            # Lignes fines grises 1 hPa
+                       colors="#ffffff", linewidths=2.6, alpha=0.75)
             ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
-                       colors="#333333", linewidths=1.0, alpha=0.7)
+                       colors="#000000", linewidths=1.2, alpha=0.85)
 
             # ── Isobares épaisses tous les 5 hPa + labels ─────────────────────
             ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
                        colors="#ffffff", linewidths=5.5, alpha=0.9)
             cs5 = ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
-                             colors="#111111", linewidths=2.8)
+                             colors="#000000", linewidths=2.8)
             labels = ax.clabel(cs5, inline=True, fmt="%d", fontsize=18,
-                               colors="#111111", inline_spacing=8)
+                               colors="#000000", inline_spacing=8)
             if labels:
                 for lbl in labels:
                     lbl.set_weight("bold")
