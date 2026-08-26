@@ -1104,22 +1104,33 @@
                     var max = stops.length ? stops[stops.length - 1].value : 1;
                     var span = (max - low) || 1;
                     var barY = legendY + 44;
-                    var gradient = context.createLinearGradient(legendX, 0, legendX + legendW, 0);
-                    if (pal && pal.transparent_below !== null && pal.transparent_below !== undefined) {
-                        gradient.addColorStop(0, 'rgba(0,0,0,0)');
-                    }
-                    stops.forEach(function (s) {
-                        var pos = Math.max(0, Math.min(1, (Number(s.value) - low) / span));
-                        gradient.addColorStop(pos, s.color);
-                    });
-                    context.fillStyle = gradient;
-                    context.beginPath();
-                    if (typeof context.roundRect === 'function') {
-                        context.roundRect(legendX, barY, legendW, 24, 12);
+                    var isDiscreteZ500 = (currentLayer === 'geopotentiel_500' || currentLayer === 'geopotentiel_500_meteociel');
+                    if (isDiscreteZ500 && stops.length > 1) {
+                        // Z500 : BANDES DISCRÈTES de 4 dam (style Météociel),
+                        // chaque classe reçoit la couleur pleine de son seuil bas.
+                        var segW = legendW / (stops.length - 1);
+                        for (var si = 0; si < stops.length - 1; si++) {
+                            context.fillStyle = stops[si].color;
+                            context.fillRect(legendX + si * segW, barY, segW + 0.5, 24);
+                        }
                     } else {
-                        context.rect(legendX, barY, legendW, 24);
+                        var gradient = context.createLinearGradient(legendX, 0, legendX + legendW, 0);
+                        if (pal && pal.transparent_below !== null && pal.transparent_below !== undefined) {
+                            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+                        }
+                        stops.forEach(function (s) {
+                            var pos = Math.max(0, Math.min(1, (Number(s.value) - low) / span));
+                            gradient.addColorStop(pos, s.color);
+                        });
+                        context.fillStyle = gradient;
+                        context.beginPath();
+                        if (typeof context.roundRect === 'function') {
+                            context.roundRect(legendX, barY, legendW, 24, 12);
+                        } else {
+                            context.rect(legendX, barY, legendW, 24);
+                        }
+                        context.fill();
                     }
-                    context.fill();
                     context.strokeStyle = 'rgba(255,255,255,0.6)';
                     context.lineWidth = 2;
                     context.stroke();

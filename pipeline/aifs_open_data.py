@@ -230,10 +230,10 @@ def render_lead_par(fields, lead, run_dt, domain, out_dir):
         if z_raw is not None and p_hpa is not None:
             z = z_raw / 98.0665  # m²/s² → dam
             dst = os.path.join(out_dir, "geopotentiel_500", "%03d.webp" % lead)
-            render_z500_with_isobars(z, p_hpa, dst, style="dense")
+            render_z500_with_isobars(z, p_hpa, dst, style="synoptique")
             step["files"]["geopotentiel_500"] = "maps/geopotentiel_500/%03d.webp" % lead
             dst2 = os.path.join(out_dir, "geopotentiel_500_meteociel", "%03d.webp" % lead)
-            render_z500_with_isobars(z, p_hpa, dst2, style="meteociel")
+            render_z500_with_isobars(z, p_hpa, dst2, style="detail")
             step["files"]["geopotentiel_500_meteociel"] = "maps/geopotentiel_500_meteociel/%03d.webp" % lead
 
     t850 = fields.get("T850")

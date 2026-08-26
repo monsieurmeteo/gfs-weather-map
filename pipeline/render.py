@@ -59,11 +59,25 @@ def ensure_dir(p):
 
 
 # ── Couleur ──────────────────────────────────────────────────────────────────
-def apply_palette(data, palette):
-    """Applique une palette (liste de (seuil, rgba)) à un champ 2D → RGBA."""
+def apply_palette(data, palette, discrete=False):
+    """Applique une palette (liste de (seuil, rgba)) à un champ 2D → RGBA.
+
+    discrete=True : bandes de couleurs PLEINES (chaque classe = couleur de son
+    seuil, sans interpolation) — nécessaire pour le Z500 par classes de 4 dam
+    (style Météociel). False : dégradé linéaire continu (autres couches).
+    """
     vs = np.array([s[0] for s in palette], dtype=np.float32)
     cs = np.array([list(s[1]) for s in palette], dtype=np.float32)
     rgba = np.zeros((*data.shape, 4), dtype=np.uint8)
+    if discrete:
+        # Chaque classe [vs[i], vs[i+1]) reçoit la couleur PLEINE de son seuil bas
+        for i in range(len(vs) - 1):
+            mask = (data >= vs[i]) & (data < vs[i + 1])
+            if np.any(mask):
+                rgba[mask] = cs[i].astype(np.uint8)
+        rgba[data <= vs[0]] = cs[0].astype(np.uint8)
+        rgba[data >= vs[-1]] = cs[-1].astype(np.uint8)
+        return rgba
     for i in range(len(vs) - 1):
         mask = (data >= vs[i]) & (data < vs[i + 1])
         if not np.any(mask):
@@ -285,12 +299,17 @@ def render_temperature850_with_isotherms(t850_grid, output_path):
 
 
 # ── Z500 + isobares ─────────────────────────────────────────────────────────
-def render_z500_with_isobars(z500_grid, prmsl_grid, output_path, style="dense"):
-    """Z500 coloré (palette geopotentiel_500) + isobares PRMSL (noir/blanc).
+def render_z500_with_isobars(z500_grid, prmsl_grid, output_path, style="synoptique"):
+    """Z500 en bandes de couleurs (palette geopotentiel_500, classes 4 dam)
+    + isobares PRMSL niveau mer en hPa.
 
-    style="dense"    : isobares fines 1 hPa + épaisses 5 hPa (labels) — rendu actuel.
-    style="meteociel": isobares 5 hPa (labels) + 10 hPa épaisses + isolignes Z500
-                       discrètes tous les 6 dam (gris sombre fin) — rendu Météociel.
+    style="synoptique" (DÉFAUT, esprit Météociel) : bandes Z500 4 dam
+        + isobares blanches tous les 5 hPa UNIQUEMENT (épaisses, étiquettes
+        blanches avec halo sombre) — lecture synoptique claire, zéro spaghetti.
+    style="detail" : mêmes bandes Z500 + isobares 1 hPa très fines + 5 hPa
+        épaisses (étiquettes sur les 5 hPa uniquement) — analyse avancée.
+    style="dense"   : ancien rendu (1 hPa + 5 hPa) — conservé pour compat.
+    style="meteociel": ancien rendu Météociel (5/10 hPa + isolignes Z500).
     """
     import matplotlib
     matplotlib.use("Agg")
@@ -299,7 +318,8 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path, style="dense"):
     import scipy.ndimage
 
     pal = PALETTES.get("geopotentiel_500", PALETTES["temperature"])
-    base_img = apply_palette(np.nan_to_num(z500_grid, nan=np.nan), pal)
+    # BANDES DISCRÈTES 4 dam (pas de dégradé continu)
+    base_img = apply_palette(np.nan_to_num(z500_grid, nan=np.nan), pal, discrete=True)
     if np.isnan(z500_grid).any():
         base_img[np.isnan(z500_grid), 3] = 0
 
@@ -329,8 +349,45 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path, style="dense"):
             levels_5hpa = np.arange(935, 1065, 5)
             levels_10hpa = np.arange(930, 1070, 10)
 
-            if style == "meteociel":
-                # ── Style Météociel : isobares 5 hPa + principales 10 hPa ──────
+            if style == "synoptique":
+                # ── MODE SYNOPTIQUE (défaut, esprit Météociel) ─────────────
+                # Isobares blanches tous les 5 hPa UNIQUEMENT : épaisses,
+                # fluides, étiquettes blanches avec halo sombre.
+                ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
+                           colors="#000000", linewidths=4.2, alpha=0.75)
+                cs5 = ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
+                                 colors="#ffffff", linewidths=2.0)
+                labels = ax.clabel(cs5, inline=True, fmt="%d", fontsize=17,
+                                   colors="#ffffff", inline_spacing=8)
+                if labels:
+                    for lbl in labels:
+                        lbl.set_weight("bold")
+                        lbl.set_path_effects([
+                            matplotlib.patheffects.Stroke(linewidth=3.2, foreground="#000000"),
+                            matplotlib.patheffects.Normal(),
+                        ])
+            elif style == "detail":
+                # ── MODE DÉTAILLÉ : 1 hPa fins très discrets + 5 hPa épais ──
+                levels_1hpa = np.arange(935, 1065, 1)
+                ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
+                           colors="#000000", linewidths=1.8, alpha=0.35)
+                ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
+                           colors="#ffffff", linewidths=0.8, alpha=0.5)
+                ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
+                           colors="#000000", linewidths=4.2, alpha=0.75)
+                cs5 = ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
+                                 colors="#ffffff", linewidths=2.0)
+                labels = ax.clabel(cs5, inline=True, fmt="%d", fontsize=17,
+                                   colors="#ffffff", inline_spacing=8)
+                if labels:
+                    for lbl in labels:
+                        lbl.set_weight("bold")
+                        lbl.set_path_effects([
+                            matplotlib.patheffects.Stroke(linewidth=3.2, foreground="#000000"),
+                            matplotlib.patheffects.Normal(),
+                        ])
+            elif style == "meteociel":
+                # ── Style Météociel (ancien) : isobares 5 hPa + principales 10 hPa ──
                 ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
                            colors="#000000", linewidths=3.2, alpha=0.65)
                 cs5 = ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
@@ -364,7 +421,7 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path, style="dense"):
                     ax.contour(GX, GY, smooth_z, levels=levels_6dam,
                                colors="#222222", linewidths=1.1, alpha=0.40)
             else:
-                # ── Style dense (défaut) : isobares fines 1 hPa + épaisses 5 hPa ──
+                # ── Style dense (ancien défaut) : isobares fines 1 hPa + épaisses 5 hPa ──
                 levels_1hpa = np.arange(935, 1065, 1)
 
                 # Isobares fines 1 hPa : ligne NOIRE (halo blanc pour détacher du fond)
