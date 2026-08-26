@@ -1808,6 +1808,9 @@
                 layerGrid.innerHTML = '';
             }
             Object.keys(manifest.layers || {}).forEach(function (key) {
+                // Les variantes de style (ex: geopotentiel_500_meteociel) sont pilotées
+                // par le sélecteur de style, pas par le menu des couches
+                if (key.indexOf('_meteociel') !== -1) { return; }
                 var layer = manifest.layers[key];
                 var group = layer.group || 'Autres';
                 if (!grouped[group]) {
@@ -2124,6 +2127,13 @@
             });
         }
 
+        var z500StyleSelect = document.getElementById('z500-style');
+        if (z500StyleSelect) {
+            z500StyleSelect.addEventListener('change', function (e) {
+                setLayer(e.target.value);
+            });
+        }
+
         var switchToken = 0; // ponytail: guard anti-double-switch — pas de AbortController pour IE11
 
         function switchModel(modelKey) {
@@ -2209,6 +2219,7 @@
                     }
                     if (typeof buildLayerMenu === 'function') buildLayerMenu();
                     buildLegend();
+                    updateZ500StyleToggle();
                     currentModel = modelKey;
                     var modelSel2 = document.getElementById('select-model');
                     if (modelSel2) modelSel2.value = modelKey;
@@ -2256,14 +2267,30 @@
             }
             currentLayer = layer;
             var dSel = document.getElementById('direct-layer-select');
-            if (dSel && dSel.value !== layer) {
-                dSel.value = layer;
+            var baseKey = (layer.indexOf('_meteociel') !== -1) ? 'geopotentiel_500' : layer;
+            if (dSel && dSel.value !== baseKey) {
+                dSel.value = baseKey;
             }
             refreshLayerMenu();
             buildLegend();
+            updateZ500StyleToggle();
             var steps = availableSteps();
             currentStep = clamp(currentStep, 0, Math.max(0, steps.length - 1));
             renderStep(currentStep);
+        }
+
+        // ── Sélecteur de style des contours Z500 (Dense / Météociel) ──────────
+        function updateZ500StyleToggle() {
+            var toggle = document.getElementById('z500-style');
+            if (!toggle) {
+                return;
+            }
+            var isZ500 = (currentLayer === 'geopotentiel_500' || currentLayer === 'geopotentiel_500_meteociel');
+            var hasVariant = !!(manifest && manifest.layers && manifest.layers['geopotentiel_500_meteociel']);
+            toggle.style.display = (isZ500 && hasVariant) ? '' : 'none';
+            if (isZ500 && toggle.value !== currentLayer) {
+                toggle.value = currentLayer;
+            }
         }
 
         // ── État dans l'URL (style meteo-npdc.fr) ─────────────────────────────

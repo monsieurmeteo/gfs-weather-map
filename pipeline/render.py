@@ -35,6 +35,7 @@ LAYER_META = {
     "pression":              ("Pression niveau mer",           "hPa",  0, "Pression et géopotentiel"),
     "pression_surface":      ("Pression au sol",               "hPa",  0, "Pression et géopotentiel"),
     "geopotentiel_500":      ("Géopotentiel 500 hPa",          "dam",  0, "Pression et géopotentiel"),
+    "geopotentiel_500_meteociel": ("Géopotentiel 500 hPa (contours Météociel)", "dam", 0, "Pression et géopotentiel"),
     "temperature_850":       ("Température à 850 hPa (~1 500 m)", "°C", 1, "Pression et géopotentiel"),
     "pluie_1h":              ("Précipitations sur 3 h",        "mm",   1, "Précipitations"),
     "pluie_cumul":           ("Précipitations cumulées",       "mm",   1, "Précipitations"),
@@ -284,8 +285,13 @@ def render_temperature850_with_isotherms(t850_grid, output_path):
 
 
 # ── Z500 + isobares ─────────────────────────────────────────────────────────
-def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
-    """Z500 coloré (palette geopotentiel_500) + isobares PRMSL (noir/blanc)."""
+def render_z500_with_isobars(z500_grid, prmsl_grid, output_path, style="dense"):
+    """Z500 coloré (palette geopotentiel_500) + isobares PRMSL (noir/blanc).
+
+    style="dense"    : isobares fines 1 hPa + épaisses 5 hPa (labels) — rendu actuel.
+    style="meteociel": isobares 5 hPa (labels) + 10 hPa épaisses + isolignes Z500
+                       discrètes tous les 6 dam (gris sombre fin) — rendu Météociel.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -320,29 +326,67 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path):
             gy = np.linspace(0, h, prmsl_grid.shape[0])
             GX, GY = np.meshgrid(gx, gy)
 
-            levels_1hpa = np.arange(935, 1065, 1)
             levels_5hpa = np.arange(935, 1065, 5)
+            levels_10hpa = np.arange(930, 1070, 10)
 
-            # Isobares fines 1 hPa (halo noir + ligne blanche)
-            ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
-                       colors="#000000", linewidths=2.8, alpha=0.5)
-            ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
-                       colors="#ffffff", linewidths=1.2, alpha=0.75)
+            if style == "meteociel":
+                # ── Style Météociel : isobares 5 hPa + principales 10 hPa ──────
+                ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
+                           colors="#000000", linewidths=3.2, alpha=0.65)
+                cs5 = ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
+                                 colors="#ffffff", linewidths=1.6)
+                labels = ax.clabel(cs5, inline=True, fmt="%d", fontsize=17,
+                                   colors="#ffffff", inline_spacing=8)
+                if labels:
+                    for lbl in labels:
+                        lbl.set_weight("bold")
+                        lbl.set_path_effects([
+                            matplotlib.patheffects.Stroke(linewidth=3.2, foreground="#000000"),
+                            matplotlib.patheffects.Normal(),
+                        ])
+                ax.contour(GX, GY, smooth_p, levels=levels_10hpa,
+                           colors="#000000", linewidths=5.5, alpha=0.55)
+                ax.contour(GX, GY, smooth_p, levels=levels_10hpa,
+                           colors="#ffffff", linewidths=2.8, alpha=0.9)
 
-            # Isobares épaisses 5 hPa + labels blancs
-            ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
-                       colors="#000000", linewidths=5.0)
-            cs5 = ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
-                             colors="#ffffff", linewidths=2.5)
-            labels = ax.clabel(cs5, inline=True, fmt="%d", fontsize=18,
-                               colors="#ffffff", inline_spacing=8)
-            if labels:
-                for lbl in labels:
-                    lbl.set_weight("bold")
-                    lbl.set_path_effects([
-                        matplotlib.patheffects.Stroke(linewidth=3.5, foreground="#000000"),
-                        matplotlib.patheffects.Normal(),
-                    ])
+                # Isolignes Z500 discrètes tous les 6 dam (gris sombre, fines)
+                if z500_grid is not None:
+                    if np.isnan(z500_grid).any():
+                        zm = np.isnan(z500_grid)
+                        zw = scipy.ndimage.gaussian_filter((~zm).astype(float), sigma=2.0)
+                        zv = scipy.ndimage.gaussian_filter(np.where(zm, 0.0, z500_grid), sigma=2.0)
+                        with np.errstate(invalid="ignore", divide="ignore"):
+                            smooth_z = np.where(zw > 0.1, zv / np.maximum(zw, 1e-6), np.nan)
+                        smooth_z = np.ma.masked_invalid(smooth_z)
+                    else:
+                        smooth_z = scipy.ndimage.gaussian_filter(z500_grid, sigma=2.0)
+                    levels_6dam = np.arange(480, 620, 6)
+                    ax.contour(GX, GY, smooth_z, levels=levels_6dam,
+                               colors="#222222", linewidths=1.1, alpha=0.40)
+            else:
+                # ── Style dense (défaut) : isobares fines 1 hPa + épaisses 5 hPa ──
+                levels_1hpa = np.arange(935, 1065, 1)
+
+                # Isobares fines 1 hPa (halo noir + ligne blanche)
+                ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
+                           colors="#000000", linewidths=2.8, alpha=0.5)
+                ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
+                           colors="#ffffff", linewidths=1.2, alpha=0.75)
+
+                # Isobares épaisses 5 hPa + labels blancs
+                ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
+                           colors="#000000", linewidths=5.0)
+                cs5 = ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
+                                 colors="#ffffff", linewidths=2.5)
+                labels = ax.clabel(cs5, inline=True, fmt="%d", fontsize=18,
+                                   colors="#ffffff", inline_spacing=8)
+                if labels:
+                    for lbl in labels:
+                        lbl.set_weight("bold")
+                        lbl.set_path_effects([
+                            matplotlib.patheffects.Stroke(linewidth=3.5, foreground="#000000"),
+                            matplotlib.patheffects.Normal(),
+                        ])
         ensure_dir(os.path.dirname(output_path))
         fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 88})
     finally:

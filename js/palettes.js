@@ -600,6 +600,7 @@
         label: 'Température à 850 hPa (~1 500 m)', unit: '°C', decimals: 1, transparent_below: null,
         stops: PALETTES.temperature.stops
     };
+    PALETTES.geopotentiel_500_meteociel = PALETTES.geopotentiel_500;
 
     function getLayerPalette(key) { return PALETTES[key] || PALETTES.temperature; }
     function paletteGradientCSS(key) {

@@ -276,11 +276,17 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
     if hgt is not None and prmsl is not None:
         z = regrid(hgt, lambda v: v / 10.0)
         p_hpa = regrid(prmsl, lambda v: v / 100.0)
-        dst = os.path.join(out_dir, "geopotentiel_500", "%03d.webp" % lead)
         if z is not None and p_hpa is not None:
-            render_z500_with_isobars(z, p_hpa, dst)
+            # Style dense (défaut) : isobares fines 1 hPa + épaisses 5 hPa
+            dst = os.path.join(out_dir, "geopotentiel_500", "%03d.webp" % lead)
+            render_z500_with_isobars(z, p_hpa, dst, style="dense")
             step["files"]["geopotentiel_500"] = "maps/geopotentiel_500/%03d.webp" % lead
             state["counts"]["geopotentiel_500"] = state["counts"].get("geopotentiel_500", 0) + 1
+            # Style Météociel (option UI) : isobares 5/10 hPa + isolignes Z500 6 dam
+            dst2 = os.path.join(out_dir, "geopotentiel_500_meteociel", "%03d.webp" % lead)
+            render_z500_with_isobars(z, p_hpa, dst2, style="meteociel")
+            step["files"]["geopotentiel_500_meteociel"] = "maps/geopotentiel_500_meteociel/%03d.webp" % lead
+            state["counts"]["geopotentiel_500_meteociel"] = state["counts"].get("geopotentiel_500_meteociel", 0) + 1
 
     if apcp is not None:
         a = regrid(apcp)  # mm sur 3 h
