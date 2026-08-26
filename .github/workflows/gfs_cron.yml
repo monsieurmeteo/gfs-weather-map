@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'full = régénère les données (~1h30) ; front = déploie le code seul (~5 min, dalles en cache)'
+        description: 'full = régénère les données ; front = déploie le code seul (~5 min)'
         required: false
         default: 'full'
       max_hours:
@@ -29,38 +29,37 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 — Fonds de carte partagés (Europe + France)
+# ─────────────────────────────────────────────────────────────────────────────
 jobs:
-  build-and-deploy:
+  build-fond:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 20
+    outputs:
+      mode: ${{ steps.vars.outputs.mode }}
+      max_hours: ${{ steps.vars.outputs.max_hours }}
+      models: ${{ steps.vars.outputs.models }}
     steps:
-      - name: Récupération du dépôt
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configuration Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Dépendances système (eccodes)
+      - name: Dépendances Python
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+          python -m pip install --upgrade pip -q
+          pip install -r requirements.txt -q
 
-      - name: Dépendances Python (épinglées)
+      - name: Validation + export des variables
+        id: vars
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Validation des entrées
-        run: |
-          # Les inputs sont vides sur les runs planifiés (schedule) :
-          # on applique les valeurs par défaut.
           MODE="${{ inputs.mode || 'full' }}"
           MAX_HOURS="${{ inputs.max_hours || '120' }}"
           MODELS="${{ inputs.models || 'gfs,arpege' }}"
           if ! [[ "$MAX_HOURS" =~ ^[0-9]+$ ]] || [ "$MAX_HOURS" -lt 3 ] || [ "$MAX_HOURS" -gt 384 ]; then
-            echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 3-384 ; 6 = rapide, 102 = ARPEGE, 384 = GFS complet)"
+            echo "::error::max_hours invalide: '$MAX_HOURS' (attendu 3-384)"
             exit 1
           fi
           case "$MODELS" in
@@ -71,39 +70,171 @@ jobs:
             full|front) ;;
             *) echo "::error::mode invalide: '$MODE' (full ou front)"; exit 1 ;;
           esac
-          echo "MODE=$MODE" >> "$GITHUB_ENV"
-          echo "MAX_HOURS=$MAX_HOURS" >> "$GITHUB_ENV"
-          echo "MODELS=$MODELS" >> "$GITHUB_ENV"
+          echo "mode=$MODE"       >> "$GITHUB_OUTPUT"
+          echo "max_hours=$MAX_HOURS" >> "$GITHUB_OUTPUT"
+          echo "models=$MODELS"   >> "$GITHUB_OUTPUT"
 
-      - name: Restauration des dalles en cache (mode front)
-        if: env.MODE == 'front'
-        uses: actions/cache/restore@v4
-        with:
-          path: output
-          key: tiles-gfs-arpege-${{ hashFiles('pipeline/domains.py') }}-${{ github.run_id }}
-          restore-keys: |
-            tiles-gfs-arpege-${{ hashFiles('pipeline/domains.py') }}-
-            tiles-gfs-arpege-
-
-      - name: Vérification des dalles en cache (mode front)
-        if: env.MODE == 'front'
+      - name: Générer les fonds (europe + france → arpege aussi)
+        if: steps.vars.outputs.mode != 'front'
         run: |
-          if [ ! -d output/gfs/maps ] || [ ! -d output/arpege/maps ]; then
-            echo "::error::Dalles absentes du cache — lancez d'abord un run en mode 'full'."
-            exit 1
-          fi
-          echo "Dalles en cache OK (GFS + ARPEGE)."
+          cd pipeline
+          python -c "
+          import sys; sys.path.insert(0,'.')
+          import generate_fond_gfs
+          generate_fond_gfs.generate('europe')
+          generate_fond_gfs.generate('france')
+          import shutil, os
+          src = '../output/gfs/maps'
+          dst = '../output/arpege/maps'
+          os.makedirs(dst, exist_ok=True)
+          for f in ('fond.webp','mask_france.png','frontieres.svg'):
+              s = os.path.join(src, f)
+              if os.path.exists(s): shutil.copy(s, dst)
+          print('Fonds OK')
+          "
 
-      - name: Exécution du pipeline multi-modèles
-        if: env.MODE != 'front'
-        run: python -u pipeline/run_all.py --max-hours "$MAX_HOURS" --models "$MODELS"
-
-      - name: Mise en cache des dalles générées
-        if: env.MODE != 'front'
-        uses: actions/cache/save@v4
+      - name: Upload fonds (artefact partagé)
+        if: steps.vars.outputs.mode != 'front'
+        uses: actions/upload-artifact@v4
         with:
-          path: output
-          key: tiles-gfs-arpege-${{ hashFiles('pipeline/domains.py') }}-${{ github.run_id }}
+          name: fonds-de-carte
+          path: output/
+          retention-days: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 — GFS Europe + France  (parallèle avec ARPEGE)
+# ─────────────────────────────────────────────────────────────────────────────
+  build-gfs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    needs: build-fond
+    if: |
+      needs.build-fond.outputs.mode != 'front' &&
+      (contains(needs.build-fond.outputs.models, 'gfs') || github.event_name == 'schedule')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dépendances système (eccodes)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+
+      - name: Dépendances Python
+        run: python -m pip install --upgrade pip -q && pip install -r requirements.txt -q
+
+      - name: Récupération des fonds
+        uses: actions/download-artifact@v4
+        with:
+          name: fonds-de-carte
+          path: output/
+
+      - name: Pipeline GFS (Europe + France)
+        run: |
+          python -u pipeline/run_all.py \
+            --max-hours "${{ needs.build-fond.outputs.max_hours }}" \
+            --models gfs \
+            --skip-fonds
+
+      - name: Upload dalles GFS
+        uses: actions/upload-artifact@v4
+        with:
+          name: dalles-gfs
+          path: output/gfs/
+          retention-days: 1
+
+      - name: Upload dalles GFS France
+        uses: actions/upload-artifact@v4
+        with:
+          name: dalles-gfs-france
+          path: output/gfs_france/
+          retention-days: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 3 — ARPEGE Europe  (parallèle avec GFS)
+# ─────────────────────────────────────────────────────────────────────────────
+  build-arpege:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: build-fond
+    if: |
+      needs.build-fond.outputs.mode != 'front' &&
+      (contains(needs.build-fond.outputs.models, 'arpege') || github.event_name == 'schedule')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dépendances système (eccodes)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+
+      - name: Dépendances Python
+        run: python -m pip install --upgrade pip -q && pip install -r requirements.txt -q
+
+      - name: Récupération des fonds
+        uses: actions/download-artifact@v4
+        with:
+          name: fonds-de-carte
+          path: output/
+
+      - name: Pipeline ARPEGE
+        run: |
+          python -u pipeline/run_all.py \
+            --max-hours 102 \
+            --models arpege \
+            --skip-fonds
+
+      - name: Upload dalles ARPEGE
+        uses: actions/upload-artifact@v4
+        with:
+          name: dalles-arpege
+          path: output/arpege/
+          retention-days: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 4 — Assemblage + Déploiement GitHub Pages
+# ─────────────────────────────────────────────────────────────────────────────
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [build-fond, build-gfs, build-arpege]
+    if: always() && (needs.build-gfs.result == 'success' || needs.build-arpege.result == 'success' || needs.build-fond.outputs.mode == 'front')
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Récupération fonds
+        if: needs.build-fond.outputs.mode != 'front'
+        uses: actions/download-artifact@v4
+        with:
+          name: fonds-de-carte
+          path: output/
+
+      - name: Récupération dalles GFS
+        if: needs.build-gfs.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: dalles-gfs
+          path: output/gfs/
+
+      - name: Récupération dalles GFS France
+        if: needs.build-gfs.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: dalles-gfs-france
+          path: output/gfs_france/
+
+      - name: Récupération dalles ARPEGE
+        if: needs.build-arpege.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: dalles-arpege
+          path: output/arpege/
 
       - name: Préparation du site statique
         run: |
@@ -113,11 +244,9 @@ jobs:
           cp -r js _site/
           cp -r output _site/
 
-      - name: Configuration Pages
-        uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v5
 
-      - name: Téléversement de l'artefact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: '_site'
 
