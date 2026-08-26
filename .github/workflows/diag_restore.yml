@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Diagnostique restauration base (boucle fixée)
+      - name: Diagnostique restauration base (logique tar réelle)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -27,12 +27,12 @@ jobs:
                 '.[] | select(.workflowName | test("Build & Deploy")) | .databaseId' 2>&1 | head -25); do
             echo "### essai run $RUN_ID"
             if gh run download "$RUN_ID" --repo monsieurmeteo/gfs-weather-map \
-                 -n github-pages -D /tmp/base 2>&1 | tail -3; then
+                 -n github-pages -D /tmp/base >/dev/null 2>&1; then
               echo "### contenu /tmp/base :"
-              ls -la /tmp/base | head -15
-              if [ -d /tmp/base/output ]; then
+              ls -la /tmp/base | head -8
+              if tar -tf /tmp/base/artifact.tar 2>/dev/null | grep -q "output/"; then
                 RESTORED="$RUN_ID"
-                echo "### OUTPUT TROUVÉ pour $RUN_ID"
+                echo "### OUTPUT TROUVÉ dans artifact.tar pour $RUN_ID"
                 break
               fi
               rm -rf /tmp/base
@@ -44,9 +44,9 @@ jobs:
             echo "::error::Aucun artefact github-pages météo récent à restaurer"
             exit 1
           fi
-          cp -r /tmp/base/. .
+          tar -xf /tmp/base/artifact.tar -C .
           echo "Base restaurée depuis le run $RESTORED"
           echo "### vérification :"
-          ls | head -20
+          ls | head -12
           du -sh output 2>/dev/null
           echo "FIN DIAG OK"
