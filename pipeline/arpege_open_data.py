@@ -82,9 +82,9 @@ def select_run(now=None, session=None):
     raise RuntimeError("Aucun run ARPEGE disponible sur le S3 Météo-France")
 
 
-def fetch_block_full(session, url, max_lead, logf):
+def fetch_block_full(session, url, max_lead, logf, lead_min=0):
     """Repli : téléchargement complet du bloc puis décodage sélectif local."""
-    logf("  repli : téléchargement complet du bloc…")
+    logf("  téléchargement direct du bloc GRIB…")
     r = session.get(url, headers=HEADERS, timeout=600, verify=True)
     r.raise_for_status()
     if len(r.content) < 1000:
@@ -111,7 +111,7 @@ def fetch_block_full(session, url, max_lead, logf):
                 step = int(codes_get(gid, "step"))
                 end = int(codes_get(gid, "endStep"))
                 lead = end if step != end else step
-                if not (0 <= lead <= max_lead and lead % 3 == 0):
+                if not (lead_min <= lead <= max_lead and lead % 3 == 0):
                     continue
                 ni = int(codes_get(gid, "Ni"))
                 nj = int(codes_get(gid, "Nj"))
@@ -159,20 +159,29 @@ def collect_fields(session, run_dt, max_lead, lead_min=0, lead_max=None):
                 log("!! %s %s introuvable" % (pkg, block))
                 continue
             t0 = time.time()
-            try:
-                fields = gribscan.fetch_block(session, url, size, max_lead,
-                                              log=log)
-                mode = "sélectif"
-            except Exception as e:
-                log("!! %s %s : extraction sélective échouée (%s)"
-                    % (pkg, block, e))
+            # Pour IP1 (1560 messages), le scan sélectif fait trop de requêtes HTTP (250s).
+            # Un téléchargement direct en 1 seule requête GET prend 3 secondes sur GitHub Actions !
+            if pkg == "IP1":
                 try:
-                    fields = fetch_block_full(session, url, max_lead, log)
-                    mode = "complet (repli)"
+                    fields = fetch_block_full(session, url, eff_max, log, lead_min=lead_min)
+                    mode = "direct (rapide)"
                     n_full_mb += size // (1024 * 1024)
-                except Exception as e2:
-                    log("!! %s %s : repli échoué (%s)" % (pkg, block, e2))
+                except Exception as e:
+                    log("!! %s %s : téléchargement échoué (%s)" % (pkg, block, e))
                     continue
+            else:
+                try:
+                    fields = gribscan.fetch_block(session, url, size, eff_max, log=log)
+                    mode = "sélectif"
+                except Exception as e:
+                    log("!! %s %s : extraction sélective échouée (%s)" % (pkg, block, e))
+                    try:
+                        fields = fetch_block_full(session, url, eff_max, log, lead_min=lead_min)
+                        mode = "complet (repli)"
+                        n_full_mb += size // (1024 * 1024)
+                    except Exception as e2:
+                        log("!! %s %s : repli échoué (%s)" % (pkg, block, e2))
+                        continue
             n_blocks += 1
             for lead, flds in fields.items():
                 all_fields.setdefault(lead, {}).update(flds)
