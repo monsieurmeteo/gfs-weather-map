@@ -158,25 +158,47 @@ jobs:
             lead_min: 252
             lead_max: 384
 
-          # ── ARPEGE (4 groupes × 2 domaines : Europe + France, produit GLOB025 0,25° Météociel) ──
+          # ── ARPEGE Europe (4 groupes, produit GLOB025 0,25° pleine couverture) ──
           - id: arp-eu-00-24
             model: arpege
-            domain: both
+            domain: europe
             lead_min: 0
             lead_max: 24
           - id: arp-eu-25-48
             model: arpege
-            domain: both
+            domain: europe
             lead_min: 25
             lead_max: 48
           - id: arp-eu-49-72
             model: arpege
-            domain: both
+            domain: europe
             lead_min: 49
             lead_max: 72
           - id: arp-eu-73-102
             model: arpege
-            domain: both
+            domain: europe
+            lead_min: 73
+            lead_max: 102
+
+          # ── ARPEGE France (4 groupes, produit EURAT01 0,1° haute résolution 11 km) ──
+          - id: arp-fr-00-24
+            model: arpege
+            domain: france
+            lead_min: 0
+            lead_max: 24
+          - id: arp-fr-25-48
+            model: arpege
+            domain: france
+            lead_min: 25
+            lead_max: 48
+          - id: arp-fr-49-72
+            model: arpege
+            domain: france
+            lead_min: 49
+            lead_max: 72
+          - id: arp-fr-73-102
+            model: arpege
+            domain: france
             lead_min: 73
             lead_max: 102
 

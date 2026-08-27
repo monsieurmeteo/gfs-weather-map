@@ -37,17 +37,34 @@ from render import (  # noqa: E402
 )
 
 HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
-# Produit S3 Météo-France : 01 = ARPEGE Europe 0,1° (EURAT01) — produit haute résolution
-# officiel couvrant l'Europe (-32° à +42°, 20°N à 72°N) avec T2M à 2 mètres réelle.
-GRIB_PRODUCTS = {"europe": "01", "france": "01"}
+# Configuration des produits ARPEGE Météo-France :
+# - Europe : produit GLOB025 (0.25°) couvrant 100% du globe sans transparence
+# - France : produit EURAT01 (0.1°) couvrant la métropole & régions en haute résolution (11 km) avec 2t
+GRIB_CONFIG = {
+    "europe": {
+        "product": "025",
+        "label": "ARPEGE Europe 0.25°",
+        "resolution": "0.25° (~25 km)",
+        "blocks": ["000H024H", "025H048H", "049H072H", "073H102H"],
+        "domain": EUROPE,
+        "out_dir_name": "arpege",
+    },
+    "france": {
+        "product": "01",
+        "label": "ARPEGE France 0.1°",
+        "resolution": "0.1° (~11 km)",
+        "blocks": ["000H012H", "013H024H", "025H036H", "037H048H", "049H060H", "061H072H", "073H084H", "085H096H", "097H102H"],
+        "domain": FRANCE,
+        "out_dir_name": "arpege_france",
+    }
+}
 PKGS = ["SP1", "SP2", "IP1"]
-BLOCKS = ["000H012H", "013H024H", "025H036H", "037H048H", "049H060H", "061H072H", "073H084H", "085H096H", "097H102H"]
 RUN_MATURITY = 16200  # 4 h 30
 MAX_LEAD = 102
 
 
-def grib_url(run, pkg, block, product="01"):
-    """URL S3 Météo-France d'un bloc GRIB2 ARPEGE (produit 01 EURAT01)."""
+def grib_url(run, pkg, block, product="025"):
+    """URL S3 Météo-France d'un bloc GRIB2 ARPEGE (025 ou 01)."""
     return ("https://meteofrance-pnt.s3.rbx.io.cloud.ovh.net/pnt/{run}/arpege/{prod}/"
             "{pkg}/arpege__{prod}__{pkg}__{block}__{run}.grib2"
             .format(run=run, prod=product, pkg=pkg, block=block))
@@ -81,16 +98,18 @@ def _head(session, url):
     return int(cl) if cl else None
 
 
-def select_run(now=None, session=None):
-    """Dernier run ARPEGE réellement disponible (SP1 000H024H présent)."""
+def select_run(now=None, session=None, product="025"):
+    """Dernier run ARPEGE réellement disponible."""
     s = session or requests.Session()
-    now = now or datetime.datetime.now(datetime.timezone.utc)
+    if not isinstance(now, datetime.datetime):
+        now = datetime.datetime.now(datetime.timezone.utc)
     for _ in range(2):
         run_dt = latest_run(now)
-        url = grib_url(run_str(run_dt), "SP1", "000H012H", GRIB_PRODUCTS["europe"])
+        test_block = "000H024H" if product == "025" else "000H012H"
+        url = grib_url(run_str(run_dt), "SP1", test_block, product)
         if _head(s, url):
             return run_dt
-        log("Run %s indisponible, repli sur le précédent" % run_str(run_dt))
+        log("Run %s indisponible pour produit %s, repli sur le précédent" % (run_str(run_dt), product))
         run_dt -= datetime.timedelta(hours=6)
     raise RuntimeError("Aucun run ARPEGE disponible sur le S3 Météo-France")
 
@@ -102,7 +121,7 @@ def fetch_block_full(session, url, max_lead, logf, lead_min=0):
     r.raise_for_status()
     if len(r.content) < 1000:
         raise IOError("Bloc vide: %s" % url)
-    tmp = os.path.join(tempfile.gettempdir(), "arpege_block.grib2")
+    tmp = os.path.join(tempfile.gettempdir(), "arpege_block_%d.grib2" % os.getpid())
     with open(tmp, "wb") as f:
         f.write(r.content)
     out = {}
@@ -132,29 +151,27 @@ def fetch_block_full(session, url, max_lead, logf, lead_min=0):
                     un = codes_get(gid, "units")
                     if key == "GUST" or "gust" in str(sn).lower() or \
                             (cat == 2 and num in (22, 23, 24)) or lead == 0:
-                        logf("  [PARAM] cat=%d num=%d lev=%d -> %s (shortName=%s, units=%s)"
-                             % (cat, num, level, key, sn, un))
+                        _dbg_key = (cat, num, level)
+                        if _dbg_key not in _dbg_v:
+                            _dbg_v[_dbg_key] = True
+                            log("  [PARAM] cat=%d num=%d lev=%d -> %s (shortName=%s, units=%s)"
+                                % (cat, num, level, key, sn, un))
                 except Exception:
                     pass
-                ni = int(codes_get(gid, "Ni"))
-                nj = int(codes_get(gid, "Nj"))
-                vals = np.asarray(codes_get_array(gid, "values"),
-                                  dtype=np.float32).reshape(nj, ni)
-                # Diagnostic valeurs brutes : rafale vs composantes de vent
-                try:
-                    if key in ("GUST", "U10", "V10") and _dbg_v.get(key) is None:
-                        _dbg_v[key] = True
-                        vf = vals[np.isfinite(vals)]
-                        logf("  [VALEURS] %s : min %.2f max %.2f (m/s) | units=%s"
-                             % (key, float(vf.min()), float(vf.max()),
-                                codes_get(gid, "units")))
-                except Exception:
-                    pass
-                lat2 = np.asarray(codes_get_array(gid, "latitudes"),
-                                  dtype=np.float64).reshape(nj, ni)
-                lon2 = np.asarray(codes_get_array(gid, "longitudes"),
-                                  dtype=np.float64).reshape(nj, ni)
-                out.setdefault(lead, {})[key] = (vals, lat2[:, 0], lon2[0, :])
+                vals = codes_get_array(gid, "values")
+                Ni = int(codes_get(gid, "Ni"))
+                Nj = int(codes_get(gid, "Nj"))
+                grid = vals.reshape((Nj, Ni))
+                lats = codes_get_array(gid, "distinctLatitudes")
+                lons = codes_get_array(gid, "distinctLongitudes")
+                if lons.max() > 180:
+                    lons = np.where(lons > 180, lons - 360, lons)
+                # GUST fallback diagnostic
+                if key == "GUST" and lead == 0 and ("GUST", 0) not in _dbg_v:
+                    _dbg_v[("GUST", 0)] = True
+                    log("  [VALEURS] GUST : min %.2f max %.2f (m/s) | units=%s"
+                        % (float(vals.min()), float(vals.max()), un))
+                out.setdefault(lead, {})[key] = (grid, lats, lons)
             except Exception as e:
                 logf("  !! message ignoré (%s)" % e)
             finally:
@@ -174,39 +191,39 @@ def _block_range(block):
     return (int(m.group(1)), int(m.group(2)))
 
 
-def collect_fields(session, run_dt, max_lead, product="01", lead_min=0, lead_max=None):
+def collect_fields(session, run_dt, max_lead, product="025", blocks=None, lead_min=0, lead_max=None):
     """Télécharge/extrait tous les champs → {lead: {KEY: (vals, lat, lon)}}."""
     all_fields = {}
     rs = run_str(run_dt)
     n_full_mb = 0
     n_blocks = 0
     eff_max = min(max_lead, lead_max) if lead_max is not None else max_lead
+    block_list = blocks if blocks is not None else GRIB_CONFIG["europe"]["blocks"]
     for pkg in PKGS:
-        for block in BLOCKS:
+        for block in block_list:
             b0, b1 = _block_range(block)
             if b0 > eff_max or b1 < lead_min:
                 continue  # bloc entièrement hors de la portée demandée
             url = grib_url(rs, pkg, block, product)
             size = _head(session, url)
             if size is None:
-                log("!! %s %s introuvable" % (pkg, block))
+                log("!! %s %s (%s) introuvable" % (pkg, block, product))
                 continue
             t0 = time.time()
-            # Téléchargement direct ultra-rapide en 1 seule requête GET (3-5s par bloc au lieu de 60s en HTTP Range)
             try:
                 fields = fetch_block_full(session, url, eff_max, log, lead_min=lead_min)
                 mode = "direct (rapide)"
                 n_full_mb += size // (1024 * 1024)
             except Exception as e:
-                log("!! %s %s : téléchargement échoué (%s)" % (pkg, block, e))
+                log("!! %s %s (%s) : téléchargement échoué (%s)" % (pkg, block, product, e))
                 continue
             n_blocks += 1
             for lead, flds in fields.items():
                 all_fields.setdefault(lead, {}).update(flds)
-            log("  %s %s : %d échéances (%s, %.1f s)" % (
-                pkg, block, len(fields), mode, time.time() - t0))
-    log("Blocs traités : %d, dont %d Mo téléchargés en repli complet"
-        % (n_blocks, n_full_mb))
+            log("  %s %s (%s) : %d échéances (%s, %.1f s)" % (
+                pkg, block, product, len(fields), mode, time.time() - t0))
+    log("Blocs traités (%s) : %d, dont %d Mo téléchargés"
+        % (product, n_blocks, n_full_mb))
     return all_fields
 
 
@@ -405,20 +422,25 @@ def run_all(max_hours=MAX_LEAD, domain="both", lead_min=0, lead_max=None):
     base = os.path.join(BASE_DIR, "output")
     session = requests.Session()
     session.headers.update(HEADERS)
-    # Un seul téléchargement (produit GLOB025) → Europe + France
-    all_fields = collect_fields(session, run_dt, max_lead,
-                                product=GRIB_PRODUCTS["europe"],
-                                lead_min=lead_min, lead_max=lead_max)
+
+    targets = []
     if domain in ("both", "europe"):
-        render_domain(all_fields, run_dt, EUROPE,
-                      os.path.join(base, "arpege", "maps"),
-                      "ARPEGE Europe 0.25°", "0.25° (~25 km)",
-                      lead_min=lead_min, lead_max=lead_max)
+        targets.append("europe")
     if domain in ("both", "france"):
-        render_domain(all_fields, run_dt, FRANCE,
-                      os.path.join(base, "arpege_france", "maps"),
-                      "ARPEGE France 0.25°", "0.25° (~25 km)",
+        targets.append("france")
+
+    for dom_key in targets:
+        cfg = GRIB_CONFIG[dom_key]
+        log("Traitement domaine %s (%s, produit %s)..." % (dom_key, cfg["label"], cfg["product"]))
+        fields = collect_fields(session, run_dt, max_lead,
+                                product=cfg["product"],
+                                blocks=cfg["blocks"],
+                                lead_min=lead_min, lead_max=lead_max)
+        render_domain(fields, run_dt, cfg["domain"],
+                      os.path.join(base, cfg["out_dir_name"], "maps"),
+                      cfg["label"], cfg["resolution"],
                       lead_min=lead_min, lead_max=lead_max)
+
     print("[ARPEGE] Pipeline terminé avec succès.", flush=True)
 
 
