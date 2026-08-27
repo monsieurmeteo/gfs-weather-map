@@ -1198,13 +1198,13 @@
                         var popMin = exportScale < 1.35 ? 95000 : (exportScale < 2.25 ? 45000 : (exportScale < 3.5 ? 15000 : 5000));
                         var maxLabels = exportScale < 1.35 ? 32 : (exportScale < 2.25 ? 50 : 80);
                         var fontSize = exportScale < 1.35 ? 22 : 24;
-                        context.font = '700 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                        context.font = '800 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
                         context.textAlign = 'center';
                         context.textBaseline = 'middle';
                         context.lineJoin = 'round';
-                        context.strokeStyle = 'rgba(8, 19, 28, 0.94)';
+                        context.strokeStyle = '#000000';
                         context.fillStyle = '#ffffff';
-                        context.lineWidth = 4.2;
+                        context.lineWidth = 4.8;
 
                         var drawn = 0;
                         for (var pi = 0; pi < places.length; pi += 1) {
@@ -1248,7 +1248,7 @@
                     var vLayer = manifest.layers[currentLayer];
                     var stepGrid = hScale < 1.35 ? 88 : (hScale < 2.5 ? 78 : 66);
                     var valFontSize = hScale < 1.35 ? 30 : 32;
-                    context.font = '800 ' + valFontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                    context.font = '900 ' + valFontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
                     context.textAlign = 'center';
                     context.textBaseline = 'middle';
                     context.lineJoin = 'round';
@@ -1303,8 +1303,8 @@
 
                             var gStr = (currentLayer === 'pluie_1h' || currentLayer === 'pluie_cumul') ? (gVal < 10 ? gVal.toFixed(1) : String(Math.round(gVal))) : String(Math.round(gVal));
 
-                            context.strokeStyle = 'rgba(8, 19, 28, 0.95)';
-                            context.lineWidth = 5.8;
+                            context.strokeStyle = '#000000';
+                            context.lineWidth = 6.4;
                             context.strokeText(gStr, gx, gy);
                             context.fillStyle = getValueColour(gVal, currentLayer);
                             context.fillText(gStr, gx, gy);
