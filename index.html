@@ -746,6 +746,150 @@
             color: var(--amfm-accent);
         }
 
+        /* 🔒 MODALE AUTHENTIFICATION ACCÈS PRIVÉ */
+        .amfm-auth-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: rgba(3, 7, 18, 0.92);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 1;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        .amfm-auth-overlay.amfm-auth-hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .amfm-auth-card {
+            background: linear-gradient(145deg, rgba(17, 24, 39, 0.96), rgba(9, 14, 26, 0.98));
+            border: 1.5px solid rgba(0, 210, 255, 0.4);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 210, 255, 0.15);
+            border-radius: 20px;
+            padding: 32px 28px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            color: #fff;
+            animation: authPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes authPopIn {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .amfm-auth-icon {
+            width: 54px;
+            height: 54px;
+            background: rgba(0, 210, 255, 0.12);
+            border: 1.5px solid rgba(0, 210, 255, 0.45);
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: var(--amfm-accent);
+            margin-bottom: 16px;
+        }
+        .amfm-auth-title {
+            font-size: 18.5px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            margin-bottom: 4px;
+        }
+        .amfm-auth-sub {
+            font-size: 12px;
+            color: var(--amfm-text-muted);
+            margin-bottom: 20px;
+        }
+        .amfm-auth-field {
+            margin-bottom: 14px;
+            text-align: left;
+        }
+        .amfm-auth-field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--amfm-accent);
+            margin-bottom: 6px;
+        }
+        .amfm-auth-input {
+            width: 100%;
+            background: rgba(3, 7, 18, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 10px;
+            padding: 11px 14px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+        .amfm-auth-input:focus {
+            border-color: var(--amfm-accent);
+            box-shadow: 0 0 12px rgba(0, 210, 255, 0.35);
+        }
+        .amfm-auth-remember {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12.5px;
+            color: var(--amfm-text-muted);
+            margin: 14px 0 20px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .amfm-auth-remember input {
+            accent-color: var(--amfm-accent);
+            cursor: pointer;
+        }
+        .amfm-auth-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #00d2ff, #0077ff);
+            border: none;
+            color: #030712;
+            font-weight: 800;
+            font-size: 14.5px;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .amfm-auth-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0, 210, 255, 0.4);
+        }
+        .amfm-auth-btn:active {
+            transform: translateY(1px);
+        }
+        .amfm-auth-error {
+            background: rgba(220, 38, 38, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 14px;
+            display: none;
+            animation: authShake 0.3s ease-in-out;
+        }
+        @keyframes authShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
         /* 📱 RESPONSIVE */
         @media (max-width: 1024px) {
             .amfm-navbar {
@@ -1057,6 +1201,104 @@
             </div>
         </div>
     </div>
+
+    <!-- 🔒 OVERLAY AUTHENTIFICATION ACCÈS PRIVÉ -->
+    <div id="auth-overlay" class="amfm-auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <div class="amfm-auth-card">
+            <div class="amfm-auth-icon">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h2 id="auth-title" class="amfm-auth-title">MÉTÉO-CLIMAT PRO</h2>
+            <p class="amfm-auth-sub">Plateforme Cartographique HD · Accès Réservé</p>
+
+            <div id="auth-error" class="amfm-auth-error">
+                <i class="fa-solid fa-triangle-exclamation"></i> Identifiant ou mot de passe incorrect
+            </div>
+
+            <form id="auth-form" onsubmit="return false;">
+                <div class="amfm-auth-field">
+                    <label for="auth-user">Identifiant</label>
+                    <input type="text" id="auth-user" class="amfm-auth-input" placeholder="Entrez votre identifiant" autocomplete="username" required spellcheck="false" autocapitalize="none">
+                </div>
+                <div class="amfm-auth-field">
+                    <label for="auth-pass">Mot de passe</label>
+                    <input type="password" id="auth-pass" class="amfm-auth-input" placeholder="••••••••" autocomplete="current-password" required>
+                </div>
+                <label class="amfm-auth-remember">
+                    <input type="checkbox" id="auth-remember" checked>
+                    <span>Mémoriser cet appareil</span>
+                </label>
+                <button type="submit" id="auth-submit" class="amfm-auth-btn">
+                    <span>Accéder aux Cartes</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        'use strict';
+        var overlay = document.getElementById('auth-overlay');
+        var form = document.getElementById('auth-form');
+        var userInput = document.getElementById('auth-user');
+        var passInput = document.getElementById('auth-pass');
+        var rememberCheck = document.getElementById('auth-remember');
+        var errorBox = document.getElementById('auth-error');
+
+        // Identifiants configurés (gfs / mto59)
+        var VALID_USER = 'gfs';
+        var VALID_PASS = 'mto59';
+
+        function isAuth() {
+            return sessionStorage.getItem('amfm_auth_token') === 'authorized' ||
+                   localStorage.getItem('amfm_auth_token') === 'authorized';
+        }
+
+        if (isAuth()) {
+            if (overlay) overlay.classList.add('amfm-auth-hidden');
+        } else {
+            if (userInput) setTimeout(function () { userInput.focus(); }, 200);
+        }
+
+        function submitAuth() {
+            var u = (userInput.value || '').trim().toLowerCase();
+            var p = (passInput.value || '').trim();
+
+            if (u === VALID_USER && p === VALID_PASS) {
+                if (rememberCheck && rememberCheck.checked) {
+                    localStorage.setItem('amfm_auth_token', 'authorized');
+                }
+                sessionStorage.setItem('amfm_auth_token', 'authorized');
+
+                if (errorBox) errorBox.style.display = 'none';
+                if (overlay) {
+                    overlay.classList.add('amfm-auth-hidden');
+                    setTimeout(function () {
+                        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                    }, 400);
+                }
+            } else {
+                if (errorBox) {
+                    errorBox.style.display = 'block';
+                    errorBox.style.animation = 'none';
+                    void errorBox.offsetWidth; // trigger reflow
+                    errorBox.style.animation = 'authShake 0.3s ease-in-out';
+                }
+                if (passInput) {
+                    passInput.value = '';
+                    passInput.focus();
+                }
+            }
+        }
+
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                submitAuth();
+            });
+        }
+    })();
+    </script>
 
     <script src="js/palettes.js?v=2.0.7"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
