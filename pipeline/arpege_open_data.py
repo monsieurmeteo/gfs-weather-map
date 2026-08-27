@@ -258,6 +258,7 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
                 state["counts"].get("geopotentiel_500_meteociel", 0) + 1
 
     t2m = fields.get("T2M")
+    dpt = fields.get("DPT")
     rh = fields.get("RH")
     u10 = fields.get("U10")
     v10 = fields.get("V10")
@@ -266,7 +267,11 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
         t_c = regrid(t2m, lambda v: v - 273.15)
         save("temperature", t_c)
         td_c = None
-        if rh is not None:
+        if dpt is not None:
+            td_c = regrid(dpt, lambda v: v - 273.15)
+            save("point_rosee", td_c)
+            save("humidex", humidex_c(t_c, td_c))
+        elif rh is not None:
             rh_g = regrid(rh)
             if rh_g is not None:
                 td_c = dew_point_c(t_c, rh_g)
@@ -277,11 +282,7 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
                           + v10[0].astype(np.float32) ** 2) * 3.6
             wind_kmh = domain.regrid(spd, u10[1], u10[2])
             if wind_kmh is not None:
-                if rh is not None and td_c is not None:
-                    felt = heat_index_c(t_c, rh_g)
-                    felt = wind_chill_c(felt, wind_kmh)
-                else:
-                    felt = wind_chill_c(t_c, wind_kmh)
+                felt = wind_chill_c(t_c, wind_kmh)
                 save("temperature_ressentie", felt)
 
     t850 = fields.get("T850")

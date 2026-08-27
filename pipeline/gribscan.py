@@ -95,17 +95,19 @@ def parse_product(b):
 
 def key_of(cat, num, level):
     """(parameterCategory, parameterNumber, level) → clé canonique ou None."""
-    if (cat, num) == (0, 0) and level == 2:
+    if (cat, num) == (0, 0) and level in (0, 2):
         return "T2M"
     if (cat, num) == (0, 0) and level == 850:
         return "T850"
+    if (cat, num) == (0, 6) and level == 2:
+        return "DPT"
     if (cat, num) == (1, 1) and level == 2:
         return "RH"
     if (cat, num) == (2, 2) and level == 10:
         return "U10"
     if (cat, num) == (2, 3) and level == 10:
         return "V10"
-    if (cat, num) == (2, 22) and level == 10:
+    if (cat, num) in ((2, 22), (2, 1)) and level == 10:
         return "GUST"
     if (cat, num) == (3, 1) and level == 0:
         return "PRMSL"
