@@ -3162,13 +3162,13 @@
             var layer = manifest.layers[currentLayer];
             var mapRect = computeMapRect(width, height);
             var isEurope = (manifest && manifest.bounds && (manifest.bounds.projection === 'lambert' || manifest.bounds.west < -20)) || (currentModel === 'gfs') || (currentModel === 'arpege');
-            // Pas de la grille dense et équilibré pour couvrir toute la France sans vide
+            // Pas de la grille dense et équilibré identique à AROME HD
             var stepPx = isEurope ?
-                (transform.scale < 1.35 ? 44 : (transform.scale < 2.5 ? 38 : 32)) :
+                (transform.scale < 1.35 ? 44 : (transform.scale < 2.5 ? 38 : 34)) :
                 (transform.scale < 1.35 ? 36 : (transform.scale < 2.5 ? 34 : 32));
             var fontSize = isEurope ?
                 (transform.scale < 1.35 ? 9.5 : 11.0) :
-                (transform.scale < 1.35 ? 10 : 11.5);
+                (transform.scale < 1.35 ? 10.0 : 11.5);
             valuesContext.font = '800 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
             valuesContext.textAlign = 'center';
             valuesContext.textBaseline = 'middle';
@@ -3202,8 +3202,8 @@
                         strVal = String(Math.round(val));
                     }
 
-                    valuesContext.strokeStyle = '#000000';
-                    valuesContext.lineWidth = 2.6;
+                    valuesContext.strokeStyle = 'rgba(10, 15, 25, 0.95)';
+                    valuesContext.lineWidth = 2.4;
                     valuesContext.strokeText(strVal, x, y);
                     valuesContext.fillStyle = getValueColour(val, currentLayer);
                     valuesContext.fillText(strVal, x, y);
