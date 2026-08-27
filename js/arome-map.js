@@ -3164,9 +3164,11 @@
             var isEurope = (manifest && manifest.bounds && (manifest.bounds.projection === 'lambert' || manifest.bounds.west < -20)) || (currentModel === 'gfs') || (currentModel === 'arpege');
             // Pas de la grille dense et équilibré pour couvrir le domaine sans vide
             var stepPx = isEurope ?
-                (transform.scale < 1.35 ? 44 : (transform.scale < 2.5 ? 38 : 32)) :
-                (transform.scale < 1.35 ? 36 : (transform.scale < 2.5 ? 34 : 32));
-            var fontSize = transform.scale < 1.35 ? 11 : 12.5;
+                (transform.scale < 1.35 ? 46 : (transform.scale < 2.5 ? 40 : 34)) :
+                (transform.scale < 1.35 ? 38 : (transform.scale < 2.5 ? 35 : 32));
+            var fontSize = isEurope ?
+                (transform.scale < 1.35 ? 11.5 : 13.5) :
+                (transform.scale < 1.35 ? 12.5 : 14.5);
             valuesContext.font = '900 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
             valuesContext.textAlign = 'center';
             valuesContext.textBaseline = 'middle';
@@ -3201,7 +3203,7 @@
                     }
 
                     valuesContext.strokeStyle = '#000000';
-                    valuesContext.lineWidth = 3.6;
+                    valuesContext.lineWidth = 4.0;
                     valuesContext.strokeText(strVal, x, y);
                     valuesContext.fillStyle = getValueColour(val, currentLayer);
                     valuesContext.fillText(strVal, x, y);
