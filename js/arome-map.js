@@ -98,6 +98,8 @@
         var mapDate = app.querySelector('[data-amfm-map-date]');
         var loading = app.querySelector('[data-amfm-loading]');
         var errorBox = app.querySelector('[data-amfm-error]');
+        var unavailableBox = app.querySelector('[data-amfm-unavailable]');
+        var unavailableText = app.querySelector('[data-amfm-unavailable-text]');
         var slider = app.querySelector('[data-amfm-slider]');
         var legend = app.querySelector('[data-amfm-legend]');
         var zoomIn = app.querySelector('[data-amfm-zoom-in]');
@@ -808,9 +810,6 @@
 
         function composeCaptureCanvas(customStep, customImage, isScreen) {
             var activeImg = customImage || currentWeatherImage;
-            if (!activeImg) {
-                return null;
-            }
             var vw = viewport.clientWidth;
             var vh = viewport.clientHeight;
             if (!vw || !vh) {
@@ -907,16 +906,43 @@
                 context.fillRect(0, 0, output.width, output.height);
             }
 
-            // Dalle météo
-            var weatherMasked = document.createElement('canvas');
-            weatherMasked.width = output.width;
-            weatherMasked.height = output.height;
-            var weatherCtx = weatherMasked.getContext('2d');
-            weatherCtx.save();
-            weatherCtx.transform(hScale, 0, 0, vScale, offX, offY);
-            weatherCtx.drawImage(activeImg, 0, 0);
-            weatherCtx.restore();
-            context.drawImage(weatherMasked, 0, 0);
+            // Dalle météo (si disponible)
+            if (activeImg && activeImg.complete && activeImg.naturalWidth) {
+                var weatherMasked = document.createElement('canvas');
+                weatherMasked.width = output.width;
+                weatherMasked.height = output.height;
+                var weatherCtx = weatherMasked.getContext('2d');
+                weatherCtx.save();
+                weatherCtx.transform(hScale, 0, 0, vScale, offX, offY);
+                weatherCtx.drawImage(activeImg, 0, 0);
+                weatherCtx.restore();
+                context.drawImage(weatherMasked, 0, 0);
+            } else {
+                // Paramètre non disponible : badge central discret sur le fond vierge
+                context.save();
+                context.font = '700 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                var msg = 'PARAMÈTRE NON DISPONIBLE POUR CE MODÈLE';
+                var tw = context.measureText(msg).width + 64;
+                var th = 60;
+                var cx = output.width / 2;
+                var cy = output.height / 2;
+                context.fillStyle = 'rgba(11, 18, 32, 0.92)';
+                context.beginPath();
+                if (typeof context.roundRect === 'function') {
+                    context.roundRect(cx - tw / 2, cy - th / 2, tw, th, 12);
+                } else {
+                    context.rect(cx - tw / 2, cy - th / 2, tw, th);
+                }
+                context.fill();
+                context.strokeStyle = 'rgba(0, 210, 255, 0.6)';
+                context.lineWidth = 2;
+                context.stroke();
+                context.fillStyle = '#00d2ff';
+                context.fillText(msg, cx, cy);
+                context.restore();
+            }
 
             // Frontières vectorielles uniques (noir franc 100% net pour France/AROME, adapté Europe)
             if (vectorDefinition && vectorDefinition.paths && vectorDefinition.paths.length) {
@@ -1766,12 +1792,29 @@
                 });
         }
 
+        function showUnavailable(message) {
+            if (unavailableBox) {
+                if (unavailableText) {
+                    unavailableText.textContent = message || 'Paramètre non disponible pour ce modèle';
+                }
+                unavailableBox.hidden = false;
+            }
+            if (legend) legend.hidden = true;
+            hideProbe();
+        }
+
+        function clearUnavailable() {
+            if (unavailableBox) {
+                unavailableBox.hidden = true;
+            }
+        }
+
         function availableSteps() {
             if (!manifest || !Array.isArray(manifest.steps)) {
                 return [];
             }
             return manifest.steps.filter(function (step) {
-                return step && step.files && step.files[currentLayer] && Number(step.lead_hour) >= 0;
+                return step && Number(step.lead_hour) >= 0;
             });
         }
 
@@ -2007,10 +2050,24 @@
             }
 
             clearError();
+            clearUnavailable();
             if (loading) loading.hidden = false;
             hideProbe();
             var token = ++loadToken;
-            var nextSource = versioned(step.files[currentLayer]);
+            var fileRel = step && step.files && step.files[currentLayer];
+            if (!fileRel) {
+                if (token === loadToken) {
+                    if (loading) loading.hidden = true;
+                    if (webgl) {
+                        webgl.ready = false;
+                    }
+                    currentWeatherImage = null;
+                    scheduleRender();
+                    showUnavailable('Paramètre non disponible pour ce modèle');
+                }
+                return;
+            }
+            var nextSource = versioned(fileRel);
             loadProbe(step);
             var loader = new Image();
             loader.crossOrigin = 'anonymous';
@@ -2018,6 +2075,7 @@
                 if (token !== loadToken) {
                     return;
                 }
+                clearUnavailable();
                 uploadWeatherImage(loader);
                 prepareImageSampler(loader);
                 if (loading) loading.hidden = true;
@@ -2026,7 +2084,12 @@
             loader.onerror = function () {
                 if (token === loadToken) {
                     if (loading) loading.hidden = true;
-                    showError('Cette carte n’est pas encore disponible. Réessayez dans quelques instants.');
+                    if (webgl) {
+                        webgl.ready = false;
+                    }
+                    currentWeatherImage = null;
+                    scheduleRender();
+                    showUnavailable('Donnée non disponible pour cette échéance');
                 }
             };
             loader.src = nextSource;
