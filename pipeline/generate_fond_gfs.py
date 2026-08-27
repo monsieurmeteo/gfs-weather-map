@@ -175,12 +175,12 @@ def generate(domain):
         dept_width = "1.2"
         dept_opacity = "0.95"
     else:
-        # Style Europe : lisibilité synoptique
-        nat_stroke = "#000000"
-        nat_width = "2.0"
-        dept_stroke = "#000000"
-        dept_width = "1.0"
-        dept_opacity = "0.90"
+        # Style Europe : lisibilité synoptique d'origine Météociel inchangée
+        nat_stroke = NATURAL
+        nat_width = "1.8"
+        dept_stroke = DEPT
+        dept_width = "0.8"
+        dept_opacity = "0.85"
 
     svg = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
