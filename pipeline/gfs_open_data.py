@@ -38,7 +38,7 @@ from render import (  # noqa: E402
 HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
 NOMADS = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
 GFS_REQ_VARS = ["TMP", "DPT", "UGRD", "VGRD", "GUST", "APCP", "CAPE",
-                "SNOD", "PRMSL", "PRES", "RH", "TCDC", "HGT"]
+                "SNOD", "PRMSL", "PRES", "RH", "TCDC", "LCDC", "MCDC", "HCDC", "HGT"]
 # Niveaux demandés au filtre NOMADS
 GFS_LEVS = {
     "lev_2_m_above_ground": "on",
@@ -46,6 +46,9 @@ GFS_LEVS = {
     "lev_surface": "on",
     "lev_mean_sea_level": "on",
     "lev_entire_atmosphere": "on",
+    "lev_low_cloud_layer": "on",
+    "lev_middle_cloud_layer": "on",
+    "lev_high_cloud_layer": "on",
     "lev_500_mb": "on",
     "lev_850_mb": "on",
 }
@@ -64,6 +67,9 @@ ALIASES = {
     "msl": "PRMSL", "prmsl": "PRMSL",
     "sp": "PRES",
     "tcc": "TCDC",
+    "lcc": "LCC", "lcdc": "LCC",
+    "mcc": "MCC", "mcdc": "MCC",
+    "hcc": "HCC", "hcdc": "HCC",
     "gh": "HGT", "hgt": "HGT", "z": "HGT", "gp": "HGT",
 }
 
@@ -294,6 +300,18 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
     if tcdc is not None:
         # TCDC GFS déjà exprimé en % (0-100)
         save("nebulosite", regrid(tcdc))
+
+    lcc = fields.get("LCC")
+    if lcc is not None:
+        save("nuages_bas", regrid(lcc))
+
+    mcc = fields.get("MCC")
+    if mcc is not None:
+        save("nuages_moyens", regrid(mcc))
+
+    hcc = fields.get("HCC")
+    if hcc is not None:
+        save("nuages_eleves", regrid(hcc))
 
     if cape is not None:
         save("mucape", regrid(cape))
