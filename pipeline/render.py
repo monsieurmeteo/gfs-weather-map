@@ -354,16 +354,16 @@ def render_z500_with_isobars(z500_grid, prmsl_grid, output_path, style="synoptiq
                 # Isobares blanches tous les 5 hPa UNIQUEMENT : épaisses,
                 # fluides, étiquettes blanches avec halo sombre.
                 ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
-                           colors="#000000", linewidths=4.2, alpha=0.75)
+                           colors="#000000", linewidths=4.6, alpha=0.45)
                 cs5 = ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
-                                 colors="#ffffff", linewidths=2.0)
-                labels = ax.clabel(cs5, inline=True, fmt="%d", fontsize=17,
-                                   colors="#ffffff", inline_spacing=8)
+                                 colors="#ffffff", linewidths=2.8)
+                labels = ax.clabel(cs5, inline=True, fmt="%d", fontsize=18,
+                                   colors="#ffffff", inline_spacing=10)
                 if labels:
                     for lbl in labels:
                         lbl.set_weight("bold")
                         lbl.set_path_effects([
-                            matplotlib.patheffects.Stroke(linewidth=3.2, foreground="#000000"),
+                            matplotlib.patheffects.Stroke(linewidth=3.5, foreground="#000000"),
                             matplotlib.patheffects.Normal(),
                         ])
             elif style == "detail":
@@ -539,18 +539,18 @@ def render_pression_with_isobars(prmsl_grid, output_path):
             ax.contour(GX, GY, smooth_p, levels=levels_1hpa,
                        colors="#000000", linewidths=1.2, alpha=0.85)
 
-            # ── Isobares épaisses tous les 5 hPa + labels ─────────────────────
+            # ── Isobares épaisses tous les 5 hPa BLANCHES + labels ─────────────────────
             ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
-                       colors="#ffffff", linewidths=5.5, alpha=0.9)
+                       colors="#000000", linewidths=4.6, alpha=0.45)
             cs5 = ax.contour(GX, GY, smooth_p, levels=levels_5hpa,
-                             colors="#000000", linewidths=2.8)
+                             colors="#ffffff", linewidths=2.8)
             labels = ax.clabel(cs5, inline=True, fmt="%d", fontsize=18,
-                               colors="#000000", inline_spacing=8)
+                               colors="#ffffff", inline_spacing=10)
             if labels:
                 for lbl in labels:
                     lbl.set_weight("bold")
                     lbl.set_path_effects([
-                        matplotlib.patheffects.Stroke(linewidth=4.0, foreground="#ffffff"),
+                        matplotlib.patheffects.Stroke(linewidth=3.5, foreground="#000000"),
                         matplotlib.patheffects.Normal(),
                     ])
         ensure_dir(os.path.dirname(output_path))
