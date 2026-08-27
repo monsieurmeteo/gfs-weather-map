@@ -122,12 +122,10 @@ def download_lead(run_dt, lead, light=False):
     """
     day = run_dt.strftime("%Y%m%d")
     hh = "%02d" % run_dt.hour
+    # Grille 100% GLOBALE mondiale (360°) : aucun découpage ni bordure sur toute la projection Europe/Lambert
     params = {
         "dir": "/gfs.%s/%s/atmos" % (day, hh),
         "file": "gfs.t%sz.pgrb2.0p25.f%03d" % (hh, lead),
-        "subregion": "",
-        "leftlon": "-55", "rightlon": "48",
-        "toplat": "75", "bottomlat": "20",
     }
     if light:
         params["var_GUST"] = "on"
