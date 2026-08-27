@@ -213,8 +213,12 @@ jobs:
             echo "::error::Aucun artefact github-pages météo récent à restaurer"
             exit 1
           fi
-          tar -xf /tmp/base/artifact.tar -C .
-          echo "Base restaurée depuis le run $RESTORED (ICON-EU sera superposé)"
+          # Extraire dans un dossier SÉPARÉ puis ne copier QUE output/ :
+          # on préserve index.html + js/ du checkout (code le plus récent).
+          mkdir -p /tmp/base/restored
+          tar -xf /tmp/base/artifact.tar -C /tmp/base/restored
+          cp -r /tmp/base/restored/output ./
+          echo "Base restaurée depuis le run $RESTORED (output/ fusionné, code du repo conservé)"
       - name: Téléchargement des chunks ICON-EU
         uses: actions/download-artifact@v4
         with:
