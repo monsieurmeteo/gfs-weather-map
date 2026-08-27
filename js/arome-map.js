@@ -3166,8 +3166,8 @@
             var stepPx = isEurope ?
                 (transform.scale < 1.35 ? 44 : (transform.scale < 2.5 ? 38 : 32)) :
                 (transform.scale < 1.35 ? 36 : (transform.scale < 2.5 ? 34 : 32));
-            var fontSize = transform.scale < 1.35 ? 10 : 11.5;
-            valuesContext.font = '800 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            var fontSize = transform.scale < 1.35 ? 11 : 12.5;
+            valuesContext.font = '900 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
             valuesContext.textAlign = 'center';
             valuesContext.textBaseline = 'middle';
             valuesContext.lineJoin = 'round';
@@ -3200,8 +3200,8 @@
                         strVal = String(Math.round(val));
                     }
 
-                    valuesContext.strokeStyle = 'rgba(10, 15, 25, 0.95)';
-                    valuesContext.lineWidth = 2.6;
+                    valuesContext.strokeStyle = '#000000';
+                    valuesContext.lineWidth = 3.6;
                     valuesContext.strokeText(strVal, x, y);
                     valuesContext.fillStyle = getValueColour(val, currentLayer);
                     valuesContext.fillText(strVal, x, y);

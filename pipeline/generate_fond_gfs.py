@@ -168,21 +168,19 @@ def generate(domain):
     depts_combined = " ".join(depts_d)
 
     if domain == "france":
-        # Style France : frontières nationales noires nettes, mais départements
-        # GRIS CLAIR fins — les isobares noires doivent rester lisibles (l'ancien
-        # style noir épais écrasait les contours de pression sur les cartes).
-        nat_stroke = "#0d1117"
-        nat_width = "2.2"
-        dept_stroke = "#9aa0a8"
-        dept_width = "0.9"
-        dept_opacity = "0.75"
+        # Style France : frontières et départements noirs nets (style officiel AROME HD)
+        nat_stroke = "#000000"
+        nat_width = "2.4"
+        dept_stroke = "#000000"
+        dept_width = "1.2"
+        dept_opacity = "0.95"
     else:
-        # Style Europe : lisibilité synoptique à grande échelle
-        nat_stroke = NATURAL
-        nat_width = "1.8"
-        dept_stroke = DEPT
-        dept_width = "0.8"
-        dept_opacity = "0.85"
+        # Style Europe : lisibilité synoptique
+        nat_stroke = "#000000"
+        nat_width = "2.0"
+        dept_stroke = "#000000"
+        dept_width = "1.0"
+        dept_opacity = "0.90"
 
     svg = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
