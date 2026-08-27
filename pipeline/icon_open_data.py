@@ -433,10 +433,11 @@ def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
     # mode léger — pas les 16 autres variables, sinon coût énorme en re-téléchargements)
     state_warm = {"max_gust": None, "cum_precip": None}
     prior = [lh for lh in all_leads if lh < lead_min]
+    target_domain = FRANCE if domain == "france" else EUROPE
     for lh in prior:
         try:
             fields = collect_lead(run_dt, lh, light=True)
-            warmup_from_cached(fields, EUROPE, state_warm)
+            warmup_from_cached(fields, target_domain, state_warm)
         except Exception:
             pass
 

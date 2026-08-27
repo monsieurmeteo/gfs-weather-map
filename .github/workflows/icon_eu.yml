@@ -205,6 +205,10 @@ jobs:
           tar -xf /tmp/base/artifact.tar -C /tmp/base/restored
           cp -r /tmp/base/restored/output ./
           echo "Base restaurée depuis le run $RESTORED (output/ fusionné, code du repo conservé)"
+      - name: Purge des répertoires régénérés
+        run: |
+          rm -rf output/icon_eu output/icon_eu_france
+          echo "Répertoires ICON purgés (seront recréés par les chunks)"
       - name: Téléchargement des chunks ICON-EU
         uses: actions/download-artifact@v4
         with:
@@ -212,13 +216,6 @@ jobs:
           path: output/
           merge-multiple: true
           if-no-files-found: ignore
-      - name: ICON-EU France uniquement (purge Europe restaurée)
-        run: |
-          # ICON-EU ne couvre pas tout le domaine Europe (manque l'ouest
-          # Atlantique et le sud) → France uniquement. On retire l'Europe
-          # ICON restaurée pour ne pas laisser des données périmées.
-          rm -rf output/icon_eu
-          echo "Europe ICON purgée (France uniquement)"
       - name: Génération des fonds et frontières universels
         run: |
           python -u pipeline/generate_fond_gfs.py --domain europe

@@ -19,9 +19,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
 from domains import EUROPE, FRANCE
-from render import LAYER_META, write_manifest, write_places
 import gfs_open_data
 import arpege_open_data
+import icon_open_data
+import aifs_open_data
 
 
 def assemble_model(model_key, domain, meta):
@@ -30,8 +31,15 @@ def assemble_model(model_key, domain, meta):
         print("[assemble] Dossier introuvable : %s" % out_dir, flush=True)
         return False
 
-    # Trouver le run_time le plus récent ou par défaut
-    run_dt = gfs_open_data.latest_run() if "gfs" in model_key else arpege_open_data.latest_run()
+    # Trouver le run_time le plus récent correspondant exactement au modèle
+    if "gfs" in model_key:
+        run_dt = gfs_open_data.latest_run()
+    elif "icon" in model_key:
+        run_dt = icon_open_data.latest_run()
+    elif "aifs" in model_key:
+        run_dt = aifs_open_data.latest_run()
+    else:
+        run_dt = arpege_open_data.latest_run()
     meta["run_time"] = run_dt.isoformat()
 
     # Découvrir toutes les échéances et couches rendues

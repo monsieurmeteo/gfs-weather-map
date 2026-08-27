@@ -2421,11 +2421,11 @@
             if (reg) {
                 if (regSel && regSel.querySelector('option[value="' + reg + '"]')) {
                     regSel.value = reg;
-                    regSel.dispatchEvent(new Event('change'));
+                    var cfg = REGION_CONFIG[reg];
+                    if (cfg) {
+                        focusLocation({ latitude: cfg.latitude, longitude: cfg.longitude, scale: cfg.scale });
+                    }
                 }
-            } else if (regSel && regSel.querySelector('option[value="hdf"]')) {
-                regSel.value = 'hdf';
-                regSel.dispatchEvent(new Event('change'));
             }
             var heure = parseInt(params.get('heure'), 10);
             if (!isNaN(heure)) {
@@ -3000,10 +3000,15 @@
 
         function projectCoords(lat, lon) {
             if (manifest && manifest.bounds && manifest.bounds.projection === 'lambert') {
-                var r_lat1 = 30.0 * Math.PI / 180;
-                var r_lat2 = 60.0 * Math.PI / 180;
-                var r_lat0 = 50.0 * Math.PI / 180;
-                var r_lon0 = -5.0 * Math.PI / 180;
+                var b = manifest.bounds;
+                var r_lat1 = (Number(b.lat1) || 30.0) * Math.PI / 180;
+                var r_lat2 = (Number(b.lat2) || 60.0) * Math.PI / 180;
+                var r_lat0 = (Number(b.lat0) || 50.0) * Math.PI / 180;
+                var r_lon0 = (Number(b.lon0) || -5.0) * Math.PI / 180;
+                var xMin = Number(b.x_min) || -0.5902;
+                var xMax = Number(b.x_max) || 0.5902;
+                var yMin = Number(b.y_min) || -0.4200;
+                var yMax = Number(b.y_max) || 0.4600;
                 var n = Math.log(Math.cos(r_lat1) / Math.cos(r_lat2)) / Math.log(
                     Math.tan(Math.PI / 4 + r_lat2 / 2) / Math.tan(Math.PI / 4 + r_lat1 / 2)
                 );
@@ -3015,8 +3020,8 @@
                 var theta = n * (r_lon - r_lon0);
                 var x = rho * Math.sin(theta);
                 var y = rho0 - rho * Math.cos(theta);
-                var u = (x - (-0.5902)) / (0.5902 - (-0.5902)); // sync avec domains.py x_min=-0.5902, x_max=0.5902
-                var v = (0.4600 - y) / (0.4600 - (-0.4200)); // sync avec domains.py y_max=0.4600, y_min=-0.4200
+                var u = (x - xMin) / (xMax - xMin);
+                var v = (yMax - y) / (yMax - yMin);
                 return { u: u, v: v };
             }
             var bounds = manifest && manifest.bounds ? manifest.bounds : { south: 39.5, west: -8.5, north: 52.5, east: 13.5 };
@@ -3280,7 +3285,7 @@
         function resetView() {
             transform = { scale: 1, x: 0, y: 0 };
             var regSel = document.getElementById('select-region');
-            if (regSel) regSel.value = (currentModel === 'gfs_france') ? 'france' : 'europe';
+            if (regSel) regSel.value = (currentModel.indexOf('_france') !== -1) ? 'france' : 'europe';
             applyTransform();
             if (typeof updateUrl === 'function') updateUrl();
         }

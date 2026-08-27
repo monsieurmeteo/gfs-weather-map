@@ -109,7 +109,7 @@ def key_of(cat, num, level):
         return "GUST"
     if (cat, num) == (3, 1) and level == 0:
         return "PRMSL"
-    if (cat, num) == (1, 52) and level == 0:
+    if (cat, num) in ((1, 8), (1, 52)) and level == 0:
         return "APCP"
     if (cat, num) == (1, 60) and level == 0:
         return "SNOD"

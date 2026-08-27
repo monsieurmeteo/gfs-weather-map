@@ -48,9 +48,11 @@ def main():
         import generate_fond_gfs
         generate_fond_gfs.generate("europe")
         generate_fond_gfs.generate("france")
-        # ARPEGE partage le fond Europe
+        # ARPEGE partage les fonds Europe et France
         sync_fond(os.path.join(BASE_DIR, "output", "gfs", "maps"),
                   os.path.join(BASE_DIR, "output", "arpege", "maps"))
+        sync_fond(os.path.join(BASE_DIR, "output", "gfs_france", "maps"),
+                  os.path.join(BASE_DIR, "output", "arpege_france", "maps"))
         print("[run_all] Fonds de carte générés.", flush=True)
 
     if "gfs" in models:
@@ -59,7 +61,7 @@ def main():
 
     if "arpege" in models:
         import arpege_open_data
-        arpege_open_data.run_all(max_hours=args.max_hours)
+        arpege_open_data.run_all(max_hours=args.max_hours, domain=args.domain)
 
     print("[run_all] Terminé en %.1f min." % ((time.time() - t0) / 60.0),
           flush=True)

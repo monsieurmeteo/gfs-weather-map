@@ -398,26 +398,26 @@ def render_domain(all_fields, run_dt, domain, out_dir, model_label, resolution,
     return n_ok
 
 
-def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
+def run_all(max_hours=MAX_LEAD, domain="both", lead_min=0, lead_max=None):
     max_lead = max(3, min(int(max_hours), MAX_LEAD))
     run_dt = select_run()
     log("Run ARPEGE sélectionné : %s" % run_str(run_dt))
     base = os.path.join(BASE_DIR, "output")
     session = requests.Session()
     session.headers.update(HEADERS)
-    # Un seul téléchargement (produit 01, Europe 0,1°) → Europe + France
+    # Un seul téléchargement (produit GLOB025) → Europe + France
     all_fields = collect_fields(session, run_dt, max_lead,
                                 product=GRIB_PRODUCTS["europe"],
                                 lead_min=lead_min, lead_max=lead_max)
     if domain in ("both", "europe"):
         render_domain(all_fields, run_dt, EUROPE,
                       os.path.join(base, "arpege", "maps"),
-                      "ARPEGE Europe 0.1°", "0.1° (~11 km)",
+                      "ARPEGE Europe 0.25°", "0.25° (~25 km)",
                       lead_min=lead_min, lead_max=lead_max)
     if domain in ("both", "france"):
         render_domain(all_fields, run_dt, FRANCE,
                       os.path.join(base, "arpege_france", "maps"),
-                      "ARPEGE France 0.1°", "0.1° (~11 km)",
+                      "ARPEGE France 0.25°", "0.25° (~25 km)",
                       lead_min=lead_min, lead_max=lead_max)
     print("[ARPEGE] Pipeline terminé avec succès.", flush=True)
 
@@ -425,12 +425,12 @@ def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
 def main():
     import argparse
     ap = argparse.ArgumentParser(
-        description="Pipeline ARPEGE Europe 0.1° & France (produit 01)")
+        description="Pipeline ARPEGE Europe & France (produit GLOB025)")
     ap.add_argument("--max-hours", type=int, default=MAX_LEAD,
                     help="Échéance max ARPEGE en heures (défaut 102)")
     ap.add_argument("--domain", choices=["both", "europe", "france"],
-                    default="europe",
-                    help="Domaine(s) à générer : europe (défaut), france, both")
+                    default="both",
+                    help="Domaine(s) à générer : both (défaut), europe, france")
     ap.add_argument("--lead-min", type=int, default=0,
                     help="Échéance de début")
     ap.add_argument("--lead-max", type=int, default=None,
