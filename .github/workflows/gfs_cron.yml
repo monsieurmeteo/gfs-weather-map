@@ -325,6 +325,10 @@ jobs:
           merge-multiple: true
           if-no-files-found: ignore
 
+      - name: Génération des fonds et frontières universels
+        run: |
+          python -u pipeline/generate_fond_gfs.py --domain europe
+          python -u pipeline/generate_fond_gfs.py --domain france
       - name: Assemblage des manifests index.json
         run: python -u pipeline/assemble.py
 
