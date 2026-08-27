@@ -373,8 +373,15 @@ def _apply_cumulative(state, out_dir, lead, step, gust_g, apcp_g):
             diff = np.where(np.isfinite(apcp_g) & np.isfinite(prev),
                             apcp_g - prev, np.nan)
             _save_cumulative(out_dir, "pluie_1h", np.clip(diff, 0, None), lead, step)
+        else:
+            _save_cumulative(out_dir, "pluie_1h", np.zeros_like(apcp_g), lead, step)
         state["tp_prev"] = apcp_g
         _save_cumulative(out_dir, "pluie_cumul", apcp_g, lead, step)
+    elif lead == 0:
+        zero_p = np.zeros((EUROPE.height, EUROPE.width), dtype=np.float32)
+        _save_cumulative(out_dir, "pluie_1h", zero_p, lead, step)
+        _save_cumulative(out_dir, "pluie_cumul", zero_p, lead, step)
+        state["tp_prev"] = zero_p
     for name in step["files"]:
         state["counts"][name] = state["counts"].get(name, 0) + 1
 

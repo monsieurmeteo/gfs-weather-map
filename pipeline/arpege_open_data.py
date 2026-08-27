@@ -373,8 +373,15 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
                 # np.isfinite().all() toujours False à cause des NaN de bord → utiliser np.where
                 diff = np.where(np.isfinite(a) & np.isfinite(prev), a - prev, np.nan)
                 save("pluie_1h", np.clip(diff, 0, None))
+            else:
+                save("pluie_1h", np.zeros_like(a))
             state["tp_prev"] = a
             save("pluie_cumul", a)
+    elif lead == 0:
+        zero_p = np.zeros((domain.height, domain.width), dtype=np.float32)
+        save("pluie_1h", zero_p)
+        save("pluie_cumul", zero_p)
+        state["tp_prev"] = zero_p
 
     snod = fields.get("SNOD")
     if snod is not None:

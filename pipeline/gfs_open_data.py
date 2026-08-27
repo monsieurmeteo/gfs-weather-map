@@ -61,7 +61,7 @@ ALIASES = {
     "u10": "U10", "10u": "U10",
     "v10": "V10", "10v": "V10",
     "gust": "GUST",
-    "tp": "APCP",
+    "tp": "APCP", "apcp": "APCP", "prate": "APCP", "cprat": "APCP", "total_precipitation": "APCP",
     "cape": "CAPE", "mcape": "MUCAPE",
     "sde": "SNOD",
     "msl": "PRMSL", "prmsl": "PRMSL",
@@ -153,46 +153,51 @@ def download_lead(run_dt, lead, light=False):
 
 
 def decode_grib(grib_bytes):
-    """Décode un GRIB GFS → dict {clé canonique: (values 2D, lat, lon)}."""
-    import cfgrib
+    """Décode un GRIB GFS avec eccodes direct → {clé canonique: (values 2D, lat, lon)}."""
+    from eccodes import (codes_grib_new_from_file, codes_get,
+                         codes_get_array, codes_release)
     cached = {}
     with tempfile.NamedTemporaryFile(suffix=".grib2", delete=False) as tf:
         tf.write(grib_bytes)
         tmp = tf.name
     try:
-        for ds in cfgrib.open_datasets(tmp):
-            for v in ds.data_vars:
-                key = ALIASES.get(v.lower())
-                if key is None:
-                    continue
-                # TCDC : ignorer les niveaux isobariques parasites
-                if key == "TCDC" and "isobaricInhPa" in ds[v].coords:
-                    continue
-                lat = ds[v].latitude.values
-                lon = ds[v].longitude.values
+        with open(tmp, "rb") as f:
+            while True:
+                gid = codes_grib_new_from_file(f)
+                if gid is None:
+                    break
+                try:
+                    short = codes_get(gid, "shortName").lower()
+                    key = ALIASES.get(short)
+                    if key is None:
+                        continue
+                    ni = int(codes_get(gid, "Ni"))
+                    nj = int(codes_get(gid, "Nj"))
+                    vals = np.asarray(codes_get_array(gid, "values"), dtype=np.float32)
+                    lat2 = np.asarray(codes_get_array(gid, "latitudes"), dtype=np.float64).reshape(nj, ni)
+                    lon2 = np.asarray(codes_get_array(gid, "longitudes"), dtype=np.float64).reshape(nj, ni)
+                    lat = lat2[:, 0]
+                    lon = lon2[0, :]
 
-                # Traitement des niveaux isobariques (HGT Z500, TMP T850)
-                if "isobaricInhPa" in ds[v].coords:
-                    levs = np.atleast_1d(ds[v].isobaricInhPa.values)
-                    for idx, lev_val in enumerate(levs):
-                        lev_f = float(lev_val)
-                        if key == "HGT" and lev_f == 500.0:
-                            val_2d = ds[v].values[idx] if ds[v].ndim == 3 else ds[v].values
-                            cached["HGT"] = (val_2d.astype(np.float32), lat, lon)
-                        elif key == "T2M" and lev_f == 850.0:
-                            val_2d = ds[v].values[idx] if ds[v].ndim == 3 else ds[v].values
-                            cached["T850"] = (val_2d.astype(np.float32), lat, lon)
-                    continue
+                    # Traitement des niveaux isobariques (HGT Z500, TMP T850)
+                    try:
+                        levType = codes_get(gid, "typeOfLevel")
+                        if levType == "isobaricInhPa":
+                            lev = int(codes_get(gid, "level"))
+                            if key == "HGT" and lev == 500:
+                                cached["HGT"] = (vals.reshape(nj, ni), lat, lon)
+                            elif key == "T2M" and lev == 850:
+                                cached["T850"] = (vals.reshape(nj, ni), lat, lon)
+                            continue
+                    except Exception:
+                        pass
 
-                val = ds[v].values
-                # Réduction des dimensions de niveau si singleton
-                while val.ndim > 2 and val.shape[0] == 1:
-                    val = val[0]
-                if val.ndim != 2:
-                    continue
-                # Première occurrence conservée (évite les doublons tcc)
-                if key not in cached:
-                    cached[key] = (val.astype(np.float32), lat, lon)
+                    if key not in cached:
+                        cached[key] = (vals.reshape(nj, ni), lat, lon)
+                except Exception:
+                    pass
+                finally:
+                    codes_release(gid)
     finally:
         try:
             os.remove(tmp)
@@ -342,12 +347,18 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
 
     if apcp is not None:
         a = regrid(apcp)  # mm sur 3 h
-        save("pluie_1h", a)
-        if state.get("cum_precip") is None:
-            state["cum_precip"] = a.copy()
-        else:
-            state["cum_precip"] = state["cum_precip"] + a
-        save("pluie_cumul", state["cum_precip"])
+        if a is not None:
+            save("pluie_1h", a)
+            if state.get("cum_precip") is None:
+                state["cum_precip"] = a.copy()
+            else:
+                state["cum_precip"] = state["cum_precip"] + a
+            save("pluie_cumul", state["cum_precip"])
+    elif lead == 0:
+        zero_p = np.zeros((domain.height, domain.width), dtype=np.float32)
+        save("pluie_1h", zero_p)
+        save("pluie_cumul", zero_p)
+        state["cum_precip"] = zero_p.copy()
 
     if snod is not None:
         save("neige_au_sol", regrid(snod, lambda v: v * 100.0))
