@@ -19,6 +19,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
 from domains import EUROPE, FRANCE
+from render import LAYER_META, write_manifest, write_places
 import gfs_open_data
 import arpege_open_data
 import icon_open_data
