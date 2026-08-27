@@ -37,19 +37,18 @@ from render import (  # noqa: E402
 )
 
 HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
-# Produit S3 Météo-France : 01 = ARPEGE Europe 0,1° (~11 km) — le plus fin
-# publié pour ARPEGE. ARPEGE France réutilise ce même produit (re-projection
-# sur le domaine Mercator France) : il n'existe pas d'ARPEGE France 0,025°.
-GRIB_PRODUCTS = {"europe": "01", "france": "01"}
+# Produit S3 Météo-France : 025 = ARPEGE Global 0,25° (GLOB025) — produit
+# mondial officiel couvrant l'intégralité du globe (-180° à +180°), utilisé par
+# Météociel pour les cartes Europe intégrales (Atlantique, Groenland, Açores).
+GRIB_PRODUCTS = {"europe": "025", "france": "025"}
 PKGS = ["SP1", "SP2", "IP1"]
-BLOCKS = ["000H012H", "013H024H", "025H036H", "037H048H", "049H060H",
-          "061H072H", "073H084H", "085H096H", "097H102H"]
+BLOCKS = ["000H024H", "025H048H", "049H072H", "073H102H"]
 RUN_MATURITY = 16200  # 4 h 30
 MAX_LEAD = 102
 
 
-def grib_url(run, pkg, block, product="01"):
-    """URL S3 Météo-France d'un bloc GRIB2 ARPEGE (produit 01 ou 02)."""
+def grib_url(run, pkg, block, product="025"):
+    """URL S3 Météo-France d'un bloc GRIB2 ARPEGE (produit 025)."""
     return ("https://meteofrance-pnt.s3.rbx.io.cloud.ovh.net/pnt/{run}/arpege/{prod}/"
             "{pkg}/arpege__{prod}__{pkg}__{block}__{run}.grib2"
             .format(run=run, prod=product, pkg=pkg, block=block))
@@ -84,12 +83,12 @@ def _head(session, url):
 
 
 def select_run(now=None, session=None):
-    """Dernier run ARPEGE réellement disponible (SP1 000H012H présent)."""
+    """Dernier run ARPEGE réellement disponible (SP1 000H024H présent)."""
     s = session or requests.Session()
     now = now or datetime.datetime.now(datetime.timezone.utc)
     for _ in range(2):
         run_dt = latest_run(now)
-        url = grib_url(run_str(run_dt), "SP1", "000H012H", GRIB_PRODUCTS["europe"])
+        url = grib_url(run_str(run_dt), "SP1", "000H024H", GRIB_PRODUCTS["europe"])
         if _head(s, url):
             return run_dt
         log("Run %s indisponible, repli sur le précédent" % run_str(run_dt))
