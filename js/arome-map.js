@@ -3162,14 +3162,14 @@
             var layer = manifest.layers[currentLayer];
             var mapRect = computeMapRect(width, height);
             var isEurope = (manifest && manifest.bounds && (manifest.bounds.projection === 'lambert' || manifest.bounds.west < -20)) || (currentModel === 'gfs') || (currentModel === 'arpege');
-            // Pas de la grille dense et équilibré pour couvrir le domaine sans vide
+            // Pas de la grille dense et équilibré pour couvrir toute la France sans vide
             var stepPx = isEurope ?
-                (transform.scale < 1.35 ? 46 : (transform.scale < 2.5 ? 40 : 34)) :
-                (transform.scale < 1.35 ? 38 : (transform.scale < 2.5 ? 35 : 32));
+                (transform.scale < 1.35 ? 44 : (transform.scale < 2.5 ? 38 : 32)) :
+                (transform.scale < 1.35 ? 36 : (transform.scale < 2.5 ? 34 : 32));
             var fontSize = isEurope ?
-                (transform.scale < 1.35 ? 11.5 : 13.5) :
-                (transform.scale < 1.35 ? 12.5 : 14.5);
-            valuesContext.font = '900 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                (transform.scale < 1.35 ? 9.5 : 11.0) :
+                (transform.scale < 1.35 ? 10 : 11.5);
+            valuesContext.font = '800 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
             valuesContext.textAlign = 'center';
             valuesContext.textBaseline = 'middle';
             valuesContext.lineJoin = 'round';
@@ -3181,7 +3181,7 @@
                     var u = (x - mapRect.x) / mapRect.w;
                     if (u < 0 || u > 1) continue;
 
-                    // Exclusion des valeurs en mer selon seaMode
+                    // Exclusion totale des valeurs en mer (ne garder que les terres)
                     if (!isLand(u, v)) continue;
 
                     var val = sampleProbe(currentProbe, u, v);
@@ -3203,7 +3203,7 @@
                     }
 
                     valuesContext.strokeStyle = '#000000';
-                    valuesContext.lineWidth = 4.0;
+                    valuesContext.lineWidth = 2.6;
                     valuesContext.strokeText(strVal, x, y);
                     valuesContext.fillStyle = getValueColour(val, currentLayer);
                     valuesContext.fillText(strVal, x, y);
