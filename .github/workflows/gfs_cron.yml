@@ -218,8 +218,7 @@ jobs:
 
       - name: Dépendances système + Python
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libeccodes0 libeccodes-tools
+          for i in 1 2 3; do sudo apt-get update -qq && sudo apt-get install -y -qq --fix-missing libeccodes0 libeccodes-tools && break || sleep 3; done
           pip install -r requirements.txt -q
 
       - name: Pipeline (${{ matrix.id }})
