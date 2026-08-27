@@ -73,18 +73,22 @@ LAND = (237, 234, 226)
 BORDER = (160, 165, 170)
 NATURAL = "#0b1220"   # côtes / frontières nationales (noir franc)
 DEPT = "#7a828e"      # départements (gris fin)
-
-
 LAND_FRANCE = (232, 228, 218)  # France légèrement distincte
+
 
 def generate(domain):
     dom = Domain(domain)
     W, H = dom.width, dom.height
-    out_dirs = [os.path.join(BASE_DIR, "output",
-                             "gfs_france" if domain == "france" else "gfs",
-                             "maps")]
     if domain == "europe":
-        out_dirs.append(os.path.join(BASE_DIR, "output", "arpege", "maps"))
+        out_dirs = [
+            os.path.join(BASE_DIR, "output", m, "maps")
+            for m in ("gfs", "arpege", "aifs", "icon_eu")
+        ]
+    else:
+        out_dirs = [
+            os.path.join(BASE_DIR, "output", m, "maps")
+            for m in ("gfs_france", "arpege_france", "aifs_france", "icon_eu_france")
+        ]
     for d in out_dirs:
         os.makedirs(d, exist_ok=True)
     out_dir = out_dirs[0]

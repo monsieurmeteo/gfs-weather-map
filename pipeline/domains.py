@@ -140,6 +140,12 @@ class Domain:
         if src_lats[0] > src_lats[-1]:
             src_lats = src_lats[::-1]
             data = data[::-1, :]
+        # ponytail: conversion auto 0..360 -> -180..180 pour grilles globales (ex. ECMWF AIFS)
+        if src_lons.max() > 180.0:
+            src_lons = np.where(src_lons > 180.0, src_lons - 360.0, src_lons)
+            order = np.argsort(src_lons)
+            src_lons = src_lons[order]
+            data = data[:, order]
         if src_lons[0] > src_lons[-1]:
             src_lons = src_lons[::-1]
             data = data[:, ::-1]
