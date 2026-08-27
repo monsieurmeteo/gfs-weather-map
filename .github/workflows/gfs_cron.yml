@@ -305,6 +305,7 @@ jobs:
           echo "Base restaurée depuis le run $RESTORED (output/ fusionné, code du repo conservé)"
 
       - name: Purge des répertoires régénérés (évite les dalles obsolètes)
+        if: needs.build-fond.outputs.mode != 'front'
         run: |
           # La base restaurée contient d'anciennes dalles du modèle en cours :
           # on les purge pour que la fusion des chunks les remplace à 100%.
