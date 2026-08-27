@@ -91,7 +91,7 @@ def apply_palette(data, palette, discrete=False):
     return rgba
 
 
-def save_webp(data, layer, dst, quality=85):
+def save_webp(data, layer, dst, quality=78):
     """Dalle WebP RGBA (alpha = zone sans données via NaN → transparent)."""
     pal = PALETTES.get(layer)
     if pal is None:
@@ -105,8 +105,8 @@ def save_webp(data, layer, dst, quality=85):
 
 
 # ── Sondes HKV1 (valeurs au survol) ─────────────────────────────────────────
-def write_hkv(grid, dst, probe_w=440, probe_h=328):
-    """Grille de valeurs compressée gzip pour la sonde au survol.
+def write_hkv(grid, dst, probe_w=220, probe_h=164):
+    """Grille de valeurs compressée gzip pour la sonde au survol (220x164 ultra-compacte).
 
     Format : en-tête 'HKV1' + w u16 + h u16 + min f32 + max f32
              + données u16 (65535 = NaN).
@@ -128,7 +128,7 @@ def write_hkv(grid, dst, probe_w=440, probe_h=328):
                  np.clip((g - gmin) / span, 0.0, 1.0) * 65534.0, 65535.0)
     q = q.astype(np.uint16)
     ensure_dir(os.path.dirname(dst))
-    with gzip.open(dst, "wb") as f:
+    with gzip.open(dst, "wb", compresslevel=6) as f:
         f.write(b"HKV1")
         f.write(struct.pack("<HH", probe_w, probe_h))
         f.write(struct.pack("<ff", gmin, gmax))
