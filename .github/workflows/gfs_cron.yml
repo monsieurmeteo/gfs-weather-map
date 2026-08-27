@@ -1,7 +1,9 @@
 name: "Météo Multi-modèles GFS & ARPEGE — Build & Deploy"
 
 on:
-  # Pas de planification automatique : déclenchement externe (API / autre programme)
+  schedule:
+    # 4 runs quotidiens (00z, 06z, 12z, 18z) dès disponibilité complète NOAA/Météo-France
+    - cron: '45 5,11,17,23 * * *'
   workflow_dispatch:
     inputs:
       mode:

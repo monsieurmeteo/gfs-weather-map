@@ -1,6 +1,9 @@
 name: "ICON-EU — Build & Deploy"
 
 on:
+  schedule:
+    # 4 runs quotidiens (00z, 06z, 12z, 18z)
+    - cron: '0 4,10,16,22 * * *'
   workflow_dispatch:
     inputs:
       mode:

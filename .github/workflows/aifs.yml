@@ -1,6 +1,9 @@
 name: "AIFS — Build & Deploy"
 
 on:
+  schedule:
+    # 2 runs quotidiens (00z, 12z)
+    - cron: '15 8,20 * * *'
   workflow_dispatch:
     inputs:
       mode:
