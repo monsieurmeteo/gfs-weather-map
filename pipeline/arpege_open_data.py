@@ -37,18 +37,17 @@ from render import (  # noqa: E402
 )
 
 HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
-# Produit S3 Météo-France : 025 = ARPEGE Global 0,25° (GLOB025) — produit
-# mondial officiel couvrant l'intégralité du globe (-180° à +180°), utilisé par
-# Météociel pour les cartes Europe intégrales (Atlantique, Groenland, Açores).
-GRIB_PRODUCTS = {"europe": "025", "france": "025"}
+# Produit S3 Météo-France : 01 = ARPEGE Europe 0,1° (EURAT01) — produit haute résolution
+# officiel couvrant l'Europe (-32° à +42°, 20°N à 72°N) avec T2M à 2 mètres réelle.
+GRIB_PRODUCTS = {"europe": "01", "france": "01"}
 PKGS = ["SP1", "SP2", "IP1"]
-BLOCKS = ["000H024H", "025H048H", "049H072H", "073H102H"]
+BLOCKS = ["000H012H", "013H024H", "025H036H", "037H048H", "049H060H", "061H072H", "073H084H", "085H096H", "097H102H"]
 RUN_MATURITY = 16200  # 4 h 30
 MAX_LEAD = 102
 
 
-def grib_url(run, pkg, block, product="025"):
-    """URL S3 Météo-France d'un bloc GRIB2 ARPEGE (produit 025)."""
+def grib_url(run, pkg, block, product="01"):
+    """URL S3 Météo-France d'un bloc GRIB2 ARPEGE (produit 01 EURAT01)."""
     return ("https://meteofrance-pnt.s3.rbx.io.cloud.ovh.net/pnt/{run}/arpege/{prod}/"
             "{pkg}/arpege__{prod}__{pkg}__{block}__{run}.grib2"
             .format(run=run, prod=product, pkg=pkg, block=block))
@@ -88,7 +87,7 @@ def select_run(now=None, session=None):
     now = now or datetime.datetime.now(datetime.timezone.utc)
     for _ in range(2):
         run_dt = latest_run(now)
-        url = grib_url(run_str(run_dt), "SP1", "000H024H", GRIB_PRODUCTS["europe"])
+        url = grib_url(run_str(run_dt), "SP1", "000H012H", GRIB_PRODUCTS["europe"])
         if _head(s, url):
             return run_dt
         log("Run %s indisponible, repli sur le précédent" % run_str(run_dt))
@@ -257,7 +256,7 @@ def render_lead(fields, lead, run_dt, domain, out_dir, state):
             state["counts"]["geopotentiel_500_meteociel"] = \
                 state["counts"].get("geopotentiel_500_meteociel", 0) + 1
 
-    t2m = fields.get("T2M")
+    t2m = fields.get("T2M") or fields.get("TSFC")
     dpt = fields.get("DPT")
     rh = fields.get("RH")
     u10 = fields.get("U10")

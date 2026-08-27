@@ -150,14 +150,21 @@ class Domain:
             src_lons = src_lons[::-1]
             data = data[:, ::-1]
         
-        # Clamping des coordonnées aux limites de la grille source pour une couverture 100% sans bordures grises
-        pts_lat = np.clip(self.lats.ravel(), src_lats[0], src_lats[-1])
-        pts_lon = np.clip(self.lons.ravel(), src_lons[0], src_lons[-1])
+        # Si la grille source est globale (GFS/AIFS), clamping pour éviter les bords gris ; si régionale (EURAT01/ICON), NaN hors domaine
+        is_global = (src_lons.min() <= -170.0 and src_lons.max() >= 170.0)
+        if is_global:
+            pts_lat = np.clip(self.lats.ravel(), src_lats[0], src_lats[-1])
+            pts_lon = np.clip(self.lons.ravel(), src_lons[0], src_lons[-1])
+            fill_val = None
+        else:
+            pts_lat = self.lats.ravel()
+            pts_lon = self.lons.ravel()
+            fill_val = np.nan
+
         pts = np.column_stack((pts_lat, pts_lon))
-        
         interp = RegularGridInterpolator(
             (src_lats, src_lons), data, method="linear",
-            bounds_error=False, fill_value=None)
+            bounds_error=False, fill_value=fill_val)
         return interp(pts).reshape((self.height, self.width)).astype(np.float32)
 
 
