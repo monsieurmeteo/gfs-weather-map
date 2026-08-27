@@ -2289,6 +2289,20 @@
                         fondImageElement = new Image();
                         fondImageElement.crossOrigin = 'anonymous';
                         fondImageElement.src = versioned(payload.fond);
+                        if (webgl) {
+                            var fImg = new Image();
+                            fImg.crossOrigin = 'anonymous';
+                            fImg.src = versioned(payload.fond);
+                            fImg.onload = function () {
+                                if (!webgl) return;
+                                var gl = webgl.gl;
+                                gl.activeTexture(gl.TEXTURE2);
+                                gl.bindTexture(gl.TEXTURE_2D, webgl.fondTexture);
+                                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, fImg);
+                                webgl.fondReady = true;
+                                scheduleRender();
+                            };
+                        }
                     }
                     if (payload.mask) {
                         franceMaskImage = new Image();
@@ -2300,6 +2314,13 @@
                                     maskSamplerContext.drawImage(franceMaskImage, 0, 0, 2200, 1640);
                                     maskSamplerReady = true;
                                 } catch (e) {}
+                            }
+                            if (webgl) {
+                                var gl = webgl.gl;
+                                gl.activeTexture(gl.TEXTURE1);
+                                gl.bindTexture(gl.TEXTURE_2D, webgl.maskTexture);
+                                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, franceMaskImage);
+                                webgl.maskReady = true;
                             }
                             scheduleRender();
                         };
@@ -2590,7 +2611,8 @@
 
             var maskTexture = gl.createTexture();
             var maskImage = new Image();
-            maskImage.src = resolvePath('maps/mask_france.png');
+            maskImage.crossOrigin = 'anonymous';
+            maskImage.src = resolvePath((manifest && manifest.mask) ? manifest.mask : 'maps/mask_france.png');
             maskImage.onload = function() {
                 gl.activeTexture(gl.TEXTURE1);
                 gl.bindTexture(gl.TEXTURE_2D, maskTexture);
@@ -2607,7 +2629,7 @@
             var fondTexture = gl.createTexture();
             var fondImage = new Image();
             fondImage.crossOrigin = 'anonymous';
-            fondImage.src = resolvePath('maps/fond.webp');
+            fondImage.src = resolvePath((manifest && manifest.fond) ? manifest.fond : 'maps/fond.webp');
             fondImage.onload = function() {
                 gl.activeTexture(gl.TEXTURE2);
                 gl.bindTexture(gl.TEXTURE_2D, fondTexture);
