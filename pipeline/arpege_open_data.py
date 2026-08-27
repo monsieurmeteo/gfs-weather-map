@@ -38,13 +38,14 @@ from render import (  # noqa: E402
 
 HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
 # Configuration des produits ARPEGE Météo-France :
-# - Europe & France : produit officiel EURAT01 (0.1° / 11 km) haute résolution avec T2M à 2 mètres réelle
+# - Europe : produit GLOB025 (0.25° mondial, 360°) couvrant 100% de l'Europe et de l'Atlantique sans triangle
+# - France : produit EURAT01 (0.1° haute résolution 11 km) avec vraie T2M à 2 mètres
 GRIB_CONFIG = {
     "europe": {
-        "product": "01",
-        "label": "ARPEGE Europe 0.1°",
-        "resolution": "0.1° (~11 km)",
-        "blocks": ["000H012H", "013H024H", "025H036H", "037H048H", "049H060H", "061H072H", "073H084H", "085H096H", "097H102H"],
+        "product": "025",
+        "label": "ARPEGE Europe 0.25°",
+        "resolution": "0.25° (~25 km)",
+        "blocks": ["000H024H", "025H048H", "049H072H", "073H102H"],
         "domain": EUROPE,
         "out_dir_name": "arpege",
     },
@@ -104,7 +105,8 @@ def select_run(now=None, session=None, product="01"):
         now = datetime.datetime.now(datetime.timezone.utc)
     for _ in range(2):
         run_dt = latest_run(now)
-        url = grib_url(run_str(run_dt), "SP1", "000H012H", product)
+        test_block = "000H024H" if product == "025" else "000H012H"
+        url = grib_url(run_str(run_dt), "SP1", test_block, product)
         if _head(s, url):
             return run_dt
         log("Run %s indisponible pour produit %s, repli sur le précédent" % (run_str(run_dt), product))
@@ -209,11 +211,15 @@ def collect_fields(session, run_dt, max_lead, product="025", blocks=None, lead_m
                 continue
             t0 = time.time()
             try:
-                fields = fetch_block_full(session, url, eff_max, log, lead_min=lead_min)
-                mode = "direct (rapide)"
+                if pkg == "IP1" and size > 300 * 1024 * 1024:
+                    fields = gribscan.fetch_block(session, url, size, eff_max, log=log)
+                    mode = "scan sélectif (Range)"
+                else:
+                    fields = fetch_block_full(session, url, eff_max, log, lead_min=lead_min)
+                    mode = "direct (rapide)"
                 n_full_mb += size // (1024 * 1024)
             except Exception as e:
-                log("!! %s %s (%s) : téléchargement échoué (%s)" % (pkg, block, product, e))
+                log("!! %s %s (%s) : extraction échouée (%s)" % (pkg, block, product, e))
                 continue
             n_blocks += 1
             for lead, flds in fields.items():

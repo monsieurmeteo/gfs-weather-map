@@ -829,10 +829,16 @@
                 offX = mapRect.x * ratio;
                 offY = mapRect.y * ratio;
             } else {
-                // Comportement AROME : en vue "France entière" (zoom 1), cadrer
-                // la boîte France (Météo-NPDC) au lieu de l'étaler sur tout le canvas
-                var isFranceExport = (currentModel.indexOf('_france') !== -1) || (manifest && manifest.bounds && manifest.bounds.projection === 'mercator');
-                if (isFranceExport && transform.scale <= 1.15) {
+                var isEuropeExport = isEuropeDomain();
+                if (isEuropeExport) {
+                    // Vue Europe Standard (2200x1640) : cadrage plein cadre 100% de la projection Lambert
+                    outW = 2200;
+                    outH = 1640;
+                    hScale = 1.0;
+                    vScale = 1.0;
+                    offX = 0;
+                    offY = 0;
+                } else if (isFranceExport && transform.scale <= 1.15) {
                     // Vue France entière : boîte Météo-NPDC (West: -5.8°, East: +10.2°, North: 51.6°, South: 41.1°)
                     outW = 2200;
                     outH = 1640;
@@ -850,7 +856,7 @@
                     offX = outW / 2 - cx * scale;
                     offY = outH / 2 - cy * scale;
                 } else {
-                    // Vue Standard 4:3 (2200x1640) : reproduction exacte et fidèle de la vue actuelle (Europe, France ou Région)
+                    // Vue Zoomée Région / Libre : reproduction exacte de la vue
                     outW = 2200;
                     outH = 1640;
                     var viewRect = computeMapRect(vw, vh);
