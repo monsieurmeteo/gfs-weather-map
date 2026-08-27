@@ -301,15 +301,15 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
         # TCDC GFS déjà exprimé en % (0-100)
         save("nebulosite", regrid(tcdc))
 
-    lcc = fields.get("LCC")
+    lcc = cached.get("LCC")
     if lcc is not None:
         save("nuages_bas", regrid(lcc))
 
-    mcc = fields.get("MCC")
+    mcc = cached.get("MCC")
     if mcc is not None:
         save("nuages_moyens", regrid(mcc))
 
-    hcc = fields.get("HCC")
+    hcc = cached.get("HCC")
     if hcc is not None:
         save("nuages_eleves", regrid(hcc))
 
