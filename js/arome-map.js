@@ -2855,12 +2855,18 @@
         // Le header flotte AU-DESSUS de la carte (translucide) : la carte
         // remplit donc tout le viewport, sans zone réservée.
         // ────────────────────────────────────────────────────────────────────
+        function isEuropeDomain() {
+            if (!currentModel) return false;
+            if (currentModel.indexOf('_france') !== -1) return false;
+            return (currentModel === 'gfs' || currentModel === 'arpege' || currentModel === 'icon_eu' || currentModel === 'aifs');
+        }
+
         function computeMapRect(width, height, t) {
             t = t || transform;
-            var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (currentModel === 'gfs') || (currentModel === 'arpege');
+            var isEurope = isEuropeDomain();
 
             if (isEurope) {
-                // Mode "contain" : tout le domaine visible (Maroc, Espagne, Islande, Scandinavie)
+                // Mode "contain" : tout le domaine visible (Groenland, Maroc, Espagne, Islande, Scandinavie)
                 // Math.min = letterbox — pas de coupure, centré
                 var scale = Math.min(width / 2200.0, height / 1640.0) * t.scale;
                 return {
@@ -2958,7 +2964,7 @@
         }
 
         function labelDensity() {
-            var isEurope = (manifest && manifest.bounds && manifest.bounds.west < -20) || (currentModel === 'gfs') || (currentModel === 'arpege');
+            var isEurope = isEuropeDomain();
             if (transform.scale < 1.35) {
                 return isEurope ?
                     { population: 500000, maximum: 22, size: 12 } :
@@ -3161,7 +3167,7 @@
 
             var layer = manifest.layers[currentLayer];
             var mapRect = computeMapRect(width, height);
-            var isEurope = (manifest && manifest.bounds && (manifest.bounds.projection === 'lambert' || manifest.bounds.west < -20)) || (currentModel === 'gfs') || (currentModel === 'arpege');
+            var isEurope = isEuropeDomain();
             // Pas de la grille dense et équilibré identique à AROME HD
             var stepPx = isEurope ?
                 (transform.scale < 1.35 ? 44 : (transform.scale < 2.5 ? 38 : 34)) :
@@ -3245,7 +3251,7 @@
             if (!viewport) return;
             var w = viewport.clientWidth;
             var h = viewport.clientHeight;
-            var isEurope = (manifest && manifest.bounds && (manifest.bounds.projection === 'lambert' || manifest.bounds.west < -20)) || (currentModel === 'gfs') || (currentModel === 'arpege');
+            var isEurope = isEuropeDomain();
             var s = isEurope ? Math.min(w / 2200.0, h / 1640.0) : Math.max(w / 2200.0, h / 1640.0);
             var totalScale = s * transform.scale;
             var rasterW = 2200.0 * totalScale;
