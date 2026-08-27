@@ -71,27 +71,11 @@ jobs:
           echo "max_hours=$MAX_HOURS" >> "$GITHUB_OUTPUT"
           echo "models=$MODELS"       >> "$GITHUB_OUTPUT"
 
-      - name: Générer les fonds (europe + france + arpege)
+      - name: Générer les fonds (Europe + France)
         if: steps.vars.outputs.mode != 'front'
         run: |
-          cd pipeline
-          python -c "
-          import sys; sys.path.insert(0, '.')
-          import generate_fond_gfs
-          generate_fond_gfs.generate('europe')
-          generate_fond_gfs.generate('france')
-          import shutil, os
-          # generate('europe') écrit déjà les fonds Europe dans gfs/maps ET arpege/maps.
-          # generate('france') écrit les fonds France (Mercator) dans gfs_france/maps :
-          # on les copie vers arpege_france/maps (jamais les fonds Europe !).
-          src_fr = '../output/gfs_france/maps'
-          dst_fr = '../output/arpege_france/maps'
-          os.makedirs(dst_fr, exist_ok=True)
-          for f in ('fond.webp', 'mask_france.png', 'frontieres.svg'):
-              s = os.path.join(src_fr, f)
-              if os.path.exists(s): shutil.copy(s, dst_fr)
-          print('Fonds OK')
-          "
+          python -u pipeline/generate_fond_gfs.py --domain europe
+          python -u pipeline/generate_fond_gfs.py --domain france
 
       - name: Upload fonds (artefact partagé)
         if: steps.vars.outputs.mode != 'front'

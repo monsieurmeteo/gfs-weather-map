@@ -59,25 +59,8 @@ jobs:
       - name: Générer les fonds (Europe + France)
         if: steps.vars.outputs.mode != 'front'
         run: |
-          cd pipeline
-          python -c "
-          import sys; sys.path.insert(0, '.')
-          import generate_fond_gfs
-          generate_fond_gfs.generate('europe')
-          generate_fond_gfs.generate('france')
-          import shutil, os
-          for dst in ('../output/icon_eu/maps', '../output/aifs/maps'):
-              os.makedirs(dst, exist_ok=True)
-              for f in ('fond.webp', 'mask_france.png', 'frontieres.svg'):
-                  s = os.path.join('../output/gfs/maps', f)
-                  if os.path.exists(s): shutil.copy(s, dst)
-          for dst in ('../output/icon_eu_france/maps', '../output/aifs_france/maps'):
-              os.makedirs(dst, exist_ok=True)
-              for f in ('fond.webp', 'mask_france.png', 'frontieres.svg'):
-                  s = os.path.join('../output/gfs_france/maps', f)
-                  if os.path.exists(s): shutil.copy(s, dst)
-          print('Fonds ICON-EU OK')
-          "
+          python -u pipeline/generate_fond_gfs.py --domain europe
+          python -u pipeline/generate_fond_gfs.py --domain france
       - name: Upload fonds (artefact partagé)
         if: steps.vars.outputs.mode != 'front'
         uses: actions/upload-artifact@v4
