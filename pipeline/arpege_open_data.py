@@ -38,14 +38,13 @@ from render import (  # noqa: E402
 
 HEADERS = {"User-Agent": "gfs-weather-map/2.0 (Monsieur Meteo)"}
 # Configuration des produits ARPEGE Météo-France :
-# - Europe : produit GLOB025 (0.25°) couvrant 100% du globe sans transparence
-# - France : produit EURAT01 (0.1°) couvrant la métropole & régions en haute résolution (11 km) avec 2t
+# - Europe & France : produit officiel EURAT01 (0.1° / 11 km) haute résolution avec T2M à 2 mètres réelle
 GRIB_CONFIG = {
     "europe": {
-        "product": "025",
-        "label": "ARPEGE Europe 0.25°",
-        "resolution": "0.25° (~25 km)",
-        "blocks": ["000H024H", "025H048H", "049H072H", "073H102H"],
+        "product": "01",
+        "label": "ARPEGE Europe 0.1°",
+        "resolution": "0.1° (~11 km)",
+        "blocks": ["000H012H", "013H024H", "025H036H", "037H048H", "049H060H", "061H072H", "073H084H", "085H096H", "097H102H"],
         "domain": EUROPE,
         "out_dir_name": "arpege",
     },
@@ -63,8 +62,8 @@ RUN_MATURITY = 16200  # 4 h 30
 MAX_LEAD = 102
 
 
-def grib_url(run, pkg, block, product="025"):
-    """URL S3 Météo-France d'un bloc GRIB2 ARPEGE (025 ou 01)."""
+def grib_url(run, pkg, block, product="01"):
+    """URL S3 Météo-France d'un bloc GRIB2 ARPEGE (produit 01 EURAT01)."""
     return ("https://meteofrance-pnt.s3.rbx.io.cloud.ovh.net/pnt/{run}/arpege/{prod}/"
             "{pkg}/arpege__{prod}__{pkg}__{block}__{run}.grib2"
             .format(run=run, prod=product, pkg=pkg, block=block))
@@ -98,15 +97,14 @@ def _head(session, url):
     return int(cl) if cl else None
 
 
-def select_run(now=None, session=None, product="025"):
+def select_run(now=None, session=None, product="01"):
     """Dernier run ARPEGE réellement disponible."""
     s = session or requests.Session()
     if not isinstance(now, datetime.datetime):
         now = datetime.datetime.now(datetime.timezone.utc)
     for _ in range(2):
         run_dt = latest_run(now)
-        test_block = "000H024H" if product == "025" else "000H012H"
-        url = grib_url(run_str(run_dt), "SP1", test_block, product)
+        url = grib_url(run_str(run_dt), "SP1", "000H012H", product)
         if _head(s, url):
             return run_dt
         log("Run %s indisponible pour produit %s, repli sur le précédent" % (run_str(run_dt), product))
