@@ -164,8 +164,6 @@ def fetch_block_full(session, url, max_lead, logf, lead_min=0):
                 grid = vals.reshape((Nj, Ni))
                 lats = codes_get_array(gid, "distinctLatitudes")
                 lons = codes_get_array(gid, "distinctLongitudes")
-                if lons.max() > 180:
-                    lons = np.where(lons > 180, lons - 360, lons)
                 # GUST fallback diagnostic
                 if key == "GUST" and lead == 0 and ("GUST", 0) not in _dbg_v:
                     _dbg_v[("GUST", 0)] = True
