@@ -2383,14 +2383,20 @@
                     }
                     var regSel = document.getElementById('select-region');
                     if (regSel) {
-                        var curVal = regSel.value;
-                        // Ne modifier le sélecteur que si on n'est PAS sur une région spécifique
-                        if (curVal === 'europe' || curVal === 'france') {
-                            if (isFranceOnly && curVal === 'europe') {
-                                regSel.value = 'france';
-                            } else if (!isFranceOnly && curVal === 'france') {
-                                regSel.value = 'europe';
+                        // Filtrage intelligent : montrer uniquement les options pertinentes
+                        var allOpts = regSel.querySelectorAll('option');
+                        for (var oi = 0; oi < allOpts.length; oi++) {
+                            var opt = allOpts[oi];
+                            if (isFranceOnly) {
+                                opt.hidden = opt.classList.contains('opt-eu');
+                            } else {
+                                opt.hidden = opt.classList.contains('opt-fr');
                             }
+                        }
+                        // Basculer sur une valeur visible si la valeur actuelle est masquée
+                        var curOpt = regSel.querySelector('option[value="' + regSel.value + '"]');
+                        if (!curOpt || curOpt.hidden) {
+                            regSel.value = isFranceOnly ? 'hdf' : 'europe';
                         }
                     }
 
@@ -2517,11 +2523,12 @@
             if (reg) {
                 if (regSel && regSel.querySelector('option[value="' + reg + '"]')) {
                     regSel.value = reg;
-                    var cfg = REGION_CONFIG[reg];
-                    if (cfg) {
-                        focusLocation({ latitude: cfg.latitude, longitude: cfg.longitude, scale: cfg.scale });
-                    }
+                    regSel.dispatchEvent(new Event('change'));
                 }
+            } else if (regSel && regSel.querySelector('option[value="hdf"]')) {
+                // Comportement AROME : démarrage sur Hauts-de-France si pas de paramètre region
+                regSel.value = 'hdf';
+                regSel.dispatchEvent(new Event('change'));
             }
             var heure = parseInt(params.get('heure'), 10);
             if (!isNaN(heure)) {
@@ -3001,8 +3008,8 @@
                 var cx = (FX0 + FX1) / 2; // 1060
                 var cy = (FY0 + FY1) / 2; // 820
                 var bboxRect = {
-                    x: width / 2 + t.x - cx * sFrance,
-                    y: height / 2 + t.y - cy * sFrance,
+                    x: width / 2 - cx * sFrance,
+                    y: height / 2 - cy * sFrance,
                     w: 2200.0 * sFrance,
                     h: 1640.0 * sFrance
                 };
@@ -4101,31 +4108,16 @@
                     setLayerMenuOpen(!window.matchMedia ||
                         !window.matchMedia('(max-width: 760px)').matches);
                 }
+                var regSel = document.getElementById('select-region');
+                if (regSel) {
+                    var isFr = (currentModel.indexOf('_france') !== -1);
+                    var allOpts = regSel.querySelectorAll('option');
+                    for (var oi = 0; oi < allOpts.length; oi++) {
+                        allOpts[oi].hidden = isFr ? allOpts[oi].classList.contains('opt-eu') : allOpts[oi].classList.contains('opt-fr');
+                    }
+                }
                 renderStep(currentStep);
                 applyUrlParams();
-                var currentParams = new URLSearchParams(window.location.search);
-                var modelParam = currentParams.get('model');
-                if (modelParam && modelParam !== currentModel &&
-                        typeof switchModel === 'function') {
-                    switchModel(modelParam);
-                    return;
-                }
-                if (!currentParams.get('region')) {
-                    var regSel = document.getElementById('select-region');
-                    if (regSel && regSel.querySelector('option[value="europe"]')) {
-                        regSel.value = 'europe';
-                        if (typeof focusLocation === 'function') {
-                            focusLocation({ latitude: 49.0, longitude: 8.0, scale: 1.0 });
-                        }
-                    } else if (regSel && regSel.querySelector('option[value="hdf"]')) {
-                        regSel.value = 'hdf';
-                        if (typeof focusLocation === 'function') {
-                            focusLocation({ latitude: 49.85, longitude: 2.82, scale: 2.65 });
-                        }
-                    }
-                } else if (pendingFocus && typeof focusLocation === 'function') {
-                    focusLocation(pendingFocus);
-                }
             })
             .catch(function (error) {
                 console.error('Erreur chargement manifeste:', error);

@@ -1205,28 +1205,30 @@
                         <option value="geopotentiel_500_meteociel">🎛️ Détaillé (isobares 1 hPa)</option>
                     </select>
 
-                    <!-- Sélecteur de Zone (Europe / France / Régions) -->
+                    <!-- Sélecteur de Zone — Hauts-de-France par défaut (identique AROME) -->
                     <select id="select-region" data-amfm-region-select class="amfm-select-region" aria-label="Zoomer sur une zone géographique">
-                        <option value="france" selected>🇫🇷 France Entière</option>
-                        <option value="europe">🇪🇺 Europe Entière</option>
-                        <option value="hdf">🏘️ Hauts-de-France</option>
-                        <option value="normandie">🍏 Normandie</option>
-                        <option value="idf">🗼 Île-de-France</option>
-                        <option value="grandest">🥨 Grand Est</option>
-                        <option value="bretagne">⛵ Bretagne</option>
-                        <option value="pdl">⚓ Pays de la Loire</option>
-                        <option value="cvl">🏰 Centre-Val de Loire</option>
-                        <option value="bfc">🍇 Bourgogne-Franche-Comté</option>
-                        <option value="naq">🌊 Nouvelle-Aquitaine</option>
-                        <option value="ara">⛰️ Auvergne-Rhône-Alpes</option>
-                        <option value="occitanie">🌞 Occitanie</option>
-                        <option value="paca">☀️ PACA</option>
-                        <option value="corse">🏝️ Corse</option>
-                        <option value="belgique">🇧🇪 Belgique</option>
-                        <option value="uk">🇬🇧 Royaume-Uni & Irlande</option>
-                        <option value="allemagne">🇩🇪 Allemagne & Benelux</option>
-                        <option value="espagne">🇪🇸 Espagne & Portugal</option>
-                        <option value="italie">🇮🇹 Italie & Méditerranée</option>
+                        <!-- Régions France (modèles _france) -->
+                        <option value="hdf" class="opt-fr" selected>🏘️ Hauts-de-France</option>
+                        <option value="france" class="opt-fr">🇫🇷 France Entière</option>
+                        <option value="normandie" class="opt-fr">🍏 Normandie</option>
+                        <option value="idf" class="opt-fr">🗼 Île-de-France</option>
+                        <option value="grandest" class="opt-fr">🥨 Grand Est</option>
+                        <option value="bretagne" class="opt-fr">⛵ Bretagne</option>
+                        <option value="pdl" class="opt-fr">⚓ Pays de la Loire</option>
+                        <option value="cvl" class="opt-fr">🏰 Centre-Val de Loire</option>
+                        <option value="bfc" class="opt-fr">🍇 Bourgogne-Franche-Comté</option>
+                        <option value="naq" class="opt-fr">🌊 Nouvelle-Aquitaine</option>
+                        <option value="ara" class="opt-fr">⛰️ Auvergne-Rhône-Alpes</option>
+                        <option value="occitanie" class="opt-fr">🌞 Occitanie</option>
+                        <option value="paca" class="opt-fr">☀️ PACA</option>
+                        <option value="corse" class="opt-fr">🏝️ Corse</option>
+                        <option value="belgique" class="opt-fr">🇧🇪 Belgique</option>
+                        <!-- Zones Europe (modèles europe) -->
+                        <option value="europe" class="opt-eu">🇪🇺 Europe Entière</option>
+                        <option value="uk" class="opt-eu">🇬🇧 Royaume-Uni &amp; Irlande</option>
+                        <option value="allemagne" class="opt-eu">🇩🇪 Allemagne &amp; Benelux</option>
+                        <option value="espagne" class="opt-eu">🇪🇸 Espagne &amp; Portugal</option>
+                        <option value="italie" class="opt-eu">🇮🇹 Italie &amp; Méditerranée</option>
                     </select>
                 </div>
 
@@ -1554,9 +1556,9 @@
     })();
     </script>
 
-    <script src="js/palettes.js?v=2.6.3"></script>
+    <script src="js/palettes.js?v=2.6.4"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
-    <script src="js/regions.js?v=2.6.3"></script>
-    <script src="js/arome-map.js?v=2.6.3"></script>
+    <script src="js/regions.js?v=2.6.4"></script>
+    <script src="js/arome-map.js?v=2.6.4"></script>
 </body>
 </html>
