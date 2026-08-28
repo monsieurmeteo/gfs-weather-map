@@ -473,7 +473,7 @@ def compute_leads(max_hours=384, lead_min=0, lead_max=None):
     return sorted(list(set(leads)))
 
 
-def run_all(max_hours=384, domain="both", lead_min=0, lead_max=None):
+def run_all(max_hours=384, domain="both", lead_min=0, lead_max=None, run_time=None):
     leads = compute_leads(max_hours, lead_min=lead_min, lead_max=lead_max)
     if not leads:
         log("Aucune échéance à traiter dans l'intervalle [%s, %s]" % (lead_min, lead_max))
@@ -481,10 +481,13 @@ def run_all(max_hours=384, domain="both", lead_min=0, lead_max=None):
 
     log("Échéances : H+%03d → H+%03d (%d pas)" % (leads[0], leads[-1], len(leads)))
 
-    # Le run doit être identique pour TOUS les chunks : on vérifie l'échéance
-    # maximale GLOBALE (max_hours), pas le lead_max local du chunk — sinon les
-    # chunks courts choisiraient un run récent et les chunks longs un plus vieux.
-    run_dt = latest_run(need_lead=max_hours)
+    if run_time:
+        try:
+            run_dt = datetime.datetime.fromisoformat(run_time)
+        except Exception:
+            run_dt = datetime.datetime.strptime(run_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+    else:
+        run_dt = latest_run(need_lead=max_hours)
     log("Run GFS sélectionné : %s" % run_dt.isoformat())
 
     base = os.path.join(BASE_DIR, "output")
@@ -508,9 +511,12 @@ def main():
                     help="Échéance de début (ex: 0, 39, 75...)")
     ap.add_argument("--lead-max", type=int, default=None,
                     help="Échéance de fin (ex: 36, 72, 108...)")
+    ap.add_argument("--run-time", type=str, default=None,
+                    help="Timestamp ISO du run fixé (ex: 2026-08-27T18:00:00Z)")
     args = ap.parse_args()
     run_all(max_hours=args.max_hours, domain=args.domain,
-            lead_min=args.lead_min, lead_max=args.lead_max)
+            lead_min=args.lead_min, lead_max=args.lead_max,
+            run_time=args.run_time)
 
 
 if __name__ == "__main__":

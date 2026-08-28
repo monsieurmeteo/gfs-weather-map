@@ -425,9 +425,16 @@ def render_domain(all_fields, run_dt, domain, out_dir, model_label, resolution,
     return n_ok
 
 
-def run_all(max_hours=MAX_LEAD, domain="both", lead_min=0, lead_max=None):
+def run_all(max_hours=MAX_LEAD, domain="both", lead_min=0, lead_max=None, run_time=None):
     max_lead = max(3, min(int(max_hours), MAX_LEAD))
-    run_dt = select_run()
+    if run_time:
+        try:
+            run_dt = datetime.datetime.fromisoformat(run_time)
+        except Exception:
+            run_dt = datetime.datetime.strptime(run_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+    else:
+        prod_check = "01" if domain == "france" else "025"
+        run_dt = select_run(product=prod_check)
     log("Run ARPEGE sélectionné : %s" % run_str(run_dt))
     base = os.path.join(BASE_DIR, "output")
     session = requests.Session()
@@ -467,9 +474,12 @@ def main():
                     help="Échéance de début")
     ap.add_argument("--lead-max", type=int, default=None,
                     help="Échéance de fin")
+    ap.add_argument("--run-time", type=str, default=None,
+                    help="Timestamp ISO du run fixé (ex: 2026-08-27T18:00:00Z)")
     args = ap.parse_args()
     run_all(max_hours=args.max_hours, domain=args.domain,
-            lead_min=args.lead_min, lead_max=args.lead_max)
+            lead_min=args.lead_min, lead_max=args.lead_max,
+            run_time=args.run_time)
 
 
 if __name__ == "__main__":
