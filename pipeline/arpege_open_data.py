@@ -99,19 +99,20 @@ def _head(session, url):
 
 
 def select_run(now=None, session=None, product="01"):
-    """Dernier run ARPEGE réellement disponible."""
+    """Dernier run ARPEGE réellement disponible et 100% COMPLET."""
     s = session or requests.Session()
     if not isinstance(now, datetime.datetime):
         now = datetime.datetime.now(datetime.timezone.utc)
-    for _ in range(2):
+    for _ in range(4):
         run_dt = latest_run(now)
-        test_block = "000H024H" if product == "025" else "000H012H"
-        url = grib_url(run_str(run_dt), "SP1", test_block, product)
+        # Vérification sur le DERNIER bloc du run (garantit que Météo-France a terminé le transfert)
+        last_block = "073H102H" if product == "025" else "097H102H"
+        url = grib_url(run_str(run_dt), "SP1", last_block, product)
         if _head(s, url):
             return run_dt
-        log("Run %s indisponible pour produit %s, repli sur le précédent" % (run_str(run_dt), product))
-        run_dt -= datetime.timedelta(hours=6)
-    raise RuntimeError("Aucun run ARPEGE disponible sur le S3 Météo-France")
+        log("Run %s encore en cours de téléversement (bloc %s absent), repli sur le run précédent complet" % (run_str(run_dt), last_block))
+        now = run_dt - datetime.timedelta(hours=6)
+    raise RuntimeError("Aucun run ARPEGE complet disponible sur le S3 Météo-France")
 
 
 def fetch_block_full(session, url, max_lead, logf, lead_min=0):
