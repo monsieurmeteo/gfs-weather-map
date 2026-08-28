@@ -140,13 +140,15 @@
         var splitContainer = app.querySelector('[data-amfm-split-container]');
         var splitModelLeftSelect = app.querySelector('[data-amfm-split-model-left]');
         var splitModelRightSelect = app.querySelector('[data-amfm-split-model-right]');
-        var splitImgLeft = app.querySelector('[data-amfm-split-img-left]');
-        var splitImgRight = app.querySelector('[data-amfm-split-img-right]');
+        var splitCanvasLeft = app.querySelector('[data-amfm-split-canvas-left]');
+        var splitCanvasRight = app.querySelector('[data-amfm-split-canvas-right]');
         var splitSubLeft = app.querySelector('[data-amfm-split-sub-left]');
         var splitSubRight = app.querySelector('[data-amfm-split-sub-right]');
         var splitMode = false;
         var splitLeftModel = 'arpege_france';
         var splitRightModel = 'gfs_france';
+        var splitManifests = {};
+        var splitImageCache = {};
 
         var diagramPopup = app.querySelector('[data-amfm-diagram-popup]');
         var diagramTitle = app.querySelector('[data-amfm-diagram-title]');
@@ -3811,29 +3813,134 @@
             });
         }
 
-        function renderSplitView() {
-            if (!splitMode || !splitImgLeft || !splitImgRight) return;
-            var steps = availableSteps();
-            if (!steps || !steps[currentStep]) return;
-            var st = steps[currentStep];
-            var lead = Number(st.lead_hour);
-            var lead3 = (lead < 10 ? '00' : (lead < 100 ? '0' : '')) + lead;
-            var layerKey = currentLayer;
-
-            var srcL = 'output/' + splitLeftModel + '/maps/' + layerKey + '/' + lead3 + '.webp';
-            var srcR = 'output/' + splitRightModel + '/maps/' + layerKey + '/' + lead3 + '.webp';
-
-            splitImgLeft.src = srcL;
-            splitImgRight.src = srcR;
-
-            var timeFormatted = '';
-            if (st.valid_time) {
-                var dt = new Date(st.valid_time);
-                timeFormatted = ' • ' + dt.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }) + ' ' + (dt.getUTCHours() < 10 ? '0' : '') + dt.getUTCHours() + 'h UTC';
+        function getModelManifest(modelKey) {
+            if (splitManifests[modelKey]) {
+                return Promise.resolve(splitManifests[modelKey]);
             }
+            return fetchJson('output/' + modelKey + '/maps/index.json').then(function (res) {
+                splitManifests[modelKey] = res;
+                return res;
+            }).catch(function (e) {
+                console.warn('Erreur chargement manifeste split:', e);
+                return null;
+            });
+        }
 
-            if (splitSubLeft) splitSubLeft.textContent = 'H+' + lead + timeFormatted;
-            if (splitSubRight) splitSubRight.textContent = 'H+' + lead + timeFormatted;
+        function drawSplitVectors(ctx, dx, dy, dw, dh, isFrance, dpr) {
+            if (!vectorDefinition || !vectorDefinition.paths) return;
+            var hScale = dw / 2200.0;
+            var vScale = dh / 1640.0;
+
+            ctx.save();
+            ctx.translate(dx, dy);
+            ctx.scale(hScale, vScale);
+
+            vectorDefinition.paths.forEach(function (entry) {
+                var isDept = entry.kind === 'department';
+                if (!isFrance && isDept) return;
+                ctx.strokeStyle = entry.colour || (isFrance ? '#0d1117' : '#0b1220');
+                ctx.globalAlpha = isDept ? 0.65 : (isFrance ? 1.0 : 0.85);
+                ctx.lineWidth = (entry.width || (isFrance ? 1.8 : 1.5)) / hScale;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke(entry.path);
+            });
+
+            ctx.restore();
+        }
+
+        function renderSplitPane(modelKey, canvas, labelElem) {
+            if (!canvas) return;
+            var rect = canvas.parentElement.getBoundingClientRect();
+            var w = Math.floor(rect.width);
+            var h = Math.floor(rect.height);
+            if (w < 10 || h < 10) return;
+
+            var dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            var ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // Fond neutre
+            ctx.fillStyle = '#070b14';
+            ctx.fillRect(0, 0, w, h);
+
+            // Cadrage 2200x1640 proportionnel
+            var s = Math.min(w / 2200.0, h / 1640.0);
+            var dw = 2200.0 * s;
+            var dh = 1640.0 * s;
+            var dx = (w - dw) / 2;
+            var dy = (h - dh) / 2;
+
+            getModelManifest(modelKey).then(function (man) {
+                if (!man || !man.steps || !man.steps.length) {
+                    if (labelElem) labelElem.textContent = 'Données indisponibles';
+                    return;
+                }
+
+                var mainSteps = availableSteps();
+                var currentLead = (mainSteps && mainSteps[currentStep]) ? Number(mainSteps[currentStep].lead_hour) : 0;
+
+                // Recherche de l'échéance la plus proche pour ce modèle
+                var bestStep = man.steps[0];
+                var minDiff = Infinity;
+                for (var i = 0; i < man.steps.length; i++) {
+                    var st = man.steps[i];
+                    var diff = Math.abs(Number(st.lead_hour) - currentLead);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        bestStep = st;
+                    }
+                }
+
+                var actualLead = Number(bestStep.lead_hour);
+                var layerKey = currentLayer;
+                if (!bestStep.files || !bestStep.files[layerKey]) {
+                    layerKey = Object.keys(bestStep.files || {})[0] || 'temperature';
+                }
+                var fileRel = bestStep.files ? bestStep.files[layerKey] : null;
+
+                var dateStr = '';
+                if (bestStep.valid_time) {
+                    var dt = new Date(bestStep.valid_time);
+                    dateStr = ' • ' + dt.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }) + ' ' + (dt.getUTCHours() < 10 ? '0' : '') + dt.getUTCHours() + 'h UTC';
+                }
+                if (labelElem) {
+                    labelElem.textContent = 'H+' + actualLead + dateStr;
+                }
+
+                if (!fileRel) return;
+
+                var isFrance = (modelKey.indexOf('_france') !== -1);
+                var fondImg = isFrance ? franceMaskImage : null;
+                if (fondImg && fondImg.complete && fondImg.naturalWidth) {
+                    ctx.drawImage(fondImg, dx, dy, dw, dh);
+                }
+
+                var imgUrl = 'output/' + modelKey + '/' + fileRel;
+                var cachedImg = splitImageCache[imgUrl];
+                if (cachedImg && cachedImg.complete && cachedImg.naturalWidth) {
+                    ctx.drawImage(cachedImg, dx, dy, dw, dh);
+                    drawSplitVectors(ctx, dx, dy, dw, dh, isFrance, dpr);
+                } else {
+                    var img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = function () {
+                        splitImageCache[imgUrl] = img;
+                        ctx.drawImage(img, dx, dy, dw, dh);
+                        drawSplitVectors(ctx, dx, dy, dw, dh, isFrance, dpr);
+                    };
+                    img.src = imgUrl;
+                }
+            });
+        }
+
+        function renderSplitView() {
+            if (!splitMode) return;
+            renderSplitPane(splitLeftModel, splitCanvasLeft, splitSubLeft);
+            renderSplitPane(splitRightModel, splitCanvasRight, splitSubRight);
         }
 
         // ⌨️ RACCOURCIS CLAVIER PRO
