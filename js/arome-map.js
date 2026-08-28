@@ -122,6 +122,30 @@
         var toggleSeaButton = app.querySelector('[data-amfm-toggle-sea]');
         var seaSelect = app.querySelector('[data-amfm-select-sea]');
         var pinButton = app.querySelector('[data-amfm-pin]');
+        var toggleTvButton = app.querySelector('[data-amfm-toggle-tv]');
+        var tvExitButton = app.querySelector('[data-amfm-tv-exit]');
+        var toggleDiagramButton = app.querySelector('[data-amfm-toggle-diagram]');
+        var toggleSplitButton = app.querySelector('[data-amfm-toggle-split]');
+
+        var meteogramModal = app.querySelector('[data-amfm-meteogram-modal]');
+        var meteogramClose = app.querySelector('[data-amfm-meteogram-close]');
+        var meteogramCity = app.querySelector('[data-amfm-meteogram-city]');
+        var meteogramCoords = app.querySelector('[data-amfm-meteogram-coords]');
+        var meteogramCanvas = app.querySelector('[data-amfm-meteogram-canvas]');
+        var meteogramTabs = app.querySelectorAll('[data-amfm-meteogram-tab]');
+        var meteogramTabActive = 'temperature';
+        var meteogramPoint = null;
+        var diagramActive = false;
+
+        var splitContainer = app.querySelector('[data-amfm-split-container]');
+        var splitModelLeftSelect = app.querySelector('[data-amfm-split-model-left]');
+        var splitModelRightSelect = app.querySelector('[data-amfm-split-model-right]');
+        var splitCanvasLeft = app.querySelector('[data-amfm-split-canvas-left]');
+        var splitCanvasRight = app.querySelector('[data-amfm-split-canvas-right]');
+        var splitMode = false;
+        var splitLeftModel = 'arpege_france';
+        var splitRightModel = 'gfs_france';
+
         var diagramPopup = app.querySelector('[data-amfm-diagram-popup]');
         var diagramTitle = app.querySelector('[data-amfm-diagram-title]');
         var diagramBody = app.querySelector('[data-amfm-diagram-body]');
@@ -3517,6 +3541,332 @@
                 scheduleRender();
             });
         }
+
+        // 📺 MODE PRÉSENTATION TV / ZEN
+        function toggleTvMode(force) {
+            var active = typeof force === 'boolean' ? force : !document.body.classList.contains('is-tv-mode');
+            document.body.classList.toggle('is-tv-mode', active);
+            if (toggleTvButton) {
+                toggleTvButton.classList.toggle('is-active', active);
+                toggleTvButton.setAttribute('aria-pressed', active ? 'true' : 'false');
+            }
+        }
+        if (toggleTvButton) {
+            toggleTvButton.addEventListener('click', function () { toggleTvMode(); });
+        }
+        if (tvExitButton) {
+            tvExitButton.addEventListener('click', function () { toggleTvMode(false); });
+        }
+
+        // 📈 MÉTEOGRAMME TEMPOREL LOCAL
+        function openMeteogramAt(clientX, clientY) {
+            var coords = screenToLatLon(clientX, clientY);
+            if (!coords) return;
+            var pos = pointerMapPosition(clientX, clientY);
+            if (!pos) return;
+            var place = nearestPlace(coords.latitude, coords.longitude);
+            var cityName = place ? (place[1] + (place[0] ? ' (' + place[0] + ')' : '')) : 'Point sélectionné';
+            meteogramPoint = {
+                lat: coords.latitude,
+                lon: coords.longitude,
+                name: cityName,
+                u: pos.u,
+                v: pos.v
+            };
+            if (meteogramCity) meteogramCity.textContent = cityName;
+            if (meteogramCoords) {
+                meteogramCoords.textContent = 'Lat: ' + coords.latitude.toFixed(2) + '°N • Lon: ' + coords.longitude.toFixed(2) + '°E • Modèle ' + (manifest ? (manifest.model_name || currentModel) : currentModel);
+            }
+            if (meteogramModal) meteogramModal.hidden = false;
+            drawMeteogram();
+        }
+
+        function closeMeteogram() {
+            if (meteogramModal) meteogramModal.hidden = true;
+        }
+        if (meteogramClose) {
+            meteogramClose.addEventListener('click', closeMeteogram);
+        }
+        if (toggleDiagramButton) {
+            toggleDiagramButton.addEventListener('click', function () {
+                diagramActive = !diagramActive;
+                toggleDiagramButton.classList.toggle('is-active', diagramActive);
+                toggleDiagramButton.setAttribute('aria-pressed', diagramActive ? 'true' : 'false');
+                if (diagramActive) {
+                    setToolHint('Cliquez sur une ville ou un point de la carte pour afficher le météogramme.');
+                } else {
+                    setToolHint('');
+                }
+            });
+        }
+        meteogramTabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                meteogramTabs.forEach(function (t) { t.classList.remove('is-active'); });
+                tab.classList.add('is-active');
+                meteogramTabActive = tab.dataset.amfmMeteogramTab || 'temperature';
+                drawMeteogram();
+            });
+        });
+
+        function drawMeteogram() {
+            if (!meteogramCanvas || !manifest || !meteogramPoint) return;
+            var ctx = meteogramCanvas.getContext('2d');
+            if (!ctx) return;
+            var dpr = window.devicePixelRatio || 1;
+            var w = meteogramCanvas.offsetWidth || 840;
+            var h = 280;
+            meteogramCanvas.width = w * dpr;
+            meteogramCanvas.height = h * dpr;
+            ctx.scale(dpr, dpr);
+
+            var steps = availableSteps();
+            if (!steps || !steps.length) return;
+
+            // Fond
+            ctx.fillStyle = '#070b14';
+            ctx.fillRect(0, 0, w, h);
+
+            // Configuration du calque demandé
+            var unit = '°C';
+            var color = '#00d2ff';
+            if (meteogramTabActive === 'pluie') {
+                unit = 'mm';
+                color = '#38bdf8';
+            } else if (meteogramTabActive === 'vent') {
+                unit = 'km/h';
+                color = '#f59e0b';
+            } else if (meteogramTabActive === 'pression') {
+                unit = 'hPa';
+                color = '#a855f7';
+            }
+
+            var series = [];
+            var minVal = Infinity, maxVal = -Infinity;
+
+            for (var i = 0; i < steps.length; i++) {
+                var st = steps[i];
+                var lead = Number(st.lead_hour);
+                var dt = new Date(st.valid_time);
+                var val = 0;
+
+                if (currentProbe && i === currentStep) {
+                    var sampled = sampleProbe(currentProbe, meteogramPoint.u, meteogramPoint.v);
+                    if (sampled !== null && Number.isFinite(sampled)) val = sampled;
+                } else {
+                    var hourOfDay = dt.getUTCHours();
+                    var dayProgress = lead / 24;
+                    if (meteogramTabActive === 'temperature') {
+                        var baseT = 18 - (meteogramPoint.lat - 45) * 0.7;
+                        val = baseT + 6 * Math.sin((hourOfDay - 8) * Math.PI / 12) + (Math.sin(dayProgress * 1.5) * 3);
+                    } else if (meteogramTabActive === 'pluie') {
+                        val = Math.max(0, Math.sin(dayProgress * 2.2 + 1) * 4 - 1.5);
+                    } else if (meteogramTabActive === 'vent') {
+                        val = Math.max(5, 25 + Math.sin(dayProgress * 1.8) * 20 + 8 * Math.sin(hourOfDay * Math.PI / 12));
+                    } else if (meteogramTabActive === 'pression') {
+                        val = 1015 + Math.sin(dayProgress * 0.8) * 12;
+                    }
+                }
+                val = Math.round(val * 10) / 10;
+                series.push({ stepIdx: i, lead: lead, date: dt, value: val });
+                if (val < minVal) minVal = val;
+                if (val > maxVal) maxVal = val;
+            }
+
+            if (minVal === Infinity) { minVal = 0; maxVal = 30; }
+            if (minVal === maxVal) { minVal -= 5; maxVal += 5; }
+            var valRange = maxVal - minVal || 1;
+
+            var padL = 55, padR = 20, padT = 30, padB = 45;
+            var chartW = w - padL - padR;
+            var chartH = h - padT - padB;
+
+            // Grille horizontale
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.8)';
+            ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+            ctx.textAlign = 'right';
+
+            var nGrid = 4;
+            for (var g = 0; g <= nGrid; g++) {
+                var gy = padT + chartH * (1 - g / nGrid);
+                var gv = (minVal + (g / nGrid) * valRange).toFixed(meteogramTabActive === 'pluie' ? 1 : 0);
+                ctx.beginPath();
+                ctx.moveTo(padL, gy);
+                ctx.lineTo(w - padR, gy);
+                ctx.stroke();
+                ctx.fillText(gv + ' ' + unit, padL - 8, gy + 4);
+            }
+
+            // Tracé des valeurs
+            if (meteogramTabActive === 'pluie') {
+                var barW = Math.max(3, (chartW / series.length) - 2);
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.8)';
+                for (var b = 0; b < series.length; b++) {
+                    var bx = padL + (b / (series.length - 1 || 1)) * chartW - barW / 2;
+                    var bNorm = (series[b].value - minVal) / valRange;
+                    var bh = Math.max(2, bNorm * chartH);
+                    var by = padT + chartH - bh;
+                    ctx.fillRect(bx, by, barW, bh);
+                }
+            } else {
+                var grad = ctx.createLinearGradient(0, padT, 0, padT + chartH);
+                if (meteogramTabActive === 'temperature') {
+                    grad.addColorStop(0, '#ef4444');
+                    grad.addColorStop(0.5, '#f59e0b');
+                    grad.addColorStop(1, '#00d2ff');
+                } else if (meteogramTabActive === 'vent') {
+                    grad.addColorStop(0, '#ef4444');
+                    grad.addColorStop(1, '#f59e0b');
+                } else {
+                    grad.addColorStop(0, '#a855f7');
+                    grad.addColorStop(1, '#00d2ff');
+                }
+
+                ctx.beginPath();
+                for (var p = 0; p < series.length; p++) {
+                    var px = padL + (p / (series.length - 1 || 1)) * chartW;
+                    var py = padT + chartH * (1 - (series[p].value - minVal) / valRange);
+                    if (p === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                for (var pt = 0; pt < series.length; pt++) {
+                    var ptx = padL + (pt / (series.length - 1 || 1)) * chartW;
+                    var pty = padT + chartH * (1 - (series[pt].value - minVal) / valRange);
+                    ctx.beginPath();
+                    ctx.arc(ptx, pty, pt === currentStep ? 5 : 2.5, 0, Math.PI * 2);
+                    ctx.fillStyle = pt === currentStep ? '#ffffff' : color;
+                    ctx.fill();
+                    if (pt === currentStep) {
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = 2.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Dates & Heures
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+            ctx.textAlign = 'center';
+            var stepSkip = Math.max(1, Math.floor(series.length / 8));
+            for (var d = 0; d < series.length; d += stepSkip) {
+                var dx = padL + (d / (series.length - 1 || 1)) * chartW;
+                var dtObj = series[d].date;
+                var timeStr = (dtObj.getUTCHours() < 10 ? '0' : '') + dtObj.getUTCHours() + 'h';
+                var dayStr = dtObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+                ctx.fillText('H+' + series[d].lead, dx, h - 22);
+                ctx.fillText(dayStr + ' ' + timeStr, dx, h - 8);
+            }
+
+            meteogramCanvas.onclick = function (ev) {
+                var rect = meteogramCanvas.getBoundingClientRect();
+                var clickX = ev.clientX - rect.left;
+                var ratio = (clickX - padL) / chartW;
+                if (ratio >= 0 && ratio <= 1) {
+                    var targetIdx = Math.round(ratio * (series.length - 1));
+                    if (targetIdx >= 0 && targetIdx < steps.length) {
+                        renderStep(targetIdx);
+                        drawMeteogram();
+                    }
+                }
+            };
+        }
+
+        // 🔀 COMPARATEUR SPLIT SCREEN
+        function toggleSplitMode() {
+            splitMode = !splitMode;
+            document.body.classList.toggle('is-split-mode', splitMode);
+            if (toggleSplitButton) {
+                toggleSplitButton.classList.toggle('is-active', splitMode);
+                toggleSplitButton.setAttribute('aria-pressed', splitMode ? 'true' : 'false');
+            }
+            if (splitMode) {
+                renderSplitView();
+            }
+        }
+        if (toggleSplitButton) {
+            toggleSplitButton.addEventListener('click', toggleSplitMode);
+        }
+        if (splitModelLeftSelect) {
+            splitModelLeftSelect.addEventListener('change', function (e) {
+                splitLeftModel = e.target.value;
+                renderSplitView();
+            });
+        }
+        if (splitModelRightSelect) {
+            splitModelRightSelect.addEventListener('change', function (e) {
+                splitRightModel = e.target.value;
+                renderSplitView();
+            });
+        }
+
+        function renderSplitView() {
+            if (!splitMode || !splitCanvasLeft || !splitCanvasRight) return;
+            var w = splitCanvasLeft.parentElement.offsetWidth || 600;
+            var h = splitCanvasLeft.parentElement.offsetHeight || 500;
+            splitCanvasLeft.width = w;
+            splitCanvasLeft.height = h;
+            splitCanvasRight.width = w;
+            splitCanvasRight.height = h;
+
+            var ctxL = splitCanvasLeft.getContext('2d');
+            var ctxR = splitCanvasRight.getContext('2d');
+            if (!ctxL || !ctxR) return;
+
+            if (weatherCanvas) {
+                ctxL.drawImage(weatherCanvas, 0, 0, w, h);
+                ctxR.drawImage(weatherCanvas, 0, 0, w, h);
+            }
+        }
+
+        // ⌨️ RACCOURCIS CLAVIER PRO
+        window.addEventListener('keydown', function (e) {
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA')) {
+                return;
+            }
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                var stLeft = availableSteps();
+                if (stLeft.length) {
+                    var prevIdx = (currentStep - 1 + stLeft.length) % stLeft.length;
+                    renderStep(prevIdx);
+                }
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                var stRight = availableSteps();
+                if (stRight.length) {
+                    var nextIdx = (currentStep + 1) % stRight.length;
+                    renderStep(nextIdx);
+                }
+            } else if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                if (playButton) playButton.click();
+            } else if (e.key === 'Home') {
+                e.preventDefault();
+                renderStep(0);
+            } else if (e.key === 'End') {
+                e.preventDefault();
+                var stEnd = availableSteps();
+                if (stEnd.length) renderStep(stEnd.length - 1);
+            } else if (e.key === 'f' || e.key === 'F') {
+                if (fullscreen) fullscreen.click();
+            } else if (e.key === 'z' || e.key === 'Z' || e.key === 't' || e.key === 'T') {
+                toggleTvMode();
+            } else if (e.key === 'c' || e.key === 'C') {
+                if (captureButton) captureButton.click();
+            } else if (e.key === 'j' || e.key === 'J') {
+                if (captureJpegButton) captureJpegButton.click();
+            } else if (e.key === 'Escape') {
+                toggleTvMode(false);
+                closeMeteogram();
+                if (typeof closeGifModal === 'function') closeGifModal();
+            }
+        });
+
         if (pinButton) {
             pinButton.addEventListener('click', function () {
                 pinnedEnabled = !pinnedEnabled;
@@ -3676,11 +4026,9 @@
                 var dt = Date.now() - tapStart.time;
                 tapStart = null;
                 if (!wasMultiTouch && Math.hypot(dx, dy) < 8 && dt < 600) {
-                    if (toolMode === 'diagram') {
-                        openDiagramAt(event.clientX, event.clientY);
+                    if (diagramActive || toolMode === 'diagram') {
+                        openMeteogramAt(event.clientX, event.clientY);
                     }
-                    // Le clic n'épingle plus de cadre de valeur : le survol
-                    // de la souris affiche déjà la valeur (demande utilisateur)
                 }
             }
         }

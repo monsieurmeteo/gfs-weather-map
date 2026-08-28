@@ -890,6 +890,208 @@
             40%, 80% { transform: translateX(6px); }
         }
 
+        /* 📺 MODE PRÉSENTATION TV / ZEN */
+        .is-tv-mode .amfm-header,
+        .is-tv-mode .amfm-timeline,
+        .is-tv-mode .amfm-legend {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.4s ease;
+        }
+        .amfm-tv-exit-btn {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 10000;
+            background: rgba(7, 11, 20, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 210, 255, 0.4);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+            transition: transform 0.2s, background 0.2s;
+        }
+        .amfm-tv-exit-btn:hover {
+            background: rgba(0, 210, 255, 0.2);
+            transform: scale(1.04);
+        }
+        .is-tv-mode .amfm-tv-exit-btn {
+            display: flex;
+        }
+
+        /* 📈 MODAL MÉTEOGRAMME LOCAL */
+        .amfm-meteogram-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(3, 7, 18, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .amfm-meteogram-overlay[hidden] {
+            display: none !important;
+        }
+        .amfm-meteogram-card {
+            background: linear-gradient(145deg, rgba(14, 22, 38, 0.98), rgba(7, 11, 20, 0.98));
+            border: 1.5px solid rgba(0, 210, 255, 0.35);
+            border-radius: 18px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 210, 255, 0.15);
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            color: #fff;
+            animation: authPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .amfm-meteogram-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.25);
+        }
+        .amfm-meteogram-title-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .amfm-meteogram-icon {
+            font-size: 20px;
+            color: var(--amfm-accent);
+        }
+        .amfm-meteogram-city {
+            font-size: 17px;
+            font-weight: 800;
+            color: #fff;
+        }
+        .amfm-meteogram-coords {
+            font-size: 11.5px;
+            color: var(--amfm-muted);
+            font-weight: 600;
+        }
+        .amfm-meteogram-tabs {
+            display: flex;
+            gap: 6px;
+            padding: 8px 20px;
+            background: rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            overflow-x: auto;
+        }
+        .amfm-tab-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--amfm-muted);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .amfm-tab-btn.is-active {
+            background: rgba(0, 210, 255, 0.18);
+            border-color: var(--amfm-accent);
+            color: #fff;
+        }
+        .amfm-meteogram-body {
+            padding: 16px 20px;
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+        }
+        .amfm-meteogram-canvas {
+            width: 100%;
+            height: 280px;
+            display: block;
+        }
+        .amfm-meteogram-hint {
+            font-size: 11px;
+            color: var(--amfm-muted);
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* 🔀 COMPARATEUR SPLIT SCREEN */
+        .amfm-split-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            z-index: 10;
+        }
+        .is-split-mode .amfm-split-container {
+            display: flex;
+        }
+        .is-split-mode .amfm-viewport {
+            display: none;
+        }
+        .amfm-split-pane {
+            flex: 1;
+            position: relative;
+            height: 100%;
+            overflow: hidden;
+            border-right: 2px solid rgba(0, 210, 255, 0.4);
+        }
+        .amfm-split-pane:last-child {
+            border-right: none;
+        }
+        .amfm-split-badge {
+            position: absolute;
+            top: 68px;
+            left: 14px;
+            z-index: 50;
+            background: rgba(7, 11, 20, 0.9);
+            border: 1px solid var(--amfm-border);
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 800;
+            color: #fff;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .amfm-split-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 11.5px;
+            font-weight: 700;
+            border-radius: 6px;
+            padding: 3px 6px;
+            outline: none;
+        }
+        .amfm-split-select option {
+            background: #070b14;
+            color: #fff;
+        }
+        @media (max-width: 768px) {
+            .is-split-mode .amfm-split-container {
+                flex-direction: column;
+            }
+            .amfm-split-pane {
+                border-right: none;
+                border-bottom: 2px solid rgba(0, 210, 255, 0.4);
+            }
+        }
+
         /* 📱 RESPONSIVE */
         @media (max-width: 1024px) {
             .amfm-navbar {
@@ -1052,6 +1254,19 @@
                         <i class="fa-solid fa-hashtag" aria-hidden="true"></i>
                     </button>
 
+                    <!-- Outils Avancés : Météogramme, Comparateur Split & Mode TV -->
+                    <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-diagram aria-pressed="false" aria-label="Météogramme temporel au clic" title="📈 Météogramme temporel (Cliquer sur la carte pour voir l'évolution 16j)">
+                        <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+                    </button>
+
+                    <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-split aria-pressed="false" aria-label="Mode Comparateur Multi-Modèles" title="🔀 Comparateur 2 Modèles côte à côte">
+                        <i class="fa-solid fa-columns" aria-hidden="true"></i>
+                    </button>
+
+                    <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-tv aria-label="Mode Présentation TV (Touche Z)" title="📺 Mode Présentation TV / Zen (Touche Z ou T)">
+                        <i class="fa-solid fa-tv" aria-hidden="true"></i>
+                    </button>
+
                     <!-- Sélecteur Mode Terre / Mer -->
                     <select class="amfm-select-sea" data-amfm-select-sea aria-label="Filtrer l'affichage des valeurs en mer et littoral" title="Zone d'affichage des valeurs météo">
                         <option value="none" selected>🌊 Partout (Mer comprise)</option>
@@ -1065,6 +1280,11 @@
                 </div>
             </div>
         </header>
+
+        <!-- Bouton Flottant Quitter Mode TV -->
+        <button type="button" class="amfm-tv-exit-btn" data-amfm-tv-exit aria-label="Quitter le mode TV">
+            <i class="fa-solid fa-compress"></i> <span>Quitter le mode TV (Échap)</span>
+        </button>
 
         <!-- Viewport Cartographique Multi-Canvas -->
         <main class="amfm-viewport" data-amfm-viewport tabindex="0" role="main" aria-label="Carte interactive de prévisions météo GFS & ARPEGE (Touches +/- pour zoomer, flèches pour naviguer)">
@@ -1084,6 +1304,70 @@
                 <span data-amfm-unavailable-text>Paramètre non disponible pour ce modèle</span>
             </div>
         </main>
+
+        <!-- Conteneur Comparateur Split Screen (2 Cartes) -->
+        <div class="amfm-split-container" data-amfm-split-container>
+            <!-- Volet Gauche -->
+            <div class="amfm-split-pane" data-amfm-split-pane="left">
+                <div class="amfm-split-badge">
+                    <span>Modèle A :</span>
+                    <select class="amfm-split-select" data-amfm-split-model-left>
+                        <option value="arpege_france" selected>🇫🇷 ARPEGE France</option>
+                        <option value="gfs_france">🇫🇷 GFS France</option>
+                        <option value="icon_eu_france">🇫🇷 ICON-EU France</option>
+                        <option value="aifs_france">🇫🇷 AIFS France</option>
+                        <option value="gfs">🌍 GFS Europe</option>
+                        <option value="arpege">🇪🇺 ARPEGE Europe</option>
+                        <option value="aifs">🤖 AIFS Europe</option>
+                    </select>
+                </div>
+                <canvas class="amfm-canvas" data-amfm-split-canvas-left></canvas>
+            </div>
+            <!-- Volet Droit -->
+            <div class="amfm-split-pane" data-amfm-split-pane="right">
+                <div class="amfm-split-badge">
+                    <span>Modèle B :</span>
+                    <select class="amfm-split-select" data-amfm-split-model-right>
+                        <option value="gfs_france" selected>🇫🇷 GFS France</option>
+                        <option value="arpege_france">🇫🇷 ARPEGE France</option>
+                        <option value="icon_eu_france">🇫🇷 ICON-EU France</option>
+                        <option value="aifs_france">🇫🇷 AIFS France</option>
+                        <option value="aifs">🤖 AIFS Europe</option>
+                        <option value="gfs">🌍 GFS Europe</option>
+                        <option value="arpege">🇪🇺 ARPEGE Europe</option>
+                    </select>
+                </div>
+                <canvas class="amfm-canvas" data-amfm-split-canvas-right></canvas>
+            </div>
+        </div>
+
+        <!-- Modal Météogramme Local Interactif -->
+        <div class="amfm-meteogram-overlay" data-amfm-meteogram-modal hidden>
+            <div class="amfm-meteogram-card" role="dialog" aria-modal="true" aria-labelledby="amfm-meteo-city">
+                <div class="amfm-meteogram-header">
+                    <div class="amfm-meteogram-title-box">
+                        <i class="fa-solid fa-chart-area amfm-meteogram-icon"></i>
+                        <div>
+                            <div class="amfm-meteogram-city" id="amfm-meteo-city" data-amfm-meteogram-city>Évolution locale</div>
+                            <div class="amfm-meteogram-coords" data-amfm-meteogram-coords>Latitude: -- | Longitude: --</div>
+                        </div>
+                    </div>
+                    <button type="button" class="amfm-modal-close" data-amfm-meteogram-close aria-label="Fermer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="amfm-meteogram-tabs">
+                    <button type="button" class="amfm-tab-btn is-active" data-amfm-meteogram-tab="temperature">🌡️ Température (°C)</button>
+                    <button type="button" class="amfm-tab-btn" data-amfm-meteogram-tab="pluie">🌧️ Précipitations (mm)</button>
+                    <button type="button" class="amfm-tab-btn" data-amfm-meteogram-tab="vent">💨 Vent & Rafales (km/h)</button>
+                    <button type="button" class="amfm-tab-btn" data-amfm-meteogram-tab="pression">🧭 Pression (hPa)</button>
+                </div>
+                <div class="amfm-meteogram-body">
+                    <canvas class="amfm-meteogram-canvas" data-amfm-meteogram-canvas width="860" height="280"></canvas>
+                    <div class="amfm-meteogram-hint">💡 Cliquez sur un point du graphique pour caler la carte sur cette échéance.</div>
+                </div>
+            </div>
+        </div>
 
         <!-- Sonde de Pixel -->
         <div class="amfm-probe" data-amfm-probe role="status">
@@ -1299,9 +1583,9 @@
     })();
     </script>
 
-    <script src="js/palettes.js?v=2.1.4"></script>
+    <script src="js/palettes.js?v=2.2.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
-    <script src="js/regions.js?v=2.1.4"></script>
-    <script src="js/arome-map.js?v=2.1.4"></script>
+    <script src="js/regions.js?v=2.2.0"></script>
+    <script src="js/arome-map.js?v=2.2.0"></script>
 </body>
 </html>
