@@ -2189,87 +2189,69 @@
 
         var regionSelect = app.querySelector('[data-amfm-region-select]');
         if (regionSelect) {
-            // Configuration identique au site AROME (domaine France) pour la
-            // France et les régions ; pays/Europe sur le domaine Europe.
             var REGION_CONFIG = {
-                europe:     { model: 'consensus',        latitude: 49.0, longitude: 8.0, scale: 1.0 },
-                france:     { model: 'consensus_france', reset: true },
-                hdf:        { model: 'consensus_france', latitude: 49.85, longitude: 2.82, scale: 2.65 },
-                normandie:  { model: 'consensus_france', latitude: 48.95, longitude: -0.07, scale: 2.85 },
-                idf:        { model: 'consensus_france', latitude: 48.65, longitude: 2.50, scale: 4.20 },
-                grandest:   { model: 'consensus_france', latitude: 48.65, longitude: 5.80, scale: 2.25 },
-                bretagne:   { model: 'consensus_france', latitude: 48.00, longitude: -3.08, scale: 2.80 },
-                pdl:        { model: 'consensus_france', latitude: 47.30, longitude: -0.85, scale: 2.75 },
-                cvl:        { model: 'consensus_france', latitude: 47.45, longitude: 1.60, scale: 2.55 },
-                bfc:        { model: 'consensus_france', latitude: 47.10, longitude: 5.00, scale: 2.65 },
-                naq:        { model: 'consensus_france', latitude: 44.95, longitude: 0.40, scale: 1.85 },
-                ara:        { model: 'consensus_france', latitude: 45.30, longitude: 4.65, scale: 2.25 },
-                occitanie:  { model: 'consensus_france', latitude: 43.50, longitude: 2.25, scale: 2.25 },
-                paca:       { model: 'consensus_france', latitude: 43.85, longitude: 6.00, scale: 2.85 },
-                corse:      { model: 'consensus_france', latitude: 42.10, longitude: 9.05, scale: 4.20 },
-                belgique:   { model: 'consensus_france', latitude: 50.25, longitude: 4.40, scale: 3.10 },
-                uk:         { model: 'consensus',        latitude: 54.2, longitude: -2.8, scale: 2.8 },
-                allemagne:  { model: 'consensus',        latitude: 51.3, longitude: 10.5, scale: 2.8 },
-                espagne:    { model: 'consensus',        latitude: 40.2, longitude: -3.8, scale: 2.6 },
-                italie:     { model: 'consensus',        latitude: 42.6, longitude: 12.6, scale: 2.8 }
+                europe:     { isFrance: false, latitude: 49.0, longitude: 8.0, scale: 1.0 },
+                france:     { isFrance: true,  reset: true },
+                hdf:        { isFrance: true,  latitude: 49.85, longitude: 2.82, scale: 2.65 },
+                normandie:  { isFrance: true,  latitude: 48.95, longitude: -0.07, scale: 2.85 },
+                idf:        { isFrance: true,  latitude: 48.65, longitude: 2.50, scale: 4.20 },
+                grandest:   { isFrance: true,  latitude: 48.65, longitude: 5.80, scale: 2.25 },
+                bretagne:   { isFrance: true,  latitude: 48.00, longitude: -3.08, scale: 2.80 },
+                pdl:        { isFrance: true,  latitude: 47.30, longitude: -0.85, scale: 2.75 },
+                cvl:        { isFrance: true,  latitude: 47.45, longitude: 1.60, scale: 2.55 },
+                bfc:        { isFrance: true,  latitude: 47.10, longitude: 5.00, scale: 2.65 },
+                naq:        { isFrance: true,  latitude: 44.95, longitude: 0.40, scale: 1.85 },
+                ara:        { isFrance: true,  latitude: 45.30, longitude: 4.65, scale: 2.25 },
+                occitanie:  { isFrance: true,  latitude: 43.50, longitude: 2.25, scale: 2.25 },
+                paca:       { isFrance: true,  latitude: 43.85, longitude: 6.00, scale: 2.85 },
+                corse:      { isFrance: true,  latitude: 42.10, longitude: 9.05, scale: 4.20 },
+                belgique:   { isFrance: true,  latitude: 50.25, longitude: 4.40, scale: 3.10 },
+                uk:         { isFrance: false, latitude: 54.2, longitude: -2.8, scale: 2.8 },
+                allemagne:  { isFrance: false, latitude: 51.3, longitude: 10.5, scale: 2.8 },
+                espagne:    { isFrance: false, latitude: 40.2, longitude: -3.8, scale: 2.6 },
+                italie:     { isFrance: false, latitude: 42.6, longitude: 12.6, scale: 2.8 }
+            };
+
+            var MODEL_FAMILY = {
+                arpege: { eu: 'arpege', fr: 'arpege_france' },
+                arpege_france: { eu: 'arpege', fr: 'arpege_france' },
+                icon_eu: { eu: 'icon_eu', fr: 'icon_eu_france' },
+                icon_eu_france: { eu: 'icon_eu', fr: 'icon_eu_france' },
+                gfs: { eu: 'gfs', fr: 'gfs_france' },
+                gfs_france: { eu: 'gfs', fr: 'gfs_france' },
+                aifs: { eu: 'aifs', fr: 'aifs_france' },
+                aifs_france: { eu: 'aifs', fr: 'aifs_france' }
             };
 
             regionSelect.addEventListener('change', function (e) {
-                var val = e.target.value || 'europe';
-                // Familles de modèles : variante Europe et variante France par modèle
-                var MODEL_FAMILY = {
-                    consensus: { eu: 'consensus', fr: 'consensus_france' },
-                    consensus_france: { eu: 'consensus', fr: 'consensus_france' },
-                    probabilites: { eu: 'probabilites', fr: 'probabilites_france' },
-                    probabilites_france: { eu: 'probabilites', fr: 'probabilites_france' },
-                    gfs: { eu: 'gfs', fr: 'gfs_france' },
-                    gfs_france: { eu: 'gfs', fr: 'gfs_france' },
-                    arpege: { eu: 'arpege', fr: 'arpege_france' },
-                    arpege_france: { eu: 'arpege', fr: 'arpege_france' },
-                    icon_eu: { eu: 'icon_eu', fr: 'icon_eu_france' },
-                    icon_eu_france: { eu: 'icon_eu', fr: 'icon_eu_france' },
-                    aifs: { eu: 'aifs', fr: 'aifs_france' },
-                    aifs_france: { eu: 'aifs', fr: 'aifs_france' }
-                };
-                var family = MODEL_FAMILY[currentModel] || { eu: 'gfs', fr: 'gfs_france' };
-                var onFranceModel = (currentModel === family.fr);
-                // "Europe Entière" : depuis une variante France → modèle Europe de la famille
+                var val = e.target.value || 'france';
+                var family = MODEL_FAMILY[currentModel] || { eu: 'arpege', fr: 'arpege_france' };
+                var cfg = REGION_CONFIG[val] || { isFrance: true, reset: true };
+
                 if (val === 'europe') {
-                    if (onFranceModel) {
+                    if (currentModel.indexOf('_france') !== -1) {
                         transform = { scale: 1, x: 0, y: 0 };
                         switchModel(family.eu);
                     } else {
-                        // Déjà sur un modèle Europe : recentrer sans changer de modèle
                         resetView();
                     }
                     updateUrl();
                     return;
                 }
-                // "France Entière" : depuis un modèle Europe avec variante France → bascule
+
                 if (val === 'france') {
-                    if (currentModel === family.eu && family.fr) {
+                    if (currentModel.indexOf('_france') === -1) {
                         transform = { scale: 1, x: 0, y: 0 };
                         switchModel(family.fr);
-                    } else if (currentModel === family.fr) {
-                        resetView();
                     } else {
-                        transform = { scale: 1, x: 0, y: 0 };
-                        switchModel('gfs_france');
+                        resetView();
                     }
                     updateUrl();
                     return;
                 }
-                var cfg = REGION_CONFIG[val];
-                if (!cfg) {
-                    resetView();
-                    updateUrl();
-                    return;
-                }
-                // Régions : les régions françaises passent sur la variante France de la
-                // famille courante (si elle existe), les pays sur la variante Europe
-                var targetModel = (cfg.model === 'gfs_france')
-                    ? (family.fr || 'gfs_france')
-                    : (family.eu || 'gfs');
+
+                // Région française ou Pays étranger
+                var targetModel = cfg.isFrance ? family.fr : family.eu;
                 var focus = {
                     latitude: cfg.latitude,
                     longitude: cfg.longitude,
@@ -2981,7 +2963,9 @@
             var isEurope = isEuropeDomain();
 
             if (isEurope) {
-                var scaleEu = Math.max(width / 2200.0, height / 1640.0) * t.scale;
+                var availWEu = Math.max(200, width - 40);
+                var availHEu = Math.max(200, height - 120);
+                var scaleEu = Math.min(availWEu / 2200.0, availHEu / 1640.0) * t.scale;
                 return {
                     x: width / 2 + t.x - 1100.0 * scaleEu,
                     y: height / 2 + t.y - 820.0 * scaleEu,
@@ -2990,10 +2974,13 @@
                 };
             }
 
-            // Mode France : plein écran immersif (Cover), centré sur l'Hexagone (cx=1080, cy=820)
-            var s = Math.max(width / 2200.0, height / 1640.0) * t.scale;
-            var cx = 1080.0;
-            var cy = 820.0;
+            // Mode France : cadrage optimal englobant toute la France et la Corse
+            // avec marges de respiration sous le header et au-dessus de la timeline
+            var availW = Math.max(240, width - 60);
+            var availH = Math.max(240, height - 140);
+            var s = Math.min(availW / 1550.0, availH / 1350.0) * t.scale;
+            var cx = 1060.0;
+            var cy = 830.0;
             return {
                 x: width / 2 + t.x - cx * s,
                 y: height / 2 + t.y - cy * s,
