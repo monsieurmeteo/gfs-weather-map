@@ -140,8 +140,10 @@
         var splitContainer = app.querySelector('[data-amfm-split-container]');
         var splitModelLeftSelect = app.querySelector('[data-amfm-split-model-left]');
         var splitModelRightSelect = app.querySelector('[data-amfm-split-model-right]');
-        var splitCanvasLeft = app.querySelector('[data-amfm-split-canvas-left]');
-        var splitCanvasRight = app.querySelector('[data-amfm-split-canvas-right]');
+        var splitImgLeft = app.querySelector('[data-amfm-split-img-left]');
+        var splitImgRight = app.querySelector('[data-amfm-split-img-right]');
+        var splitSubLeft = app.querySelector('[data-amfm-split-sub-left]');
+        var splitSubRight = app.querySelector('[data-amfm-split-sub-right]');
         var splitMode = false;
         var splitLeftModel = 'arpege_france';
         var splitRightModel = 'gfs_france';
@@ -2082,6 +2084,9 @@
 
             clearError();
             clearUnavailable();
+            if (splitMode && typeof renderSplitView === 'function') {
+                renderSplitView();
+            }
             if (loading) loading.hidden = false;
             hideProbe();
             var token = ++loadToken;
@@ -3546,6 +3551,7 @@
         function toggleTvMode(force) {
             var active = typeof force === 'boolean' ? force : !document.body.classList.contains('is-tv-mode');
             document.body.classList.toggle('is-tv-mode', active);
+            if (app) app.classList.toggle('is-tv-mode', active);
             if (toggleTvButton) {
                 toggleTvButton.classList.toggle('is-active', active);
                 toggleTvButton.setAttribute('aria-pressed', active ? 'true' : 'false');
@@ -3780,6 +3786,7 @@
         function toggleSplitMode() {
             splitMode = !splitMode;
             document.body.classList.toggle('is-split-mode', splitMode);
+            if (app) app.classList.toggle('is-split-mode', splitMode);
             if (toggleSplitButton) {
                 toggleSplitButton.classList.toggle('is-active', splitMode);
                 toggleSplitButton.setAttribute('aria-pressed', splitMode ? 'true' : 'false');
@@ -3805,22 +3812,28 @@
         }
 
         function renderSplitView() {
-            if (!splitMode || !splitCanvasLeft || !splitCanvasRight) return;
-            var w = splitCanvasLeft.parentElement.offsetWidth || 600;
-            var h = splitCanvasLeft.parentElement.offsetHeight || 500;
-            splitCanvasLeft.width = w;
-            splitCanvasLeft.height = h;
-            splitCanvasRight.width = w;
-            splitCanvasRight.height = h;
+            if (!splitMode || !splitImgLeft || !splitImgRight) return;
+            var steps = availableSteps();
+            if (!steps || !steps[currentStep]) return;
+            var st = steps[currentStep];
+            var lead = Number(st.lead_hour);
+            var lead3 = (lead < 10 ? '00' : (lead < 100 ? '0' : '')) + lead;
+            var layerKey = currentLayer;
 
-            var ctxL = splitCanvasLeft.getContext('2d');
-            var ctxR = splitCanvasRight.getContext('2d');
-            if (!ctxL || !ctxR) return;
+            var srcL = 'output/' + splitLeftModel + '/maps/' + layerKey + '/' + lead3 + '.webp';
+            var srcR = 'output/' + splitRightModel + '/maps/' + layerKey + '/' + lead3 + '.webp';
 
-            if (weatherCanvas) {
-                ctxL.drawImage(weatherCanvas, 0, 0, w, h);
-                ctxR.drawImage(weatherCanvas, 0, 0, w, h);
+            splitImgLeft.src = srcL;
+            splitImgRight.src = srcR;
+
+            var timeFormatted = '';
+            if (st.valid_time) {
+                var dt = new Date(st.valid_time);
+                timeFormatted = ' • ' + dt.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }) + ' ' + (dt.getUTCHours() < 10 ? '0' : '') + dt.getUTCHours() + 'h UTC';
             }
+
+            if (splitSubLeft) splitSubLeft.textContent = 'H+' + lead + timeFormatted;
+            if (splitSubRight) splitSubRight.textContent = 'H+' + lead + timeFormatted;
         }
 
         // ⌨️ RACCOURCIS CLAVIER PRO
