@@ -108,14 +108,14 @@ def main():
         "resolution": "0.25° (~25 km)",
     })
     assemble_model("arpege", EUROPE, {
-        "model_name": "ARPEGE Europe 0.1°",
-        "provider": "Météo-France — open data (data.gouv.fr)",
-        "resolution": "0.1° (~11 km)",
+        "model_name": "ARPEGE Europe 0.25°",
+        "provider": "Météo-France — Open Data (Licence Etalab)",
+        "resolution": "0.25° (~25 km)",
     })
     assemble_model("arpege_france", FRANCE, {
         "model_name": "ARPEGE France 0.1°",
-        "provider": "Météo-France — open data (data.gouv.fr)",
-        "resolution": "0.1° (~11 km)",
+        "provider": "Météo-France — Open Data (Licence Etalab)",
+        "resolution": "0.1° (~10 km) • Grille 721×541",
     })
     assemble_model("icon_eu", EUROPE, {
         "model_name": "ICON-EU 7 km Europe",
