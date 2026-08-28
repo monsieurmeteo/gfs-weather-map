@@ -2628,7 +2628,7 @@
                 'uniform float uHasMask;\n' +
                 'uniform float uHasFond;\n' +
                 'void main(){\n' +
-                ' vec3 frame=vec3(0.043,0.055,0.086);\n' +
+                ' vec3 frame=vec3(0.02745,0.04314,0.07843);\n' +
                 ' if(uRect.z<=0.0||uRect.w<=0.0){gl_FragColor=vec4(frame,1.0);return;}\n' +
                 ' vec2 uv=(vUv*uViewport-uRect.xy)/uRect.zw;\n' +
                 ' if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){\n' +
@@ -2886,6 +2886,10 @@
             var mapRect = computeMapRect(width, height);
             var horizontalScale = mapRect.w / 2200.0;
             var verticalScale = mapRect.h / 1640.0;
+            vectorContext.save();
+            vectorContext.beginPath();
+            vectorContext.rect(mapRect.x, mapRect.y, mapRect.w, mapRect.h);
+            vectorContext.clip();
             vectorContext.setTransform(
                 pixelRatio * horizontalScale,
                 0,
@@ -2920,6 +2924,7 @@
                     vectorContext.stroke(entry.path);
                 });
             }
+            vectorContext.restore();
             vectorContext.globalAlpha = 1;
         }
 
@@ -2983,7 +2988,7 @@
             var isEurope = isEuropeDomain();
 
             if (isEurope) {
-                var scale = Math.max(width / 2200.0, height / 1640.0) * t.scale;
+                var scale = Math.min(width / 2200.0, height / 1640.0) * t.scale;
                 return {
                     x: width / 2 + t.x - 1100.0 * scale,
                     y: height / 2 + t.y - 820.0 * scale,
@@ -3191,6 +3196,10 @@
             // Projection UNIQUE (computeMapRect) : les villes sont
             // exactement au même endroit que le raster et les vecteurs.
             var labelRect = computeMapRect(width, height);
+            labelsContext.save();
+            labelsContext.beginPath();
+            labelsContext.rect(labelRect.x, labelRect.y, labelRect.w, labelRect.h);
+            labelsContext.clip();
             labelsContext.font = '700 ' + density.size + 'px Arial, sans-serif';
             labelsContext.textAlign = 'center';
             labelsContext.textBaseline = 'middle';
@@ -3233,6 +3242,7 @@
                     break;
                 }
             }
+            labelsContext.restore();
         }
 
         function getValueColour(val, layerKey) {
