@@ -2383,6 +2383,10 @@
                     }
                     var regSel = document.getElementById('select-region');
                     if (regSel) {
+                        var grpFr = regSel.querySelector('#optgroup-fr');
+                        var grpEu = regSel.querySelector('#optgroup-eu');
+                        if (grpFr) { grpFr.hidden = !isFranceOnly; grpFr.style.display = isFranceOnly ? '' : 'none'; }
+                        if (grpEu) { grpEu.hidden = isFranceOnly; grpEu.style.display = isFranceOnly ? 'none' : ''; }
                         // Filtrage intelligent : montrer uniquement les options pertinentes
                         var allOpts = regSel.querySelectorAll('option');
                         for (var oi = 0; oi < allOpts.length; oi++) {
@@ -4122,6 +4126,10 @@
                 var regSel = document.getElementById('select-region');
                 if (regSel) {
                     var isFr = (currentModel.indexOf('_france') !== -1);
+                    var grpFr = regSel.querySelector('#optgroup-fr');
+                    var grpEu = regSel.querySelector('#optgroup-eu');
+                    if (grpFr) { grpFr.hidden = !isFr; grpFr.style.display = isFr ? '' : 'none'; }
+                    if (grpEu) { grpEu.hidden = isFr; grpEu.style.display = isFr ? 'none' : ''; }
                     var allOpts = regSel.querySelectorAll('option');
                     for (var oi = 0; oi < allOpts.length; oi++) {
                         allOpts[oi].hidden = isFr ? allOpts[oi].classList.contains('opt-eu') : allOpts[oi].classList.contains('opt-fr');
