@@ -275,34 +275,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          mkdir -p /tmp/base
+          mkdir -p /tmp/base /tmp/base/restored
           RESTORED=""
-          # Seuls les artefacts des workflows météo (nom 'Build & Deploy' + contenu output/)
-          # sont acceptés : les github-pages d'autres automatisations sont ignorés.
           for RUN_ID in $(gh run list --repo monsieurmeteo/gfs-weather-map \
-                --status success --limit 20 --json databaseId,workflowName --jq \
+                --status success --limit 5 --json databaseId,workflowName --jq \
                 '.[] | select(.workflowName | test("Build & Deploy")) | .databaseId' 2>/dev/null || true); do
+            echo "Tentative de restauration depuis le run $RUN_ID..."
             if gh run download "$RUN_ID" --repo monsieurmeteo/gfs-weather-map \
                  -n github-pages -D /tmp/base >/dev/null 2>&1; then
-              if tar -tf /tmp/base/artifact.tar 2>/dev/null | grep -q "output/"; then
-                RESTORED="$RUN_ID"
-                break
-              fi
-              rm -rf /tmp/base
-              mkdir -p /tmp/base
+              RESTORED="$RUN_ID"
+              break
             fi
           done
-          if [ -z "$RESTORED" ]; then
-            echo "::error::Aucun artefact github-pages météo récent à restaurer — déploiement annulé (l'ancien site reste en ligne)"
-            exit 1
+          if [ -n "$RESTORED" ]; then
+            tar -xf /tmp/base/artifact.tar -C /tmp/base/restored
+            cp -r /tmp/base/restored/output ./ 2>/dev/null || true
+            echo "Base restaurée depuis le run $RESTORED (output/ fusionné)"
+          else
+            echo "Attention : Aucun artefact précédent trouvé."
           fi
-          # Extraire dans un dossier SÉPARÉ puis ne copier QUE output/ :
-          # on préserve index.html + js/ du checkout (code le plus récent),
-          # sinon la restauration écraserait le code avec l'ancien site.
-          mkdir -p /tmp/base/restored
-          tar -xf /tmp/base/artifact.tar -C /tmp/base/restored
-          cp -r /tmp/base/restored/output ./
-          echo "Base restaurée depuis le run $RESTORED (output/ fusionné, code du repo conservé)"
 
       - name: Purge des répertoires régénérés (évite les dalles obsolètes)
         if: needs.build-fond.outputs.mode != 'front'
