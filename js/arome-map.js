@@ -2981,65 +2981,24 @@
             var isEurope = isEuropeDomain();
 
             if (isEurope) {
-                // Mode "contain" : tout le domaine visible (Groenland, Maroc, Espagne, Islande, Scandinavie)
-                // Math.min = letterbox — pas de coupure, centré
-                var scale = Math.min(width / 2200.0, height / 1640.0) * t.scale;
+                var scaleEu = Math.max(width / 2200.0, height / 1640.0) * t.scale;
                 return {
-                    x: width / 2 + t.x - 1100.0 * scale,
-                    y: height / 2 + t.y - 820.0 * scale,
-                    w: 2200.0 * scale,
-                    h: 1640.0 * scale
+                    x: width / 2 + t.x - 1100.0 * scaleEu,
+                    y: height / 2 + t.y - 820.0 * scaleEu,
+                    w: 2200.0 * scaleEu,
+                    h: 1640.0 * scaleEu
                 };
             }
 
-            var s = Math.max(width / 2200.0, height / 1640.0);
-
-            if (t.scale <= 1.15) {
-                // Vue France entière : englobe TOUTE la France métropolitaine ET la Corse
-                // avec marge de respiration en haut (header) et en bas (timeline d'échéances)
-                var FX0 = 260;  // Ouest Bretagne
-                var FX1 = 1860; // Est Corse / Alsace
-                var FY0 = 110;  // Nord Dunkerque
-                var FY1 = 1530; // Sud Bonifacio (Corse entièrement dégagée)
-                var fw = FX1 - FX0; // 1600
-                var fh = FY1 - FY0; // 1420
-                var availH = Math.max(180, height - 150); // 70px timeline + 60px header + 20px marge
-                var availW = Math.max(260, width - 40);
-                var sFrance = Math.min(availW / (fw * 1.04), availH / (fh * 1.04));
-                var cx = (FX0 + FX1) / 2; // 1060
-                var cy = (FY0 + FY1) / 2; // 820
-                var bboxRect = {
-                    x: width / 2 + t.x - cx * sFrance,
-                    y: height / 2 + t.y - cy * sFrance,
-                    w: 2200.0 * sFrance,
-                    h: 1640.0 * sFrance
-                };
-                if (t.scale <= 1.001) {
-                    return bboxRect;
-                }
-                // Interpolation fluide entre vue France et zoom libre
-                var coverScale = s * t.scale;
-                var coverRect = {
-                    x: width / 2 + t.x - 1100.0 * coverScale,
-                    y: height / 2 + t.y - 820.0 * coverScale,
-                    w: 2200.0 * coverScale,
-                    h: 1640.0 * coverScale
-                };
-                var f = Math.max(0, Math.min(1, (t.scale - 1.001) / 0.149));
-                return {
-                    x: bboxRect.x + (coverRect.x - bboxRect.x) * f,
-                    y: bboxRect.y + (coverRect.y - bboxRect.y) * f,
-                    w: bboxRect.w + (coverRect.w - bboxRect.w) * f,
-                    h: bboxRect.h + (coverRect.h - bboxRect.h) * f
-                };
-            }
-            // Mode zoom/pan libre : cohérent avec changeZoom, pan et pinch
-            var scale = s * t.scale;
+            // Mode France : plein écran immersif (Cover), centré sur l'Hexagone (cx=1080, cy=820)
+            var s = Math.max(width / 2200.0, height / 1640.0) * t.scale;
+            var cx = 1080.0;
+            var cy = 820.0;
             return {
-                x: width / 2 + t.x - 1100.0 * scale,
-                y: height / 2 + t.y - 820.0 * scale,
-                w: 2200.0 * scale,
-                h: 1640.0 * scale
+                x: width / 2 + t.x - cx * s,
+                y: height / 2 + t.y - cy * s,
+                w: 2200.0 * s,
+                h: 1640.0 * s
             };
         }
 
