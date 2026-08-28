@@ -3849,6 +3849,24 @@
             ctx.restore();
         }
 
+        function loadSplitImage(url) {
+            if (splitImageCache[url] && splitImageCache[url].complete && splitImageCache[url].naturalWidth) {
+                return Promise.resolve(splitImageCache[url]);
+            }
+            return new Promise(function (resolve) {
+                var img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function () {
+                    splitImageCache[url] = img;
+                    resolve(img);
+                };
+                img.onerror = function () {
+                    resolve(null);
+                };
+                img.src = url;
+            });
+        }
+
         function renderSplitPane(modelKey, canvas, labelElem) {
             if (!canvas) return;
             var rect = canvas.parentElement.getBoundingClientRect();
@@ -3914,26 +3932,29 @@
                 if (!fileRel) return;
 
                 var isFrance = (modelKey.indexOf('_france') !== -1);
-                var fondImg = isFrance ? franceMaskImage : null;
-                if (fondImg && fondImg.complete && fondImg.naturalWidth) {
-                    ctx.drawImage(fondImg, dx, dy, dw, dh);
-                }
-
+                var fondUrl = 'output/' + modelKey + '/maps/fond.webp';
                 var imgUrl = 'output/' + modelKey + '/' + fileRel;
-                var cachedImg = splitImageCache[imgUrl];
-                if (cachedImg && cachedImg.complete && cachedImg.naturalWidth) {
-                    ctx.drawImage(cachedImg, dx, dy, dw, dh);
+
+                Promise.all([loadSplitImage(fondUrl), loadSplitImage(imgUrl)]).then(function (results) {
+                    var fondImg = results[0];
+                    var weatherImg = results[1];
+
+                    // 1. Dessin du fond géographique complet (reliefs, terres, océans)
+                    if (fondImg) {
+                        ctx.drawImage(fondImg, dx, dy, dw, dh);
+                    } else {
+                        ctx.fillStyle = '#a5a6b0';
+                        ctx.fillRect(dx, dy, dw, dh);
+                    }
+
+                    // 2. Dessin de la couche météo (précipitations avec transparence)
+                    if (weatherImg) {
+                        ctx.drawImage(weatherImg, dx, dy, dw, dh);
+                    }
+
+                    // 3. Dessin des contours vectoriels (frontières, côtes, départements)
                     drawSplitVectors(ctx, dx, dy, dw, dh, isFrance, dpr);
-                } else {
-                    var img = new Image();
-                    img.crossOrigin = 'anonymous';
-                    img.onload = function () {
-                        splitImageCache[imgUrl] = img;
-                        ctx.drawImage(img, dx, dy, dw, dh);
-                        drawSplitVectors(ctx, dx, dy, dw, dh, isFrance, dpr);
-                    };
-                    img.src = imgUrl;
-                }
+                });
             });
         }
 
