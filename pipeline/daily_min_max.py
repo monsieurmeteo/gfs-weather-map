@@ -14,6 +14,7 @@ import gzip
 import struct
 import re
 import datetime
+from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 from PIL import Image
 
@@ -50,7 +51,6 @@ def process_model_min_max(model_key):
     if not os.path.isdir(temp_dir):
         return
 
-    # Découverte de toutes les échéances de température disponibles
     temp_files = {}
     for f in glob.glob(os.path.join(temp_dir, "*.hkv.gz")):
         m = re.match(r"^(\d{3})\.hkv\.gz$", os.path.basename(f))
@@ -91,23 +91,22 @@ def process_model_min_max(model_key):
         t_min = np.nanmin(stack, axis=0)
         t_max = np.nanmax(stack, axis=0)
 
-        # Upscaling 2200x1640
         im_min = Image.fromarray(t_min.astype(np.float32)).resize((2200, 1640), resample=Image.BILINEAR)
         im_max = Image.fromarray(t_max.astype(np.float32)).resize((2200, 1640), resample=Image.BILINEAR)
         grid_min_full = np.array(im_min)
         grid_max_full = np.array(im_max)
 
-        # Rendre pour tous les leads de cette journée pour une navigation fluide
-        for l in day_leads:
-            lead_str = "%03d" % l
+        lead_str = "%03d" % (d * 24)
 
-            # Sauvegarde Tn (Température minimale)
-            save_webp(grid_min_full, "temperature", os.path.join(out_dir, "temperature_min_24h", "%s.webp" % lead_str))
-            write_hkv(t_min, os.path.join(out_dir, "values", "temperature_min_24h", "%s.hkv.gz" % lead_str), probe_w=440, probe_h=328)
+        webp_min = os.path.join(out_dir, "temperature_min_24h", "%s.webp" % lead_str)
+        hkv_min = os.path.join(out_dir, "values", "temperature_min_24h", "%s.hkv.gz" % lead_str)
+        save_webp(grid_min_full, "temperature_min_24h", webp_min)
+        write_hkv(t_min, hkv_min, probe_w=440, probe_h=328)
 
-            # Sauvegarde Tx (Température maximale)
-            save_webp(grid_max_full, "temperature", os.path.join(out_dir, "temperature_max_24h", "%s.webp" % lead_str))
-            write_hkv(t_max, os.path.join(out_dir, "values", "temperature_max_24h", "%s.hkv.gz" % lead_str), probe_w=440, probe_h=328)
+        webp_max = os.path.join(out_dir, "temperature_max_24h", "%s.webp" % lead_str)
+        hkv_max = os.path.join(out_dir, "values", "temperature_max_24h", "%s.hkv.gz" % lead_str)
+        save_webp(grid_max_full, "temperature_max_24h", webp_max)
+        write_hkv(t_max, hkv_max, probe_w=440, probe_h=328)
 
 
 def main():
@@ -118,8 +117,8 @@ def main():
         "aifs_france", "aifs",
         "consensus_france", "consensus"
     ]
-    for m in models:
-        process_model_min_max(m)
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        executor.map(process_model_min_max, models)
     print("✅ [daily_min_max] Calcul Tn/Tx 24h terminé pour tous les modèles.", flush=True)
 
 

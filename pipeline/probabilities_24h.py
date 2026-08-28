@@ -6,7 +6,7 @@ probabilities_24h.py — Cartes de Probabilités Multi-Modèles sur 24h (Météo
 Calcule les probabilités de dépassement de seuils critiques par tranche de 24 heures :
 - J+0 (0-24h), J+1 (24-48h), J+2 (48-72h), J+3 (72-96h), J+4 (96-120h), J+5 (120-144h), J+6 (144-168h), J+7 (168-192h)
 
-16 Calques de Probabilités :
+18 Calques de Probabilités calculés en parallèle :
 - Chaleur : P(Tmax >= 25°C), P(Tmax >= 30°C), P(Tmax >= 35°C), P(Tmax >= 40°C)
 - Gelée   : P(Tmin <= 0°C), P(Tmin <= -5°C)
 - Vent    : P(Rafales >= 60 km/h), P(Rafales >= 80 km/h), P(Rafales >= 100 km/h), P(Rafales >= 120 km/h)
@@ -22,6 +22,7 @@ import struct
 import json
 import re
 import datetime
+from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 from PIL import Image
 
@@ -55,7 +56,6 @@ PROB_LAYERS = {
 
 
 def read_hkv(path):
-    """Lit une sonde HKV1 et retourne un array 2D float32 (NaN pour valeurs manquantes)."""
     try:
         with gzip.open(path, "rb") as gz:
             magic = gz.read(4)
@@ -77,7 +77,6 @@ def read_hkv(path):
 
 
 def get_model_daily_summary(model_key, layer_key, start_hour, end_hour, operation="max"):
-    """Calcule le résumé 24h (max, min ou somme) pour un modèle donné."""
     m_dir = os.path.join(BASE_DIR, "output", model_key, "maps", "values", layer_key)
     if not os.path.isdir(m_dir):
         return None
@@ -105,12 +104,99 @@ def get_model_daily_summary(model_key, layer_key, start_hour, end_hour, operatio
         return np.nanmin(stack, axis=0)
     elif operation == "sum":
         return np.nansum(stack, axis=0)
-    return None
+    return np.nanmean(stack, axis=0)
 
 
-def generate_probabilities(domain_key, target_model, models_weights, max_days=7):
-    """Génère les cartes de probabilités par tranche de 24h."""
-    print("[probabilites] Calcul des Probabilités 24h %s (J+0 -> J+%d)..." % (target_model, max_days), flush=True)
+def calc_prob(grids, operator, threshold):
+    if not grids:
+        return None
+    counts = np.zeros(grids[0].shape, dtype=np.float32)
+    valid_models = np.zeros(grids[0].shape, dtype=np.float32)
+
+    for g in grids:
+        valid = np.isfinite(g)
+        valid_models += valid.astype(np.float32)
+        if operator == ">=":
+            counts += ((g >= threshold) & valid).astype(np.float32)
+        elif operator == "<=":
+            counts += ((g <= threshold) & valid).astype(np.float32)
+
+    safe_valid = np.where(valid_models > 0, valid_models, 1.0)
+    prob_pct = (counts / safe_valid) * 100.0
+    return np.where(valid_models > 0, prob_pct, np.nan)
+
+
+def process_day_prob(args):
+    d, models, out_dir = args
+    start_h = d * 24
+    end_h = (d + 1) * 24
+    lead_str = "%03d" % start_h
+
+    # Récupérer les données pour chaque modèle une seule fois
+    tmax_list, tmin_list, gust_list, rain_list, snow_list, cape_list = [], [], [], [], [], []
+
+    for m in models:
+        tmax = get_model_daily_summary(m, "temperature", start_h, end_h, "max")
+        if tmax is not None: tmax_list.append(tmax)
+
+        tmin = get_model_daily_summary(m, "temperature", start_h, end_h, "min")
+        if tmin is not None: tmin_list.append(tmin)
+
+        gust = get_model_daily_summary(m, "rafales_10m", start_h, end_h, "max")
+        if gust is not None: gust_list.append(gust)
+
+        rain = get_model_daily_summary(m, "precipitations_cumulees", start_h, end_h, "max")
+        if rain is not None: rain_list.append(rain)
+
+        snow = get_model_daily_summary(m, "neige_sol", start_h, end_h, "max")
+        if snow is not None: snow_list.append(snow)
+
+        cape = get_model_daily_summary(m, "mucape", start_h, end_h, "max")
+        if cape is not None: cape_list.append(cape)
+
+    prob_maps = {
+        "prob_tmax_25":   calc_prob(tmax_list, ">=", 25.0),
+        "prob_tmax_30":   calc_prob(tmax_list, ">=", 30.0),
+        "prob_tmax_35":   calc_prob(tmax_list, ">=", 35.0),
+        "prob_tmax_40":   calc_prob(tmax_list, ">=", 40.0),
+        "prob_tmin_0":    calc_prob(tmin_list, "<=", 0.0),
+        "prob_tmin_m5":   calc_prob(tmin_list, "<=", -5.0),
+        "prob_vent_60":   calc_prob(gust_list, ">=", 60.0),
+        "prob_vent_80":   calc_prob(gust_list, ">=", 80.0),
+        "prob_vent_100":  calc_prob(gust_list, ">=", 100.0),
+        "prob_vent_120":  calc_prob(gust_list, ">=", 120.0),
+        "prob_pluie_10":  calc_prob(rain_list, ">=", 10.0),
+        "prob_pluie_25":  calc_prob(rain_list, ">=", 25.0),
+        "prob_pluie_50":  calc_prob(rain_list, ">=", 50.0),
+        "prob_pluie_70":  calc_prob(rain_list, ">=", 70.0),
+        "prob_neige_1":   calc_prob(snow_list, ">=", 1.0),
+        "prob_neige_5":   calc_prob(snow_list, ">=", 5.0),
+        "prob_mucape_500":calc_prob(cape_list, ">=", 500.0),
+        "prob_mucape_1500":calc_prob(cape_list, ">=", 1500.0),
+    }
+
+    day_files = {}
+    day_probes = {}
+
+    for prob_key, grid in prob_maps.items():
+        if grid is not None:
+            im_full = Image.fromarray(grid.astype(np.float32)).resize((2200, 1640), resample=Image.BILINEAR)
+            grid_full = np.array(im_full)
+
+            webp_dst = os.path.join(out_dir, prob_key, "%s.webp" % lead_str)
+            hkv_dst = os.path.join(out_dir, "values", prob_key, "%s.hkv.gz" % lead_str)
+
+            save_webp(grid_full, prob_key, webp_dst)
+            write_hkv(grid, hkv_dst, probe_w=440, probe_h=328)
+
+            day_files[prob_key] = "maps/%s/%s.webp" % (prob_key, lead_str)
+            day_probes[prob_key] = "maps/values/%s/%s.hkv.gz" % (prob_key, lead_str)
+
+    return (d, start_h, day_files, day_probes)
+
+
+def generate_probabilities_dataset(domain_key, target_model, models, max_days=8):
+    print("[probabilites] Calcul des Probabilités 24h %s (J+0 -> J+%d)..." % (target_model, max_days - 1), flush=True)
     out_dir = os.path.join(BASE_DIR, "output", target_model, "maps")
     ensure_dir(out_dir)
 
@@ -118,100 +204,30 @@ def generate_probabilities(domain_key, target_model, models_weights, max_days=7)
     run_hour = (now_utc.hour // 6) * 6
     run_dt = now_utc.replace(hour=run_hour, minute=0, second=0, microsecond=0)
 
-    days_steps = []
-    layer_files = {}
-    probe_files = {}
+    tasks = [(d, models, out_dir) for d in range(max_days)]
+    steps = []
 
-    indicators = {
-        "prob_tmax_25":   ("temperature", "max", lambda x: x >= 25.0),
-        "prob_tmax_30":   ("temperature", "max", lambda x: x >= 30.0),
-        "prob_tmax_35":   ("temperature", "max", lambda x: x >= 35.0),
-        "prob_tmax_40":   ("temperature", "max", lambda x: x >= 40.0),
-        "prob_tmin_0":    ("temperature", "min", lambda x: x <= 0.0),
-        "prob_tmin_m5":   ("temperature", "min", lambda x: x <= -5.0),
-        "prob_vent_60":   ("rafales",     "max", lambda x: x >= 60.0),
-        "prob_vent_80":   ("rafales",     "max", lambda x: x >= 80.0),
-        "prob_vent_100":  ("rafales",     "max", lambda x: x >= 100.0),
-        "prob_vent_120":  ("rafales",     "max", lambda x: x >= 120.0),
-        "prob_pluie_10":  ("pluie_1h",    "sum", lambda x: x >= 10.0),
-        "prob_pluie_25":  ("pluie_1h",    "sum", lambda x: x >= 25.0),
-        "prob_pluie_50":  ("pluie_1h",    "sum", lambda x: x >= 50.0),
-        "prob_pluie_70":  ("pluie_1h",    "sum", lambda x: x >= 70.0),
-        "prob_neige_1":   ("neige_au_sol","max", lambda x: x >= 1.0),
-        "prob_neige_5":   ("neige_au_sol","max", lambda x: x >= 5.0),
-        "prob_mucape_500":("mucape",      "max", lambda x: x >= 500.0),
-        "prob_mucape_1500":("mucape",     "max", lambda x: x >= 1500.0),
-    }
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        results = executor.map(process_day_prob, tasks)
+        for res in sorted(results, key=lambda x: x[0]):
+            d, start_h, day_files, day_probes = res
+            if day_files:
+                valid_dt = run_dt + datetime.timedelta(hours=start_h)
+                steps.append({
+                    "lead_hour": start_h,
+                    "valid_time": valid_dt.isoformat(),
+                    "files": day_files,
+                    "probes": day_probes,
+                })
 
-    for d in range(max_days + 1):
-        start_h = d * 24
-        end_h = (d + 1) * 24
-        step_str = "%03d" % (d * 24)
-
-        for p_key, (src_layer, op, cond_fn) in indicators.items():
-            prob_hits = []
-            weights = []
-
-            for m, weight in models_weights.items():
-                daily_val = get_model_daily_summary(m, src_layer, start_h, end_h, operation=op)
-                if daily_val is not None:
-                    mask = np.where(np.isfinite(daily_val), cond_fn(daily_val).astype(np.float32), np.nan)
-                    prob_hits.append(mask)
-                    weights.append(weight)
-
-            if not prob_hits:
-                continue
-
-            weights_arr = np.array(weights, dtype=np.float32)
-            weights_arr = weights_arr / np.sum(weights_arr)
-
-            stack = np.stack(prob_hits, axis=0)
-            valid_mask = np.isfinite(stack)
-            
-            w_3d = weights_arr[:, None, None] * valid_mask
-            sum_w = np.sum(w_3d, axis=0)
-            safe_sum_w = np.where(sum_w > 0, sum_w, 1.0)
-
-            weighted_prob = np.sum(np.nan_to_num(stack, nan=0.0) * w_3d, axis=0) * 100.0
-            prob_grid = np.where(sum_w > 0, weighted_prob / safe_sum_w, np.nan)
-
-            im_full = Image.fromarray(prob_grid.astype(np.float32)).resize((2200, 1640), resample=Image.BILINEAR)
-            grid_full = np.array(im_full)
-
-            webp_dst = os.path.join(out_dir, p_key, "%s.webp" % step_str)
-            hkv_dst = os.path.join(out_dir, "values", p_key, "%s.hkv.gz" % step_str)
-
-            save_webp(grid_full, "probabilite", webp_dst)
-            write_hkv(prob_grid, hkv_dst, probe_w=440, probe_h=328)
-
-            rel_webp = "maps/%s/%s.webp" % (p_key, step_str)
-            rel_hkv = "maps/values/%s/%s.hkv.gz" % (p_key, step_str)
-
-            layer_files.setdefault(d * 24, {})[p_key] = rel_webp
-            probe_files.setdefault(d * 24, {})[p_key] = rel_hkv
-
-        if d * 24 in layer_files:
-            days_steps.append(d * 24)
-
-    if not days_steps:
+    if not steps:
         print("[probabilites] Aucune dalle générée pour %s" % target_model, flush=True)
         return False
 
     domain_obj = FRANCE if domain_key == "france" else EUROPE
-    steps = []
-    for lh in sorted(days_steps):
-        day_num = lh // 24
-        v_dt = run_dt + datetime.timedelta(days=day_num)
-        steps.append({
-            "lead_hour": lh,
-            "valid_time": v_dt.isoformat(),
-            "files": layer_files.get(lh, {}),
-            "probes": probe_files.get(lh, {}),
-        })
-
     meta = {
         "model_name": "🎯 PROBABILITÉS France 24h" if domain_key == "france" else "🎯 PROBABILITÉS Europe 24h",
-        "provider": "Météo-Climat Pro — Risques & Probabilités Multi-Modèles (4 Modèles)",
+        "provider": "Météo-Climat Pro — Risques & Probabilités (ARPEGE, ICON, GFS, AIFS)",
         "resolution": "Probabilités 24h HD (0 à 100%)",
         "run_time": run_dt.isoformat(),
     }
@@ -224,21 +240,11 @@ def generate_probabilities(domain_key, target_model, models_weights, max_days=7)
 
 
 def main():
-    france_weights = {
-        "arpege_france": 0.35,
-        "icon_eu_france": 0.30,
-        "aifs_france": 0.20,
-        "gfs_france": 0.15,
-    }
-    generate_probabilities("france", "probabilites_france", france_weights, max_days=4)
+    france_models = ["arpege_france", "icon_eu_france", "gfs_france", "aifs_france"]
+    generate_probabilities_dataset("france", "probabilites_france", france_models, max_days=5)
 
-    europe_weights = {
-        "aifs": 0.30,
-        "icon_eu": 0.30,
-        "gfs": 0.20,
-        "arpege": 0.20,
-    }
-    generate_probabilities("europe", "probabilites", europe_weights, max_days=7)
+    europe_models = ["aifs", "icon_eu", "gfs", "arpege"]
+    generate_probabilities_dataset("europe", "probabilites", europe_models, max_days=8)
 
 
 if __name__ == "__main__":
