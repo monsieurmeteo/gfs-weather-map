@@ -2289,9 +2289,13 @@
         function switchModel(modelKey) {
             var token = ++switchToken; // invalide tout fetch précédent
             var modelMap = {
+                consensus: { path: 'output/consensus', name: 'CONSENSUS Europe', badge: 'Moyenne' },
+                consensus_france: { path: 'output/consensus_france', name: 'CONSENSUS France HD', badge: '0,1°' },
+                probabilites: { path: 'output/probabilites', name: 'PROBABILITÉS Europe', badge: '24h' },
+                probabilites_france: { path: 'output/probabilites_france', name: 'PROBABILITÉS France', badge: '24h' },
                 gfs: { path: 'output/gfs', name: 'GFS Europe', badge: '0,25°' },
                 gfs_france: { path: 'output/gfs_france', name: 'GFS France', badge: '0,25°' },
-                arpege: { path: 'output/arpege', name: 'ARPEGE Europe', badge: '0,1°' },
+                arpege: { path: 'output/arpege', name: 'ARPEGE Europe', badge: '0,25°' },
                 arpege_france: { path: 'output/arpege_france', name: 'ARPEGE France', badge: '0,1°' },
                 icon_eu: { path: 'output/icon_eu', name: 'ICON-EU Europe', badge: '7 km' },
                 icon_eu_france: { path: 'output/icon_eu_france', name: 'ICON-EU France', badge: '7 km' },
@@ -2373,7 +2377,6 @@
                     var isFranceOnly = (modelKey.indexOf('_france') !== -1);
                     var dSel = document.getElementById('direct-layer-select');
                     if (dSel) {
-                        // Couches disponibles = celles réellement rendues par le modèle (Z500/T850 compris sur France)
                         var z500Opt = dSel.querySelector('option[value="geopotentiel_500"]');
                         if (z500Opt) z500Opt.disabled = !(manifest.layers && manifest.layers['geopotentiel_500']);
                         var t850Opt = dSel.querySelector('option[value="temperature_850"]');
@@ -2381,10 +2384,14 @@
                     }
                     var regSel = document.getElementById('select-region');
                     if (regSel) {
-                        if (isFranceOnly && regSel.value === 'europe') {
-                            regSel.value = 'france';
-                        } else if (!isFranceOnly && regSel.value === 'france') {
-                            regSel.value = 'europe';
+                        var curVal = regSel.value;
+                        // Ne modifier le sélecteur que si on n'est PAS sur une région spécifique
+                        if (curVal === 'europe' || curVal === 'france') {
+                            if (isFranceOnly && curVal === 'europe') {
+                                regSel.value = 'france';
+                            } else if (!isFranceOnly && curVal === 'france') {
+                                regSel.value = 'europe';
+                            }
                         }
                     }
 
@@ -2404,11 +2411,14 @@
                     if (pendingFocus && typeof focusLocation === 'function') {
                         focusLocation(pendingFocus);
                         pendingFocus = null;
+                    } else if (regSel && regSel.value && regSel.value !== 'france' && regSel.value !== 'europe') {
+                        var rcfg = REGION_CONFIG[regSel.value];
+                        if (rcfg && typeof focusLocation === 'function') {
+                            focusLocation({ latitude: rcfg.latitude, longitude: rcfg.longitude, scale: rcfg.scale });
+                        }
                     }
                 })
                 .catch(function () {
-                    // Revert — ne jamais afficher les images d'un autre modèle
-                    // sous une baseUrl cassée.
                     baseUrl = prevBaseUrl;
                     app.dataset.baseUrl = prevBaseUrl;
                     app.dataset.model = 'gfs';
@@ -2425,10 +2435,25 @@
         if (modelSelect) {
             modelSelect.addEventListener('change', function(e) {
                 var v = e.target.value;
-                transform = { scale: 1, x: 0, y: 0 };
                 var regSel = document.getElementById('select-region');
-                if (regSel) {
-                    regSel.value = (v.indexOf('_france') !== -1) ? 'france' : 'europe';
+                var activeRegion = regSel ? regSel.value : 'france';
+                
+                // Si l'internaute est sur une région spécifique (hdf, normandie, bretagne, idf...),
+                // on CONSERVE le zoom et la région lors du changement de modèle !
+                if (activeRegion && activeRegion !== 'france' && activeRegion !== 'europe') {
+                    var cfg = REGION_CONFIG[activeRegion];
+                    if (cfg) {
+                        pendingFocus = {
+                            latitude: cfg.latitude,
+                            longitude: cfg.longitude,
+                            scale: cfg.scale
+                        };
+                    }
+                } else {
+                    if (regSel) {
+                        regSel.value = (v.indexOf('_france') !== -1) ? 'france' : 'europe';
+                    }
+                    transform = { scale: 1, x: 0, y: 0 };
                 }
                 switchModel(v);
             });
