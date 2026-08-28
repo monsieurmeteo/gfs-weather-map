@@ -142,13 +142,13 @@ def process_day_prob(args):
         tmin = get_model_daily_summary(m, "temperature", start_h, end_h, "min")
         if tmin is not None: tmin_list.append(tmin)
 
-        gust = get_model_daily_summary(m, "rafales_10m", start_h, end_h, "max")
+        gust = get_model_daily_summary(m, "rafales", start_h, end_h, "max")
         if gust is not None: gust_list.append(gust)
 
-        rain = get_model_daily_summary(m, "precipitations_cumulees", start_h, end_h, "max")
+        rain = get_model_daily_summary(m, "pluie_cumul", start_h, end_h, "max")
         if rain is not None: rain_list.append(rain)
 
-        snow = get_model_daily_summary(m, "neige_sol", start_h, end_h, "max")
+        snow = get_model_daily_summary(m, "neige_au_sol", start_h, end_h, "max")
         if snow is not None: snow_list.append(snow)
 
         cape = get_model_daily_summary(m, "mucape", start_h, end_h, "max")

@@ -41,7 +41,7 @@ def inverse_mercator_y(y):
     return np.degrees(2.0 * np.arctan(np.exp(y)) - np.pi / 2.0)
 
 
-def lambert_conformal_direct(lats, lons, lat1=35.0, lat2=65.0, lat0=50.0, lon0=-5.0):
+def lambert_conformal_direct(lats, lons, lat1=30.0, lat2=60.0, lat0=50.0, lon0=-5.0):
     r_lat1 = np.radians(lat1)
     r_lat2 = np.radians(lat2)
     r_lat0 = np.radians(lat0)
@@ -61,7 +61,7 @@ def lambert_conformal_direct(lats, lons, lat1=35.0, lat2=65.0, lat0=50.0, lon0=-
     return x, y
 
 
-def lambert_conformal_inverse(xs, ys, lat1=35.0, lat2=65.0, lat0=50.0, lon0=-5.0):
+def lambert_conformal_inverse(x, y, lat1=30.0, lat2=60.0, lat0=50.0, lon0=-5.0):
     r_lat1 = np.radians(lat1)
     r_lat2 = np.radians(lat2)
     r_lat0 = np.radians(lat0)
@@ -72,11 +72,10 @@ def lambert_conformal_inverse(xs, ys, lat1=35.0, lat2=65.0, lat0=50.0, lon0=-5.0
     F = (np.cos(r_lat1) * (np.tan(np.pi / 4.0 + r_lat1 / 2.0) ** n)) / n
     rho0 = F / (np.tan(np.pi / 4.0 + r_lat0 / 2.0) ** n)
     
-    rho = np.sign(n) * np.sqrt(xs ** 2 + (rho0 - ys) ** 2)
-    theta = np.arctan2(xs, rho0 - ys)
+    rho = np.hypot(x, rho0 - y)
+    theta = np.arctan2(x, rho0 - y)
     lons = np.degrees(r_lon0 + theta / n)
-    t = (F / rho) ** (1.0 / n)
-    lats = np.degrees(2.0 * np.arctan(t) - np.pi / 2.0)
+    lats = np.degrees(2.0 * np.arctan((F / rho) ** (1.0 / n)) - np.pi / 2.0)
     return lats, lons
 
 
@@ -101,6 +100,12 @@ class Domain:
             self.lat0, self.lon0 = d["lat0"], d["lon0"]
             self.x_min, self.x_max = d["x_min"], d["x_max"]
             self.y_min, self.y_max = d["y_min"], d["y_max"]
+            self.bounds.update({
+                "lat1": self.lat1, "lat2": self.lat2,
+                "lat0": self.lat0, "lon0": self.lon0,
+                "x_min": self.x_min, "x_max": self.x_max,
+                "y_min": self.y_min, "y_max": self.y_max
+            })
             xs = np.linspace(self.x_min, self.x_max, self.width, dtype=np.float64)
             ys = np.linspace(self.y_max, self.y_min, self.height, dtype=np.float64)
             XX, YY = np.meshgrid(xs, ys)

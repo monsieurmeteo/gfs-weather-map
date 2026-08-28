@@ -2030,18 +2030,35 @@
 
             var step = steps[currentStep];
             var date = new Date(step.valid_time);
+            var is24h = (currentModel.indexOf('probabilites') !== -1) || 
+                        (currentLayer.indexOf('_24h') !== -1) || 
+                        (currentLayer.indexOf('prob_') === 0);
+            var dayOffset = Math.floor(step.lead_hour / 24);
+            var leadStr = '';
             var dateFormatted = '';
-            try {
-                dateFormatted = validityFormat.format(date).replace(':', 'h');
-            } catch (e) {
-                dateFormatted = date.toLocaleTimeString('fr-FR');
+
+            if (is24h) {
+                leadStr = (dayOffset === 0) ? "J+0 (Aujourd'hui)" :
+                          (dayOffset === 1) ? "J+1 (Demain)" :
+                          ('J+' + dayOffset);
+                try {
+                    var dOpt = { weekday: 'short', day: '2-digit', month: '2-digit' };
+                    dateFormatted = new Intl.DateTimeFormat('fr-FR', dOpt).format(date) + ' (24h)';
+                } catch (e) {
+                    dateFormatted = date.toLocaleDateString('fr-FR') + ' (24h)';
+                }
+            } else {
+                try {
+                    dateFormatted = validityFormat.format(date).replace(':', 'h');
+                } catch (e) {
+                    dateFormatted = date.toLocaleTimeString('fr-FR');
+                }
+                leadStr = 'H+' + String(step.lead_hour).padStart(2, '0');
+                if (dayOffset >= 1) {
+                    leadStr = 'J+' + dayOffset + ' (' + leadStr + ')';
+                }
             }
             if (validity) validity.textContent = dateFormatted;
-            var leadStr = 'H+' + String(step.lead_hour).padStart(2, '0');
-            var dayOffset = Math.floor(step.lead_hour / 24);
-            if (dayOffset >= 1) {
-                leadStr = 'J+' + dayOffset + ' (' + leadStr + ')';
-            }
             if (lead) lead.textContent = leadStr;
             var layer = manifest.layers[currentLayer];
             if (viewport) {
@@ -3148,16 +3165,20 @@
             }
 
             var bounds = manifest.bounds;
-            var northY = mercator(Number(bounds.north));
-            var southY = mercator(Number(bounds.south));
-            var longitudeSpan = Number(bounds.east) - Number(bounds.west);
-            var mercatorSpan = northY - southY;
-            if (!longitudeSpan || !mercatorSpan) {
-                return;
+            var isLambert = bounds && bounds.projection === 'lambert';
+            var northY = 0, southY = 0, mercatorSpan = 0;
+            if (!isLambert) {
+                northY = mercator(Number(bounds.north));
+                southY = mercator(Number(bounds.south));
+                mercatorSpan = northY - southY;
+                var longitudeSpan = Number(bounds.east) - Number(bounds.west);
+                if (!longitudeSpan || !mercatorSpan) {
+                    return;
+                }
             }
 
             var density = labelDensity();
-            var candidates = visiblePlaces(
+            var candidates = isLambert ? places : visiblePlaces(
                 width,
                 height,
                 bounds,
