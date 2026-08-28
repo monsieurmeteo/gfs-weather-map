@@ -2621,19 +2621,16 @@
                 'uniform float uHasMask;\n' +
                 'uniform float uHasFond;\n' +
                 'void main(){\n' +
-                ' vec3 frame=vec3(0.043,0.055,0.086);\n' +
-                // Projection UNIQUE (identique aux vecteurs/probes/export) :
-                // le raster 2200×1640 occupe le rectangle uRect (px écran).
                 ' vec2 uv=(vUv*uViewport-uRect.xy)/uRect.zw;\n' +
-                ' if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){\n' +
-                '  gl_FragColor=vec4(frame,1.0);return;\n' +
-                ' }\n' +
-                // Fond : carte des pays (fond.webp) si dispo, sinon gris neutre
-                ' vec3 base=vec3(0.6471,0.6510,0.6902);\n' +
+                ' vec2 uvClamped=clamp(uv,0.0,1.0);\n' +
+                ' vec3 base=vec3(0.043,0.055,0.086);\n' +
                 ' if(uHasFond>0.5){\n' +
-                '  base=texture2D(uFond,uv).rgb;\n' +
+                '  base=texture2D(uFond,uvClamped).rgb;\n' +
                 ' } else if(uHasMask>0.5){\n' +
-                '  base=mix(vec3(0.6471,0.6510,0.6902),vec3(0.76,0.78,0.81),texture2D(uMask,uv).r);\n' +
+                '  base=mix(vec3(0.6471,0.6510,0.6902),vec3(0.76,0.78,0.81),texture2D(uMask,uvClamped).r);\n' +
+                ' }\n' +
+                ' if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){\n' +
+                '  gl_FragColor=vec4(base,1.0);return;\n' +
                 ' }\n' +
                 ' if(uHasWeather<0.5){\n' +
                 '  gl_FragColor=vec4(base,1.0);return;\n' +
@@ -2653,24 +2650,43 @@
             if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
                 return null;
             }
-            gl.useProgram(program);
-            var buffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-                -1, 1, 0, 0,
-                -1, -1, 0, 1,
-                1, 1, 1, 0,
-                1, -1, 1, 1
-            ]), gl.STATIC_DRAW);
+
+            var positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(
+                gl.ARRAY_BUFFER,
+                new Float32Array([
+                    -1, -1,
+                     1, -1,
+                    -1,  1,
+                     1,  1
+                ]),
+                gl.STATIC_DRAW
+            );
+
+            var uvBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+            gl.bufferData(
+                gl.ARRAY_BUFFER,
+                new Float32Array([
+                    0, 1,
+                    1, 1,
+                    0, 0,
+                    1, 0
+                ]),
+                gl.STATIC_DRAW
+            );
+
             var position = gl.getAttribLocation(program, 'aPosition');
             var uv = gl.getAttribLocation(program, 'aUv');
             gl.enableVertexAttribArray(position);
-            gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
             gl.enableVertexAttribArray(uv);
-            gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 16, 8);
+            gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+            gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 0, 0);
 
             var texture = gl.createTexture();
-            gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, texture);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -2694,7 +2710,6 @@
                 scheduleRender();
             };
 
-            // Fond de carte (pays voisins inclus) — fond.webp
             var fondTexture = gl.createTexture();
             var fondImage = new Image();
             fondImage.crossOrigin = 'anonymous';
@@ -2721,7 +2736,7 @@
                 mapRect: gl.getUniformLocation(program, 'uRect'),
                 hasWeather: gl.getUniformLocation(program, 'uHasWeather'),
                 maskSampler: gl.getUniformLocation(program, 'uMask'),
-                useMask: gl.getUniformLocation(program, 'uUseMask'),
+                useMask: gl.getUniformLocation(program, 'uHasMask'),
                 fondSampler: gl.getUniformLocation(program, 'uFond'),
                 useFond: gl.getUniformLocation(program, 'uHasFond'),
                 ready: false,
@@ -2761,8 +2776,6 @@
                 var gl = webgl.gl;
                 gl.viewport(0, 0, weatherCanvas.width, weatherCanvas.height);
                 gl.useProgram(webgl.program);
-                // Projection UNIQUE (computeMapRect) : identique aux vecteurs,
-                // labels, probes, GIF et export → aucun désalignement possible.
                 var mapRect = computeMapRect(width, height);
                 gl.uniform2f(webgl.viewportSize, width, height);
                 gl.uniform4f(webgl.mapRect, mapRect.x, mapRect.y, mapRect.w, mapRect.h);
@@ -2781,7 +2794,6 @@
                 return;
             }
             fallbackContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-            // Cadre sombre autour du domaine (le fond clair n'existe que dans la carte)
             fallbackContext.fillStyle = '#0b1220';
             fallbackContext.fillRect(0, 0, width, height);
             if (!currentWeatherImage) {
@@ -2963,29 +2975,63 @@
             var isEurope = isEuropeDomain();
 
             if (isEurope) {
-                var availWEu = Math.max(200, width - 40);
-                var availHEu = Math.max(200, height - 120);
-                var scaleEu = Math.min(availWEu / 2200.0, availHEu / 1640.0) * t.scale;
+                var scale = Math.min(width / 2200.0, height / 1640.0) * t.scale;
                 return {
-                    x: width / 2 + t.x - 1100.0 * scaleEu,
-                    y: height / 2 + t.y - 820.0 * scaleEu,
-                    w: 2200.0 * scaleEu,
-                    h: 1640.0 * scaleEu
+                    x: width / 2 + t.x - 1100.0 * scale,
+                    y: height / 2 + t.y - 820.0 * scale,
+                    w: 2200.0 * scale,
+                    h: 1640.0 * scale
                 };
             }
 
-            // Mode France : cadrage optimal englobant toute la France et la Corse
-            // avec marges de respiration sous le header et au-dessus de la timeline
-            var availW = Math.max(240, width - 60);
-            var availH = Math.max(240, height - 140);
-            var s = Math.min(availW / 1550.0, availH / 1350.0) * t.scale;
-            var cx = 1060.0;
-            var cy = 830.0;
+            var s = Math.max(width / 2200.0, height / 1640.0);
+
+            if (t.scale <= 1.15) {
+                // Vue France entière AROME : englobe TOUTE la France métropolitaine ET la Corse
+                // avec marge de respiration en haut (header) et en bas (timeline d'échéances)
+                var FX0 = 260;  // Ouest Bretagne
+                var FX1 = 1860; // Est Corse / Alsace
+                var FY0 = 110;  // Nord Dunkerque
+                var FY1 = 1530; // Sud Bonifacio (Corse entièrement dégagée)
+                var fw = FX1 - FX0; // 1600
+                var fh = FY1 - FY0; // 1420
+                var availH = Math.max(180, height - 150); // 70px timeline + 60px header + 20px marge
+                var availW = Math.max(260, width - 40);
+                var sFrance = Math.min(availW / (fw * 1.04), availH / (fh * 1.04));
+                var cx = (FX0 + FX1) / 2; // 1060
+                var cy = (FY0 + FY1) / 2; // 820
+                var bboxRect = {
+                    x: width / 2 + t.x - cx * sFrance,
+                    y: height / 2 + t.y - cy * sFrance,
+                    w: 2200.0 * sFrance,
+                    h: 1640.0 * sFrance
+                };
+                if (t.scale <= 1.001) {
+                    return bboxRect;
+                }
+                // Interpolation fluide entre vue France et zoom libre
+                var coverScale = s * t.scale;
+                var coverRect = {
+                    x: width / 2 + t.x - 1100.0 * coverScale,
+                    y: height / 2 + t.y - 820.0 * coverScale,
+                    w: 2200.0 * coverScale,
+                    h: 1640.0 * coverScale
+                };
+                var f = Math.max(0, Math.min(1, (t.scale - 1.001) / 0.149));
+                return {
+                    x: bboxRect.x + (coverRect.x - bboxRect.x) * f,
+                    y: bboxRect.y + (coverRect.y - bboxRect.y) * f,
+                    w: bboxRect.w + (coverRect.w - bboxRect.w) * f,
+                    h: bboxRect.h + (coverRect.h - bboxRect.h) * f
+                };
+            }
+            // Mode zoom/pan libre : cohérent avec changeZoom, pan et pinch
+            var scale = s * t.scale;
             return {
-                x: width / 2 + t.x - cx * s,
-                y: height / 2 + t.y - cy * s,
-                w: 2200.0 * s,
-                h: 1640.0 * s
+                x: width / 2 + t.x - 1100.0 * scale,
+                y: height / 2 + t.y - 820.0 * scale,
+                w: 2200.0 * scale,
+                h: 1640.0 * scale
             };
         }
 
