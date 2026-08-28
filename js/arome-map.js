@@ -830,6 +830,7 @@
                 offY = mapRect.y * ratio;
             } else {
                 var isEuropeExport = isEuropeDomain();
+                var isFranceExport = !isEuropeExport;
                 if (isEuropeExport) {
                     // Vue Europe Standard (2200x1640) : cadrage plein cadre 100% de la projection Lambert
                     outW = 2200;
