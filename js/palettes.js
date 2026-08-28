@@ -595,12 +595,65 @@
                 { value: 612, color: '#4f0000' },
             ]
         },
+        probabilite: {
+            label: 'Probabilité de dépassement', unit: '%', decimals: 0, transparent_below: 5,
+            stops: [
+                { value: 0, color: 'rgba(0,0,0,0)' },
+                { value: 10, color: '#40b4ff' },
+                { value: 25, color: '#28d296' },
+                { value: 40, color: '#b4f028' },
+                { value: 50, color: '#ffe600' },
+                { value: 65, color: '#ffa000' },
+                { value: 80, color: '#f01414' },
+                { value: 95, color: '#be0082' },
+                { value: 100, color: '#8c00c8' }
+            ]
+        },
     };
     PALETTES.temperature_850 = {
         label: 'Température à 850 hPa (~1 500 m)', unit: '°C', decimals: 1, transparent_below: null,
         stops: PALETTES.temperature.stops
     };
+    PALETTES.temperature_min_24h = {
+        label: 'Température minimale Tn (24h)', unit: '°C', decimals: 1, transparent_below: null,
+        stops: PALETTES.temperature.stops
+    };
+    PALETTES.temperature_max_24h = {
+        label: 'Température maximale Tx (24h)', unit: '°C', decimals: 1, transparent_below: null,
+        stops: PALETTES.temperature.stops
+    };
     PALETTES.geopotentiel_500_meteociel = PALETTES.geopotentiel_500;
+
+    // Calques de Probabilités 24h
+    var probLayerLabels = {
+        prob_tmax_25: 'Probabilité Tmax ≥ 25 °C (24h)',
+        prob_tmax_30: 'Probabilité Tmax ≥ 30 °C (24h)',
+        prob_tmax_35: 'Probabilité Tmax ≥ 35 °C (24h)',
+        prob_tmax_40: 'Probabilité Tmax ≥ 40 °C (24h)',
+        prob_tmin_0: 'Probabilité Gelée Tmin ≤ 0 °C (24h)',
+        prob_tmin_m5: 'Probabilité Forte Gelée ≤ -5 °C',
+        prob_vent_60: 'Probabilité Rafales ≥ 60 km/h (24h)',
+        prob_vent_80: 'Probabilité Rafales ≥ 80 km/h (24h)',
+        prob_vent_100: 'Probabilité Rafales ≥ 100 km/h (24h)',
+        prob_vent_120: 'Probabilité Rafales ≥ 120 km/h (24h)',
+        prob_pluie_10: 'Probabilité Pluie 24h ≥ 10 mm',
+        prob_pluie_25: 'Probabilité Pluie 24h ≥ 25 mm',
+        prob_pluie_50: 'Probabilité Pluie 24h ≥ 50 mm',
+        prob_pluie_70: 'Probabilité Pluie 24h ≥ 70 mm',
+        prob_neige_1: 'Probabilité Neige 24h ≥ 1 cm',
+        prob_neige_5: 'Probabilité Neige 24h ≥ 5 cm',
+        prob_mucape_500: 'Probabilité Risque Orageux (24h)',
+        prob_mucape_1500: 'Probabilité Orages Violents (24h)'
+    };
+    Object.keys(probLayerLabels).forEach(function (pk) {
+        PALETTES[pk] = {
+            label: probLayerLabels[pk],
+            unit: '%',
+            decimals: 0,
+            transparent_below: 5,
+            stops: PALETTES.probabilite.stops
+        };
+    });
 
     function getLayerPalette(key) { return PALETTES[key] || PALETTES.temperature; }
     function paletteGradientCSS(key) {

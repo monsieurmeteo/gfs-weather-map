@@ -2203,6 +2203,8 @@
                 var MODEL_FAMILY = {
                     consensus: { eu: 'consensus', fr: 'consensus_france' },
                     consensus_france: { eu: 'consensus', fr: 'consensus_france' },
+                    probabilites: { eu: 'probabilites', fr: 'probabilites_france' },
+                    probabilites_france: { eu: 'probabilites', fr: 'probabilites_france' },
                     gfs: { eu: 'gfs', fr: 'gfs_france' },
                     gfs_france: { eu: 'gfs', fr: 'gfs_france' },
                     arpege: { eu: 'arpege', fr: 'arpege_france' },

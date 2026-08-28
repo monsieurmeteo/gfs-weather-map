@@ -153,6 +153,28 @@ def main():
         "provider": "Météo-Climat Pro — Multi-Model Blend (AIFS + ICON + GFS + ARPEGE)",
         "resolution": "Multi-Résolution HD (Grille 2200×1640)",
     })
+    try:
+        import probabilities_24h
+        probabilities_24h.main()
+    except Exception as e:
+        print("[assemble] Note : probabilities_24h non exécuté : %s" % e, flush=True)
+
+    try:
+        import daily_min_max
+        daily_min_max.main()
+    except Exception as e:
+        print("[assemble] Note : daily_min_max non exécuté : %s" % e, flush=True)
+
+    assemble_model("probabilites_france", FRANCE, {
+        "model_name": "🎯 PROBABILITÉS France 24h",
+        "provider": "Météo-Climat Pro — Risques & Probabilités (4 Modèles)",
+        "resolution": "Probabilités 24h HD (0 à 100%)",
+    })
+    assemble_model("probabilites", EUROPE, {
+        "model_name": "🎯 PROBABILITÉS Europe 24h",
+        "provider": "Météo-Climat Pro — Risques & Probabilités (4 Modèles)",
+        "resolution": "Probabilités 24h HD (0 à 100%)",
+    })
     print("[assemble] Assemblage terminé avec succès.", flush=True)
 
 

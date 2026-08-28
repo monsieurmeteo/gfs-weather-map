@@ -20,6 +20,8 @@ from palettes_data import PALETTES
 # ── Métadonnées des couches (libellés, unités, décimales, groupe UI) ────────
 LAYER_META = {
     "temperature":           ("Température à 2 m",             "°C",   1, "Températures"),
+    "temperature_min_24h":   ("Température minimale Tn (24h)", "°C",   1, "Températures"),
+    "temperature_max_24h":   ("Température maximale Tx (24h)", "°C",   1, "Températures"),
     "temperature_ressentie": ("Température ressentie",         "°C",   1, "Températures"),
     "point_rosee":           ("Point de rosée à 2 m",          "°C",   1, "Températures"),
     "humidex":               ("Indice Humidex",                "",     1, "Températures"),
@@ -45,7 +47,7 @@ LAYER_META = {
 # Ordre d'affichage des couches dans le sélecteur
 LAYER_ORDER = [
     "geopotentiel_500", "temperature_850", "pression", "pression_surface",
-    "temperature", "temperature_ressentie", "point_rosee", "humidex",
+    "temperature", "temperature_min_24h", "temperature_max_24h", "temperature_ressentie", "point_rosee", "humidex",
     "vent", "rafales", "rafales_cumul",
     "nebulosite", "nuages_bas", "nuages_moyens", "nuages_eleves",
     "humidite", "mucape",
