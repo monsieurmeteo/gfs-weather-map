@@ -175,7 +175,42 @@ def main():
         "provider": "Météo-Climat Pro — Risques & Probabilités (4 Modèles)",
         "resolution": "Probabilités 24h HD (0 à 100%)",
     })
+
+    # Nettoyage automatique des dalles orphelines pour alléger le site à < 200 Mo
+    prune_stale_files()
+
     print("[assemble] Assemblage terminé avec succès.", flush=True)
+
+
+def prune_stale_files():
+    """Supprime les anciennes dalles orphelines pour maintenir l'archive ultra-légère (< 200 Mo)."""
+    keep_files = set()
+    for index_path in glob.glob(os.path.join(BASE_DIR, "output", "*", "maps", "index.json")):
+        try:
+            with open(index_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            model_root = os.path.dirname(os.path.dirname(index_path))
+            for step in data.get("steps", []):
+                for rel in step.get("files", {}).values():
+                    keep_files.add(os.path.normpath(os.path.join(model_root, rel)))
+                for rel in step.get("probes", {}).values():
+                    keep_files.add(os.path.normpath(os.path.join(model_root, rel)))
+        except Exception:
+            pass
+
+    deleted_count = 0
+    for p in glob.glob(os.path.join(BASE_DIR, "output", "*", "maps", "**", "*"), recursive=True):
+        if os.path.isfile(p):
+            fname = os.path.basename(p)
+            if fname.endswith((".webp", ".hkv.gz")) and not fname.startswith("fond"):
+                if os.path.normpath(p) not in keep_files:
+                    try:
+                        os.remove(p)
+                        deleted_count += 1
+                    except Exception:
+                        pass
+    if deleted_count > 0:
+        print("[assemble] Nettoyage : %d dalles orphelines supprimées" % deleted_count, flush=True)
 
 
 if __name__ == "__main__":
