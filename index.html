@@ -1028,115 +1028,6 @@
             margin-top: 8px;
         }
 
-        /* 🔀 COMPARATEUR SPLIT SCREEN */
-        .amfm-split-container {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            z-index: 10;
-            background: #070b14;
-        }
-        body.is-split-mode .amfm-split-container,
-        [data-amfm-app].is-split-mode .amfm-split-container {
-            display: flex !important;
-        }
-        body.is-split-mode .amfm-viewport,
-        [data-amfm-app].is-split-mode .amfm-viewport {
-            display: none !important;
-        }
-        .amfm-split-pane {
-            flex: 1;
-            position: relative;
-            height: 100%;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            border-right: 2px solid rgba(0, 210, 255, 0.4);
-            background: #070b14;
-        }
-        .amfm-split-pane:last-child {
-            border-right: none;
-        }
-        .amfm-split-badge {
-            position: absolute;
-            top: 68px;
-            left: 14px;
-            z-index: 50;
-            background: rgba(7, 11, 20, 0.92);
-            border: 1px solid var(--amfm-border);
-            border-radius: 8px;
-            padding: 6px 12px;
-            font-size: 12px;
-            font-weight: 800;
-            color: #fff;
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-        }
-        .amfm-split-select {
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            color: #fff;
-            font-size: 12px;
-            font-weight: 700;
-            border-radius: 6px;
-            padding: 4px 8px;
-            outline: none;
-            cursor: pointer;
-        }
-        .amfm-split-select option {
-            background: #070b14;
-            color: #fff;
-        }
-        .amfm-split-sub {
-            font-size: 11px;
-            color: var(--amfm-accent);
-            font-weight: 700;
-        }
-        .amfm-split-view-wrapper {
-            flex: 1;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            padding-top: 55px;
-            padding-bottom: 75px;
-        }
-        .amfm-split-img {
-            max-width: 100%;
-            max-height: 100%;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            user-select: none;
-            -webkit-user-drag: none;
-        }
-        @media (max-width: 768px) {
-            body.is-split-mode .amfm-split-container,
-            [data-amfm-app].is-split-mode .amfm-split-container {
-                flex-direction: column !important;
-            }
-            .amfm-split-pane {
-                border-right: none;
-                border-bottom: 2px solid rgba(0, 210, 255, 0.4);
-            }
-            .amfm-split-badge {
-                top: 55px;
-                padding: 4px 8px;
-            }
-            .amfm-split-view-wrapper {
-                padding-top: 45px;
-                padding-bottom: 65px;
-            }
-        }
 
         /* 📱 RESPONSIVE */
         @media (max-width: 1024px) {
@@ -1300,13 +1191,9 @@
                         <i class="fa-solid fa-hashtag" aria-hidden="true"></i>
                     </button>
 
-                    <!-- Outils Avancés : Météogramme, Comparateur Split & Mode TV -->
+                    <!-- Outils Avancés : Météogramme & Mode TV -->
                     <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-diagram aria-pressed="false" aria-label="Météogramme temporel au clic" title="📈 Météogramme temporel (Cliquer sur la carte pour voir l'évolution 16j)">
                         <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
-                    </button>
-
-                    <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-split aria-pressed="false" aria-label="Mode Comparateur Multi-Modèles" title="🔀 Comparateur 2 Modèles côte à côte">
-                        <i class="fa-solid fa-columns" aria-hidden="true"></i>
                     </button>
 
                     <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-tv aria-label="Mode Présentation TV (Touche Z)" title="📺 Mode Présentation TV / Zen (Touche Z ou T)">
@@ -1350,48 +1237,6 @@
                 <span data-amfm-unavailable-text>Paramètre non disponible pour ce modèle</span>
             </div>
         </main>
-
-        <!-- Conteneur Comparateur Split Screen (2 Cartes) -->
-        <div class="amfm-split-container" data-amfm-split-container>
-            <!-- Volet Gauche -->
-            <div class="amfm-split-pane" data-amfm-split-pane="left">
-                <div class="amfm-split-badge">
-                    <span style="color:#00d2ff;font-weight:900;">A :</span>
-                    <select class="amfm-split-select" data-amfm-split-model-left>
-                        <option value="arpege_france" selected>🇫🇷 ARPEGE France 0.1°</option>
-                        <option value="gfs_france">🇫🇷 GFS France 0.25°</option>
-                        <option value="icon_eu_france">🇫🇷 ICON-EU France 7km</option>
-                        <option value="aifs_france">🇫🇷 AIFS France 0.25°</option>
-                        <option value="arpege">🇪🇺 ARPEGE Europe 0.25°</option>
-                        <option value="gfs">🌍 GFS Europe 0.25°</option>
-                        <option value="aifs">🤖 AIFS Europe 0.25°</option>
-                    </select>
-                    <span class="amfm-split-sub" data-amfm-split-sub-left></span>
-                </div>
-                <div class="amfm-split-view-wrapper">
-                    <canvas class="amfm-split-canvas" data-amfm-split-canvas-left></canvas>
-                </div>
-            </div>
-            <!-- Volet Droit -->
-            <div class="amfm-split-pane" data-amfm-split-pane="right">
-                <div class="amfm-split-badge">
-                    <span style="color:#00d2ff;font-weight:900;">B :</span>
-                    <select class="amfm-split-select" data-amfm-split-model-right>
-                        <option value="gfs_france" selected>🇫🇷 GFS France 0.25°</option>
-                        <option value="arpege_france">🇫🇷 ARPEGE France 0.1°</option>
-                        <option value="icon_eu_france">🇫🇷 ICON-EU France 7km</option>
-                        <option value="aifs_france">🇫🇷 AIFS France 0.25°</option>
-                        <option value="gfs">🌍 GFS Europe 0.25°</option>
-                        <option value="arpege">🇪🇺 ARPEGE Europe 0.25°</option>
-                        <option value="aifs">🤖 AIFS Europe 0.25°</option>
-                    </select>
-                    <span class="amfm-split-sub" data-amfm-split-sub-right></span>
-                </div>
-                <div class="amfm-split-view-wrapper">
-                    <canvas class="amfm-split-canvas" data-amfm-split-canvas-right></canvas>
-                </div>
-            </div>
-        </div>
 
         <!-- Modal Météogramme Local Interactif -->
         <div class="amfm-meteogram-overlay" data-amfm-meteogram-modal hidden>
@@ -1635,9 +1480,9 @@
     })();
     </script>
 
-    <script src="js/palettes.js?v=2.2.3"></script>
+    <script src="js/palettes.js?v=2.3.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
-    <script src="js/regions.js?v=2.2.3"></script>
-    <script src="js/arome-map.js?v=2.2.3"></script>
+    <script src="js/regions.js?v=2.3.0"></script>
+    <script src="js/arome-map.js?v=2.3.0"></script>
 </body>
 </html>

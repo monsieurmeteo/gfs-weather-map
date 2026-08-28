@@ -125,7 +125,6 @@
         var toggleTvButton = app.querySelector('[data-amfm-toggle-tv]');
         var tvExitButton = app.querySelector('[data-amfm-tv-exit]');
         var toggleDiagramButton = app.querySelector('[data-amfm-toggle-diagram]');
-        var toggleSplitButton = app.querySelector('[data-amfm-toggle-split]');
 
         var meteogramModal = app.querySelector('[data-amfm-meteogram-modal]');
         var meteogramClose = app.querySelector('[data-amfm-meteogram-close]');
@@ -137,18 +136,7 @@
         var meteogramPoint = null;
         var diagramActive = false;
 
-        var splitContainer = app.querySelector('[data-amfm-split-container]');
-        var splitModelLeftSelect = app.querySelector('[data-amfm-split-model-left]');
-        var splitModelRightSelect = app.querySelector('[data-amfm-split-model-right]');
-        var splitCanvasLeft = app.querySelector('[data-amfm-split-canvas-left]');
-        var splitCanvasRight = app.querySelector('[data-amfm-split-canvas-right]');
-        var splitSubLeft = app.querySelector('[data-amfm-split-sub-left]');
-        var splitSubRight = app.querySelector('[data-amfm-split-sub-right]');
-        var splitMode = false;
-        var splitLeftModel = 'arpege_france';
-        var splitRightModel = 'gfs_france';
-        var splitManifests = {};
-        var splitImageCache = {};
+
 
         var diagramPopup = app.querySelector('[data-amfm-diagram-popup]');
         var diagramTitle = app.querySelector('[data-amfm-diagram-title]');
@@ -2086,9 +2074,6 @@
 
             clearError();
             clearUnavailable();
-            if (splitMode && typeof renderSplitView === 'function') {
-                renderSplitView();
-            }
             if (loading) loading.hidden = false;
             hideProbe();
             var token = ++loadToken;
@@ -3784,185 +3769,7 @@
             };
         }
 
-        // 🔀 COMPARATEUR SPLIT SCREEN
-        function toggleSplitMode() {
-            splitMode = !splitMode;
-            document.body.classList.toggle('is-split-mode', splitMode);
-            if (app) app.classList.toggle('is-split-mode', splitMode);
-            if (toggleSplitButton) {
-                toggleSplitButton.classList.toggle('is-active', splitMode);
-                toggleSplitButton.setAttribute('aria-pressed', splitMode ? 'true' : 'false');
-            }
-            if (splitMode) {
-                renderSplitView();
-            }
-        }
-        if (toggleSplitButton) {
-            toggleSplitButton.addEventListener('click', toggleSplitMode);
-        }
-        if (splitModelLeftSelect) {
-            splitModelLeftSelect.addEventListener('change', function (e) {
-                splitLeftModel = e.target.value;
-                renderSplitView();
-            });
-        }
-        if (splitModelRightSelect) {
-            splitModelRightSelect.addEventListener('change', function (e) {
-                splitRightModel = e.target.value;
-                renderSplitView();
-            });
-        }
 
-        function getModelManifest(modelKey) {
-            if (splitManifests[modelKey]) {
-                return Promise.resolve(splitManifests[modelKey]);
-            }
-            return fetchJson('output/' + modelKey + '/maps/index.json').then(function (res) {
-                splitManifests[modelKey] = res;
-                return res;
-            }).catch(function (e) {
-                console.warn('Erreur chargement manifeste split:', e);
-                return null;
-            });
-        }
-
-        function drawSplitVectors(ctx, dx, dy, dw, dh, isFrance, dpr) {
-            if (!vectorDefinition || !vectorDefinition.paths) return;
-            var hScale = dw / 2200.0;
-            var vScale = dh / 1640.0;
-
-            ctx.save();
-            ctx.translate(dx, dy);
-            ctx.scale(hScale, vScale);
-
-            vectorDefinition.paths.forEach(function (entry) {
-                var isDept = entry.kind === 'department';
-                if (!isFrance && isDept) return;
-                ctx.strokeStyle = entry.colour || (isFrance ? '#0d1117' : '#0b1220');
-                ctx.globalAlpha = isDept ? 0.65 : (isFrance ? 1.0 : 0.85);
-                ctx.lineWidth = (entry.width || (isFrance ? 1.8 : 1.5)) / hScale;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.stroke(entry.path);
-            });
-
-            ctx.restore();
-        }
-
-        function loadSplitImage(url) {
-            if (splitImageCache[url] && splitImageCache[url].complete && splitImageCache[url].naturalWidth) {
-                return Promise.resolve(splitImageCache[url]);
-            }
-            return new Promise(function (resolve) {
-                var img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = function () {
-                    splitImageCache[url] = img;
-                    resolve(img);
-                };
-                img.onerror = function () {
-                    resolve(null);
-                };
-                img.src = url;
-            });
-        }
-
-        function renderSplitPane(modelKey, canvas, labelElem) {
-            if (!canvas) return;
-            var rect = canvas.parentElement.getBoundingClientRect();
-            var w = Math.floor(rect.width);
-            var h = Math.floor(rect.height);
-            if (w < 10 || h < 10) return;
-
-            var dpr = Math.min(window.devicePixelRatio || 1, 2);
-            canvas.width = w * dpr;
-            canvas.height = h * dpr;
-            var ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-            // Fond neutre
-            ctx.fillStyle = '#070b14';
-            ctx.fillRect(0, 0, w, h);
-
-            // Cadrage 2200x1640 proportionnel
-            var s = Math.min(w / 2200.0, h / 1640.0);
-            var dw = 2200.0 * s;
-            var dh = 1640.0 * s;
-            var dx = (w - dw) / 2;
-            var dy = (h - dh) / 2;
-
-            getModelManifest(modelKey).then(function (man) {
-                if (!man || !man.steps || !man.steps.length) {
-                    if (labelElem) labelElem.textContent = 'Données indisponibles';
-                    return;
-                }
-
-                var mainSteps = availableSteps();
-                var currentLead = (mainSteps && mainSteps[currentStep]) ? Number(mainSteps[currentStep].lead_hour) : 0;
-
-                // Recherche de l'échéance la plus proche pour ce modèle
-                var bestStep = man.steps[0];
-                var minDiff = Infinity;
-                for (var i = 0; i < man.steps.length; i++) {
-                    var st = man.steps[i];
-                    var diff = Math.abs(Number(st.lead_hour) - currentLead);
-                    if (diff < minDiff) {
-                        minDiff = diff;
-                        bestStep = st;
-                    }
-                }
-
-                var actualLead = Number(bestStep.lead_hour);
-                var layerKey = currentLayer;
-                if (!bestStep.files || !bestStep.files[layerKey]) {
-                    layerKey = Object.keys(bestStep.files || {})[0] || 'temperature';
-                }
-                var fileRel = bestStep.files ? bestStep.files[layerKey] : null;
-
-                var dateStr = '';
-                if (bestStep.valid_time) {
-                    var dt = new Date(bestStep.valid_time);
-                    dateStr = ' • ' + dt.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }) + ' ' + (dt.getUTCHours() < 10 ? '0' : '') + dt.getUTCHours() + 'h UTC';
-                }
-                if (labelElem) {
-                    labelElem.textContent = 'H+' + actualLead + dateStr;
-                }
-
-                if (!fileRel) return;
-
-                var isFrance = (modelKey.indexOf('_france') !== -1);
-                var fondUrl = 'output/' + modelKey + '/maps/fond.webp';
-                var imgUrl = 'output/' + modelKey + '/' + fileRel;
-
-                Promise.all([loadSplitImage(fondUrl), loadSplitImage(imgUrl)]).then(function (results) {
-                    var fondImg = results[0];
-                    var weatherImg = results[1];
-
-                    // 1. Dessin du fond géographique complet (reliefs, terres, océans)
-                    if (fondImg) {
-                        ctx.drawImage(fondImg, dx, dy, dw, dh);
-                    } else {
-                        ctx.fillStyle = '#a5a6b0';
-                        ctx.fillRect(dx, dy, dw, dh);
-                    }
-
-                    // 2. Dessin de la couche météo (précipitations avec transparence)
-                    if (weatherImg) {
-                        ctx.drawImage(weatherImg, dx, dy, dw, dh);
-                    }
-
-                    // 3. Dessin des contours vectoriels (frontières, côtes, départements)
-                    drawSplitVectors(ctx, dx, dy, dw, dh, isFrance, dpr);
-                });
-            });
-        }
-
-        function renderSplitView() {
-            if (!splitMode) return;
-            renderSplitPane(splitLeftModel, splitCanvasLeft, splitSubLeft);
-            renderSplitPane(splitRightModel, splitCanvasRight, splitSubRight);
-        }
 
         // ⌨️ RACCOURCIS CLAVIER PRO
         window.addEventListener('keydown', function (e) {
