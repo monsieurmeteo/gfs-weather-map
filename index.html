@@ -1028,6 +1028,71 @@
             margin-top: 8px;
         }
 
+        /* 🏷️ CARTOUCHE D'INFORMATION DIRECTEMENT SUR LA CARTE */
+        .amfm-map-badge {
+            position: absolute;
+            top: 75px;
+            left: 20px;
+            z-index: 40;
+            background: linear-gradient(135deg, rgba(7, 11, 20, 0.92), rgba(14, 22, 38, 0.88));
+            border: 1.5px solid rgba(0, 210, 255, 0.45);
+            border-radius: 12px;
+            padding: 10px 16px;
+            color: #fff;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 15px rgba(0, 210, 255, 0.15);
+            pointer-events: none;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        .amfm-map-badge-param {
+            font-size: 15px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+            margin-bottom: 2px;
+        }
+        .amfm-map-badge-model {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--amfm-accent, #00d2ff);
+            margin-bottom: 4px;
+        }
+        .amfm-map-badge-date {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .amfm-badge-lead {
+            color: #38bdf8;
+            font-weight: 900;
+            margin-left: 4px;
+        }
+        body.is-tv-mode .amfm-map-badge,
+        [data-amfm-app].is-tv-mode .amfm-map-badge {
+            top: 24px;
+            left: 24px;
+            transform: scale(1.08);
+            transform-origin: top left;
+        }
+        @media (max-width: 768px) {
+            .amfm-map-badge {
+                top: 60px;
+                left: 10px;
+                padding: 6px 10px;
+                border-radius: 8px;
+            }
+            .amfm-map-badge-param {
+                font-size: 12px;
+            }
+            .amfm-map-badge-model {
+                font-size: 10.5px;
+            }
+            .amfm-map-badge-date {
+                font-size: 11px;
+            }
+        }
 
         /* 📱 RESPONSIVE */
         @media (max-width: 1024px) {
@@ -1225,6 +1290,12 @@
             <canvas class="amfm-canvas" data-amfm-vectors aria-hidden="true"></canvas>
             <canvas class="amfm-canvas" data-amfm-values aria-hidden="true"></canvas>
             <canvas class="amfm-canvas" data-amfm-labels aria-hidden="true"></canvas>
+            <!-- Cartouche d'information intégré directement sur la carte (TV, Plein écran & Normal) -->
+            <div class="amfm-map-badge" data-amfm-map-badge aria-hidden="true">
+                <div class="amfm-map-badge-param" data-amfm-badge-param>Chargement…</div>
+                <div class="amfm-map-badge-model" data-amfm-badge-model>Modèle météo</div>
+                <div class="amfm-map-badge-date" data-amfm-badge-date>Date et Échéance</div>
+            </div>
             <!-- Indicateur de Chargement -->
             <div class="amfm-loading" data-amfm-loading hidden>
                 <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> <span>Chargement des données météo…</span>
@@ -1480,9 +1551,9 @@
     })();
     </script>
 
-    <script src="js/palettes.js?v=2.3.0"></script>
+    <script src="js/palettes.js?v=2.3.1"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
-    <script src="js/regions.js?v=2.3.0"></script>
-    <script src="js/arome-map.js?v=2.3.0"></script>
+    <script src="js/regions.js?v=2.3.1"></script>
+    <script src="js/arome-map.js?v=2.3.1"></script>
 </body>
 </html>

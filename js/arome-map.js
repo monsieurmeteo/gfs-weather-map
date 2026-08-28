@@ -137,6 +137,10 @@
         var diagramActive = false;
 
 
+        var mapBadge = app.querySelector('[data-amfm-map-badge]');
+        var badgeParam = app.querySelector('[data-amfm-badge-param]');
+        var badgeModel = app.querySelector('[data-amfm-badge-model]');
+        var badgeDate = app.querySelector('[data-amfm-badge-date]');
 
         var diagramPopup = app.querySelector('[data-amfm-diagram-popup]');
         var diagramTitle = app.querySelector('[data-amfm-diagram-title]');
@@ -2070,6 +2074,26 @@
                     (layer && layer.unit ? ' (' + layer.unit + ')' : '') + ' — ';
                 headline.appendChild(layerSpan);
                 headline.appendChild(document.createTextNode(runLabel + ' ' + leadStr));
+            }
+
+            // Mise à jour du cartouche intégré directement sur la carte (TV, Plein écran & Normal)
+            if (badgeParam) {
+                var prettyL = layer ? layer.label : currentLayer;
+                var prettyU = (layer && layer.unit) ? ' (' + layer.unit + ')' : '';
+                badgeParam.textContent = prettyL + prettyU;
+            }
+            if (badgeModel) {
+                var mTitle = (manifest && manifest.model_name) ? manifest.model_name : 'Modèle météo';
+                var rTag = '';
+                if (manifest && manifest.run_time) {
+                    try {
+                        rTag = ' • Run ' + String(manifest.run_time).slice(11, 16) + 'Z';
+                    } catch (e) {}
+                }
+                badgeModel.textContent = mTitle + rTag;
+            }
+            if (badgeDate) {
+                badgeDate.innerHTML = dateFormatted + ' <span class="amfm-badge-lead">(' + leadStr + ')</span>';
             }
 
             clearError();
