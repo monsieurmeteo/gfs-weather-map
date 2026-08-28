@@ -111,15 +111,14 @@ def process_model_min_max(model_key):
 
 def main():
     models = [
-        "arpege_france", "arpege",
-        "icon_eu_france", "icon_eu",
-        "gfs_france", "gfs",
-        "aifs_france", "aifs",
-        "consensus_france", "consensus"
+        "arpege_france",
+        "icon_eu_france",
+        "gfs_france",
+        "aifs_france"
     ]
     with ThreadPoolExecutor(max_workers=4) as executor:
         executor.map(process_model_min_max, models)
-    print("✅ [daily_min_max] Calcul Tn/Tx 24h terminé pour tous les modèles.", flush=True)
+    print("✅ [daily_min_max] Calcul Tn/Tx 24h terminé pour tous les modèles France.", flush=True)
 
 
 if __name__ == "__main__":

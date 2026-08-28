@@ -1129,8 +1129,8 @@
 </head>
 <body>
     <div data-amfm-app
-         data-base-url="output/consensus_france"
-         data-model="consensus_france"
+         data-base-url="output/arpege_france"
+         data-model="arpege_france"
          data-logo="logo.png"
          data-variable="geopotentiel_500"
          data-timezone="Europe/Paris"
@@ -1142,21 +1142,18 @@
                 <!-- Gauche : Marque + Modèle + Commune -->
                 <div class="amfm-nav-brand">
                     <img src="logo.png" alt="Météo-Climat Pro" class="amfm-logo" aria-hidden="false">
-                    <span class="amfm-title-text">CONSENSUS France HD</span>
+                    <span class="amfm-title-text">ARPEGE France</span>
                     <span class="amfm-badge">0,1°</span>
                 </div>
 
                 <!-- Centre : Sélecteur de Calque Météo + Sélecteur de Région -->
                 <div class="amfm-nav-controls">
-                    <!-- Sélecteur de Modèle (CONSENSUS / PROBABILITÉS / ARPEGE / ICON / GFS / AIFS) -->
+                    <!-- Sélecteur de Modèle (ARPEGE / ICON / GFS / AIFS) -->
                     <select id="select-model" class="amfm-select-model" aria-label="Sélection du modèle de prévision">
-                        <option value="consensus_france" selected>🌟 CONSENSUS France HD (4 Modèles)</option>
-                        <option value="consensus">🌟 CONSENSUS Europe (4 Modèles)</option>
-                        <option value="probabilites_france">🎯 PROBABILITÉS France 24h</option>
-                        <option value="probabilites">🎯 PROBABILITÉS Europe 24h</option>
-                        <option value="arpege_france">🇫🇷 ARPEGE France (0,1°)</option>
+                        <option value="arpege_france" selected>🇫🇷 ARPEGE France (0,1°)</option>
                         <option value="arpege">🇪🇺 ARPEGE Europe (0,25°)</option>
                         <option value="icon_eu_france">🇫🇷 ICON-EU France (7 km)</option>
+                        <option value="icon_eu">🇪🇺 ICON-EU Europe (7 km)</option>
                         <option value="gfs_france">🇫🇷 GFS France (0,25°)</option>
                         <option value="gfs">🌍 GFS Europe (0,25°)</option>
                         <option value="aifs_france">🇫🇷 ECMWF AIFS France (0,25°)</option>
@@ -1199,34 +1196,6 @@
                         </optgroup>
                         <optgroup label="❄️ Hiver & Neige">
                             <option value="neige_au_sol">🏔️ Épaisseur neige au sol (cm)</option>
-                        </optgroup>
-                        <optgroup label="🔥 Probabilités Chaleur (24h)">
-                            <option value="prob_tmax_25">🔥 P(Tmax ≥ 25 °C) — Chaleur</option>
-                            <option value="prob_tmax_30">🔥 P(Tmax ≥ 30 °C) — Forte chaleur</option>
-                            <option value="prob_tmax_35">🔥 P(Tmax ≥ 35 °C) — Canicule</option>
-                            <option value="prob_tmax_40">🔥 P(Tmax ≥ 40 °C) — Canicule extrême</option>
-                        </optgroup>
-                        <optgroup label="💨 Probabilités Vent & Tempêtes (24h)">
-                            <option value="prob_vent_60">💨 P(Rafales ≥ 60 km/h) — Vent fort</option>
-                            <option value="prob_vent_80">💨 P(Rafales ≥ 80 km/h) — Coup de vent</option>
-                            <option value="prob_vent_100">💨 P(Rafales ≥ 100 km/h) — Tempête</option>
-                            <option value="prob_vent_120">💨 P(Rafales ≥ 120 km/h) — Forte tempête</option>
-                        </optgroup>
-                        <optgroup label="🌧️ Probabilités Pluie & Inondations (24h)">
-                            <option value="prob_pluie_10">🌧️ P(Pluie 24h ≥ 10 mm)</option>
-                            <option value="prob_pluie_25">🌧️ P(Pluie 24h ≥ 25 mm) — Fortes pluies</option>
-                            <option value="prob_pluie_50">🌧️ P(Pluie 24h ≥ 50 mm) — Inondations</option>
-                            <option value="prob_pluie_70">🌧️ P(Pluie 24h ≥ 70 mm) — Pluies intenses</option>
-                        </optgroup>
-                        <optgroup label="❄️ Probabilités Hiver & Gel (24h)">
-                            <option value="prob_tmin_0">❄️ P(Gelée Tmin ≤ 0 °C)</option>
-                            <option value="prob_tmin_m5">❄️ P(Forte Gelée ≤ -5 °C)</option>
-                            <option value="prob_neige_1">❄️ P(Neige 24h ≥ 1 cm)</option>
-                            <option value="prob_neige_5">❄️ P(Neige 24h ≥ 5 cm)</option>
-                        </optgroup>
-                        <optgroup label="⚡ Probabilités Orages (24h)">
-                            <option value="prob_mucape_500">⚡ P(Risque Orageux 24h)</option>
-                            <option value="prob_mucape_1500">⚡ P(Orages Violents / Grêle)</option>
                         </optgroup>
                     </select>
 

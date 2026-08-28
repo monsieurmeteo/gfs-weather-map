@@ -97,6 +97,14 @@ def assemble_model(model_key, domain, meta):
 
 def main():
     print("[assemble] Début de l'assemblage multi-modèles...", flush=True)
+
+    # Calcul des températures minimales (Tn) et maximales (Tx) 24h pour les modèles France
+    try:
+        import daily_min_max
+        daily_min_max.main()
+    except Exception as e:
+        print("[assemble] Note : daily_min_max non exécuté : %s" % e, flush=True)
+
     assemble_model("gfs", EUROPE, {
         "model_name": "GFS 0.25° Europe",
         "provider": "NOAA (NOMADS) — open data",
@@ -137,46 +145,8 @@ def main():
         "provider": "ECMWF — open data (data.ecmwf.int)",
         "resolution": "0.25° (~25 km)",
     })
-    try:
-        import consensus_blend
-        consensus_blend.main()
-    except Exception as e:
-        print("[assemble] Note : consensus_blend non exécuté : %s" % e, flush=True)
 
-    assemble_model("consensus_france", FRANCE, {
-        "model_name": "🌟 CONSENSUS France HD",
-        "provider": "Météo-Climat Pro — Multi-Model Blend (ARPEGE + ICON + GFS + AIFS)",
-        "resolution": "Multi-Résolution HD (Grille 2200×1640)",
-    })
-    assemble_model("consensus", EUROPE, {
-        "model_name": "🌟 CONSENSUS Europe",
-        "provider": "Météo-Climat Pro — Multi-Model Blend (AIFS + ICON + GFS + ARPEGE)",
-        "resolution": "Multi-Résolution HD (Grille 2200×1640)",
-    })
-    try:
-        import probabilities_24h
-        probabilities_24h.main()
-    except Exception as e:
-        print("[assemble] Note : probabilities_24h non exécuté : %s" % e, flush=True)
-
-    try:
-        import daily_min_max
-        daily_min_max.main()
-    except Exception as e:
-        print("[assemble] Note : daily_min_max non exécuté : %s" % e, flush=True)
-
-    assemble_model("probabilites_france", FRANCE, {
-        "model_name": "🎯 PROBABILITÉS France 24h",
-        "provider": "Météo-Climat Pro — Risques & Probabilités (4 Modèles)",
-        "resolution": "Probabilités 24h HD (0 à 100%)",
-    })
-    assemble_model("probabilites", EUROPE, {
-        "model_name": "🎯 PROBABILITÉS Europe 24h",
-        "provider": "Météo-Climat Pro — Risques & Probabilités (4 Modèles)",
-        "resolution": "Probabilités 24h HD (0 à 100%)",
-    })
-
-    # Nettoyage automatique des dalles orphelines pour alléger le site à < 200 Mo
+    # Nettoyage automatique des dalles orphelines pour maintenir l'archive ultra-légère (< 200 Mo)
     prune_stale_files()
 
     print("[assemble] Assemblage terminé avec succès.", flush=True)
