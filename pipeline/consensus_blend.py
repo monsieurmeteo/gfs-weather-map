@@ -7,9 +7,7 @@ Calcule la synthèse pondérée multi-modèles (Super-Ensemble) :
 - Domaine France : ARPEGE France 0.1° + ICON-EU France + GFS France + AIFS France
 - Domaine Europe : ECMWF AIFS + ICON-EU + GFS + ARPEGE
 
-Génère pour chaque échéance et paramètre :
-1. Les dalles WebP 2200x1640 dans output/consensus_france et output/consensus
-2. Les sondes HKV1 gzip (values/) pour la sonde au survol et le météogramme
+Génération ultra-rapide multi-threadée (ThreadPoolExecutor).
 """
 import os
 import sys
@@ -19,6 +17,7 @@ import struct
 import json
 import re
 import datetime
+from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 from PIL import Image
 
@@ -53,13 +52,66 @@ def read_hkv(path):
         return None
 
 
+def process_lead_layer(args):
+    lead, layer, models_weights, model_steps, out_dir = args
+    lead_str = "%03d" % lead
+
+    collected_grids = []
+    collected_weights = []
+
+    for m, weight in models_weights.items():
+        hkv_path = os.path.join(BASE_DIR, "output", m, "maps", "values", layer, "%s.hkv.gz" % lead_str)
+        if not os.path.exists(hkv_path):
+            if m in model_steps and model_steps[m]:
+                closest_lead = min(model_steps[m], key=lambda x: abs(x - lead))
+                if abs(closest_lead - lead) <= 3:
+                    hkv_path = os.path.join(BASE_DIR, "output", m, "maps", "values", layer, "%03d.hkv.gz" % closest_lead)
+
+        if os.path.exists(hkv_path):
+            grid = read_hkv(hkv_path)
+            if grid is not None:
+                if grid.shape != (328, 440):
+                    im = Image.fromarray(grid.astype(np.float32)).resize((440, 328), resample=Image.BILINEAR)
+                    grid = np.array(im)
+                collected_grids.append(grid)
+                collected_weights.append(weight)
+
+    if not collected_grids:
+        return None
+
+    weights_arr = np.array(collected_weights, dtype=np.float32)
+    weights_arr = weights_arr / np.sum(weights_arr)
+
+    stack = np.stack(collected_grids, axis=0)
+    valid_mask = np.isfinite(stack)
+
+    w_3d = weights_arr[:, None, None] * valid_mask
+    sum_w = np.sum(w_3d, axis=0)
+    safe_sum_w = np.where(sum_w > 0, sum_w, 1.0)
+
+    weighted_sum = np.sum(np.nan_to_num(stack, nan=0.0) * w_3d, axis=0)
+    consensus_grid = np.where(sum_w > 0, weighted_sum / safe_sum_w, np.nan)
+
+    im_full = Image.fromarray(consensus_grid.astype(np.float32)).resize((2200, 1640), resample=Image.BILINEAR)
+    grid_full = np.array(im_full)
+
+    webp_dst = os.path.join(out_dir, layer, "%s.webp" % lead_str)
+    hkv_dst = os.path.join(out_dir, "values", layer, "%s.hkv.gz" % lead_str)
+
+    save_webp(grid_full, layer, webp_dst)
+    write_hkv(consensus_grid, hkv_dst, probe_w=440, probe_h=328)
+
+    rel_webp = "maps/%s/%s.webp" % (layer, lead_str)
+    rel_hkv = "maps/values/%s/%s.hkv.gz" % (layer, lead_str)
+
+    return (lead, layer, rel_webp, rel_hkv)
+
+
 def generate_consensus(domain_key, target_model, models_weights, max_lead=102):
-    """Génère le modèle consensus pour un domaine donné."""
     print("[consensus] Calcul du Consensus %s (H+000 -> H+%03d)..." % (target_model, max_lead), flush=True)
     out_dir = os.path.join(BASE_DIR, "output", target_model, "maps")
     ensure_dir(out_dir)
 
-    # Découverte des échéances disponibles pour chaque modèle
     model_steps = {}
     for m in models_weights:
         m_dir = os.path.join(BASE_DIR, "output", m, "maps")
@@ -77,77 +129,36 @@ def generate_consensus(domain_key, target_model, models_weights, max_lead=102):
         print("[consensus] Aucun modèle source disponible pour %s" % target_model, flush=True)
         return False
 
-    # Échéances cibles : toutes les échéances 3h jusqu'à max_lead
     all_leads = set()
     for l_list in model_steps.values():
         all_leads.update(l_list)
-    target_leads = sorted([l for l in all_leads if l <= max_lead and (l % 3 == 0 or l <= 48)])
+    # Échéances tri-horaires régulières (0, 3, 6, 9, ...) pour rapidité et régularité
+    target_leads = sorted([l for l in all_leads if l <= max_lead and l % 3 == 0])
+    if not target_leads:
+        target_leads = sorted([l for l in all_leads if l <= max_lead])[:24]
 
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     run_hour = (now_utc.hour // 6) * 6
     run_dt = now_utc.replace(hour=run_hour, minute=0, second=0, microsecond=0)
 
-    rendered_leads = []
+    tasks = []
+    for lead in target_leads:
+        for layer in LAYER_ORDER:
+            tasks.append((lead, layer, models_weights, model_steps, out_dir))
+
     layer_files = {}
     probe_files = {}
+    rendered_leads = set()
 
-    for lead in target_leads:
-        lead_str = "%03d" % lead
-
-        for layer in LAYER_ORDER:
-            collected_grids = []
-            collected_weights = []
-
-            for m, weight in models_weights.items():
-                hkv_path = os.path.join(BASE_DIR, "output", m, "maps", "values", layer, "%s.hkv.gz" % lead_str)
-                if not os.path.exists(hkv_path):
-                    if m in model_steps and model_steps[m]:
-                        closest_lead = min(model_steps[m], key=lambda x: abs(x - lead))
-                        if abs(closest_lead - lead) <= 3:
-                            hkv_path = os.path.join(BASE_DIR, "output", m, "maps", "values", layer, "%03d.hkv.gz" % closest_lead)
-
-                if os.path.exists(hkv_path):
-                    grid = read_hkv(hkv_path)
-                    if grid is not None:
-                        if grid.shape != (328, 440):
-                            im = Image.fromarray(grid.astype(np.float32)).resize((440, 328), resample=Image.BILINEAR)
-                            grid = np.array(im)
-                        collected_grids.append(grid)
-                        collected_weights.append(weight)
-
-            if not collected_grids:
-                continue
-
-            weights_arr = np.array(collected_weights, dtype=np.float32)
-            weights_arr = weights_arr / np.sum(weights_arr)
-
-            stack = np.stack(collected_grids, axis=0)
-            valid_mask = np.isfinite(stack)
-            
-            w_3d = weights_arr[:, None, None] * valid_mask
-            sum_w = np.sum(w_3d, axis=0)
-            safe_sum_w = np.where(sum_w > 0, sum_w, 1.0)
-            
-            weighted_sum = np.sum(np.nan_to_num(stack, nan=0.0) * w_3d, axis=0)
-            consensus_grid = np.where(sum_w > 0, weighted_sum / safe_sum_w, np.nan)
-
-            im_full = Image.fromarray(consensus_grid.astype(np.float32)).resize((2200, 1640), resample=Image.BILINEAR)
-            grid_full = np.array(im_full)
-
-            webp_dst = os.path.join(out_dir, layer, "%s.webp" % lead_str)
-            hkv_dst = os.path.join(out_dir, "values", layer, "%s.hkv.gz" % lead_str)
-
-            save_webp(grid_full, layer, webp_dst)
-            write_hkv(consensus_grid, hkv_dst, probe_w=440, probe_h=328)
-
-            rel_webp = "maps/%s/%s.webp" % (layer, lead_str)
-            rel_hkv = "maps/values/%s/%s.hkv.gz" % (layer, lead_str)
-
-            layer_files.setdefault(lead, {})[layer] = rel_webp
-            probe_files.setdefault(lead, {})[layer] = rel_hkv
-
-        if lead in layer_files:
-            rendered_leads.append(lead)
+    # Exécution multi-threadée ultra rapide
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = executor.map(process_lead_layer, tasks)
+        for res in results:
+            if res is not None:
+                lead, layer, rel_webp, rel_hkv = res
+                layer_files.setdefault(lead, {})[layer] = rel_webp
+                probe_files.setdefault(lead, {})[layer] = rel_hkv
+                rendered_leads.add(lead)
 
     if not rendered_leads:
         print("[consensus] Aucune dalle générée pour %s" % target_model, flush=True)
@@ -174,7 +185,7 @@ def generate_consensus(domain_key, target_model, models_weights, max_lead=102):
     write_places(domain_obj, out_dir)
     write_manifest(out_dir, steps, meta, domain_obj)
     print("✅ [consensus] %s : %d échéances (H+%03d -> H+%03d) générées avec succès !"
-          % (target_model, len(steps), rendered_leads[0], rendered_leads[-1]), flush=True)
+          % (target_model, len(steps), sorted(rendered_leads)[0], sorted(rendered_leads)[-1]), flush=True)
     return True
 
 
@@ -193,7 +204,7 @@ def main():
         "gfs": 0.20,
         "arpege": 0.20,
     }
-    generate_consensus("europe", "consensus", europe_weights, max_lead=240)
+    generate_consensus("europe", "consensus", europe_weights, max_lead=168)
 
 
 if __name__ == "__main__":

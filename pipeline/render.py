@@ -103,7 +103,7 @@ def save_webp(data, layer, dst, quality=78):
     if np.isnan(data).any():
         rgba[..., 3] = np.where(np.isnan(data), 0, rgba[..., 3])
     ensure_dir(os.path.dirname(dst))
-    Image.fromarray(rgba, "RGBA").save(dst, format="WEBP", quality=quality, method=4)
+    Image.fromarray(rgba, "RGBA").save(dst, format="WEBP", quality=quality, method=0)
 
 
 # ── Sondes HKV1 (valeurs au survol) ─────────────────────────────────────────
