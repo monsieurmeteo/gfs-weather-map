@@ -2416,14 +2416,21 @@
                     if (modelSel2) modelSel2.value = modelKey;
                     renderStep(0);
                     updateUrl();
-                    if (typeof applyUrlParams === 'function') applyUrlParams();
+
                     if (pendingFocus && typeof focusLocation === 'function') {
                         focusLocation(pendingFocus);
                         pendingFocus = null;
-                    } else if (regSel && regSel.value && regSel.value !== 'france' && regSel.value !== 'europe') {
-                        var rcfg = REGION_CONFIG[regSel.value];
-                        if (rcfg && typeof focusLocation === 'function') {
-                            focusLocation({ latitude: rcfg.latitude, longitude: rcfg.longitude, scale: rcfg.scale });
+                    } else if (regSel) {
+                        var curVal = regSel.value;
+                        var rcfg = REGION_CONFIG[curVal];
+                        if (rcfg && rcfg.isFrance === isFranceOnly && typeof focusLocation === 'function') {
+                            if (rcfg.reset) {
+                                resetView();
+                            } else if (rcfg.latitude !== undefined) {
+                                focusLocation({ latitude: rcfg.latitude, longitude: rcfg.longitude, scale: rcfg.scale });
+                            }
+                        } else {
+                            resetView();
                         }
                     }
                 })
@@ -2443,28 +2450,33 @@
         var modelSelect = document.getElementById('select-model');
         if (modelSelect) {
             modelSelect.addEventListener('change', function(e) {
-                var v = e.target.value;
+                var nextModel = e.target.value;
+                var isNextFrance = (nextModel.indexOf('_france') !== -1);
+                var isCurrentFrance = (currentModel.indexOf('_france') !== -1);
                 var regSel = document.getElementById('select-region');
-                var activeRegion = regSel ? regSel.value : 'france';
-                
-                // Si l'internaute est sur une région spécifique (hdf, normandie, bretagne, idf...),
-                // on CONSERVE le zoom et la région lors du changement de modèle !
-                if (activeRegion && activeRegion !== 'france' && activeRegion !== 'europe') {
-                    var cfg = REGION_CONFIG[activeRegion];
-                    if (cfg) {
-                        pendingFocus = {
-                            latitude: cfg.latitude,
-                            longitude: cfg.longitude,
-                            scale: cfg.scale
-                        };
+
+                if (isNextFrance !== isCurrentFrance) {
+                    // Bascule de domaine (France <-> Europe) : reset immédiat et complet du cadrage
+                    pendingFocus = null;
+                    transform = { scale: 1, x: 0, y: 0 };
+                    if (regSel) {
+                        regSel.value = isNextFrance ? 'france' : 'europe';
                     }
                 } else {
-                    if (regSel) {
-                        regSel.value = (v.indexOf('_france') !== -1) ? 'france' : 'europe';
+                    // Même domaine : on conserve la région active
+                    var activeRegion = regSel ? regSel.value : '';
+                    if (activeRegion && activeRegion !== 'france' && activeRegion !== 'europe') {
+                        var cfg = REGION_CONFIG[activeRegion];
+                        if (cfg && cfg.latitude !== undefined) {
+                            pendingFocus = {
+                                latitude: cfg.latitude,
+                                longitude: cfg.longitude,
+                                scale: cfg.scale
+                            };
+                        }
                     }
-                    transform = { scale: 1, x: 0, y: 0 };
                 }
-                switchModel(v);
+                switchModel(nextModel);
             });
         }
 
