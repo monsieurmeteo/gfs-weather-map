@@ -2175,32 +2175,34 @@
             // Configuration identique au site AROME (domaine France) pour la
             // France et les régions ; pays/Europe sur le domaine Europe.
             var REGION_CONFIG = {
-                europe:     { model: 'gfs',        latitude: 49.0, longitude: 8.0, scale: 1.0 },
-                france:     { model: 'gfs_france', reset: true },
-                hdf:        { model: 'gfs_france', latitude: 49.85, longitude: 2.82, scale: 2.65 },
-                normandie:  { model: 'gfs_france', latitude: 48.95, longitude: -0.07, scale: 2.85 },
-                idf:        { model: 'gfs_france', latitude: 48.65, longitude: 2.50, scale: 4.20 },
-                grandest:   { model: 'gfs_france', latitude: 48.65, longitude: 5.80, scale: 2.25 },
-                bretagne:   { model: 'gfs_france', latitude: 48.00, longitude: -3.08, scale: 2.80 },
-                pdl:        { model: 'gfs_france', latitude: 47.30, longitude: -0.85, scale: 2.75 },
-                cvl:        { model: 'gfs_france', latitude: 47.45, longitude: 1.60, scale: 2.55 },
-                bfc:        { model: 'gfs_france', latitude: 47.10, longitude: 5.00, scale: 2.65 },
-                naq:        { model: 'gfs_france', latitude: 44.95, longitude: 0.40, scale: 1.85 },
-                ara:        { model: 'gfs_france', latitude: 45.30, longitude: 4.65, scale: 2.25 },
-                occitanie:  { model: 'gfs_france', latitude: 43.50, longitude: 2.25, scale: 2.25 },
-                paca:       { model: 'gfs_france', latitude: 43.85, longitude: 6.00, scale: 2.85 },
-                corse:      { model: 'gfs_france', latitude: 42.10, longitude: 9.05, scale: 4.20 },
-                belgique:   { model: 'gfs_france', latitude: 50.25, longitude: 4.40, scale: 3.10 },
-                uk:         { model: 'gfs',        latitude: 54.2, longitude: -2.8, scale: 2.8 },
-                allemagne:  { model: 'gfs',        latitude: 51.3, longitude: 10.5, scale: 2.8 },
-                espagne:    { model: 'gfs',        latitude: 40.2, longitude: -3.8, scale: 2.6 },
-                italie:     { model: 'gfs',        latitude: 42.6, longitude: 12.6, scale: 2.8 }
+                europe:     { model: 'consensus',        latitude: 49.0, longitude: 8.0, scale: 1.0 },
+                france:     { model: 'consensus_france', reset: true },
+                hdf:        { model: 'consensus_france', latitude: 49.85, longitude: 2.82, scale: 2.65 },
+                normandie:  { model: 'consensus_france', latitude: 48.95, longitude: -0.07, scale: 2.85 },
+                idf:        { model: 'consensus_france', latitude: 48.65, longitude: 2.50, scale: 4.20 },
+                grandest:   { model: 'consensus_france', latitude: 48.65, longitude: 5.80, scale: 2.25 },
+                bretagne:   { model: 'consensus_france', latitude: 48.00, longitude: -3.08, scale: 2.80 },
+                pdl:        { model: 'consensus_france', latitude: 47.30, longitude: -0.85, scale: 2.75 },
+                cvl:        { model: 'consensus_france', latitude: 47.45, longitude: 1.60, scale: 2.55 },
+                bfc:        { model: 'consensus_france', latitude: 47.10, longitude: 5.00, scale: 2.65 },
+                naq:        { model: 'consensus_france', latitude: 44.95, longitude: 0.40, scale: 1.85 },
+                ara:        { model: 'consensus_france', latitude: 45.30, longitude: 4.65, scale: 2.25 },
+                occitanie:  { model: 'consensus_france', latitude: 43.50, longitude: 2.25, scale: 2.25 },
+                paca:       { model: 'consensus_france', latitude: 43.85, longitude: 6.00, scale: 2.85 },
+                corse:      { model: 'consensus_france', latitude: 42.10, longitude: 9.05, scale: 4.20 },
+                belgique:   { model: 'consensus_france', latitude: 50.25, longitude: 4.40, scale: 3.10 },
+                uk:         { model: 'consensus',        latitude: 54.2, longitude: -2.8, scale: 2.8 },
+                allemagne:  { model: 'consensus',        latitude: 51.3, longitude: 10.5, scale: 2.8 },
+                espagne:    { model: 'consensus',        latitude: 40.2, longitude: -3.8, scale: 2.6 },
+                italie:     { model: 'consensus',        latitude: 42.6, longitude: 12.6, scale: 2.8 }
             };
 
             regionSelect.addEventListener('change', function (e) {
                 var val = e.target.value || 'europe';
                 // Familles de modèles : variante Europe et variante France par modèle
                 var MODEL_FAMILY = {
+                    consensus: { eu: 'consensus', fr: 'consensus_france' },
+                    consensus_france: { eu: 'consensus', fr: 'consensus_france' },
                     gfs: { eu: 'gfs', fr: 'gfs_france' },
                     gfs_france: { eu: 'gfs', fr: 'gfs_france' },
                     arpege: { eu: 'arpege', fr: 'arpege_france' },

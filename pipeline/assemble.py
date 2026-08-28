@@ -137,6 +137,22 @@ def main():
         "provider": "ECMWF — open data (data.ecmwf.int)",
         "resolution": "0.25° (~25 km)",
     })
+    try:
+        import consensus_blend
+        consensus_blend.main()
+    except Exception as e:
+        print("[assemble] Note : consensus_blend non exécuté : %s" % e, flush=True)
+
+    assemble_model("consensus_france", FRANCE, {
+        "model_name": "🌟 CONSENSUS France HD",
+        "provider": "Météo-Climat Pro — Multi-Model Blend (ARPEGE + ICON + GFS + AIFS)",
+        "resolution": "Multi-Résolution HD (Grille 2200×1640)",
+    })
+    assemble_model("consensus", EUROPE, {
+        "model_name": "🌟 CONSENSUS Europe",
+        "provider": "Météo-Climat Pro — Multi-Model Blend (AIFS + ICON + GFS + ARPEGE)",
+        "resolution": "Multi-Résolution HD (Grille 2200×1640)",
+    })
     print("[assemble] Assemblage terminé avec succès.", flush=True)
 
 
