@@ -2628,16 +2628,17 @@
                 'uniform float uHasMask;\n' +
                 'uniform float uHasFond;\n' +
                 'void main(){\n' +
+                ' vec3 frame=vec3(0.043,0.055,0.086);\n' +
+                ' if(uRect.z<=0.0||uRect.w<=0.0){gl_FragColor=vec4(frame,1.0);return;}\n' +
                 ' vec2 uv=(vUv*uViewport-uRect.xy)/uRect.zw;\n' +
-                ' vec2 uvClamped=clamp(uv,0.0,1.0);\n' +
-                ' vec3 base=vec3(0.043,0.055,0.086);\n' +
-                ' if(uHasFond>0.5){\n' +
-                '  base=texture2D(uFond,uvClamped).rgb;\n' +
-                ' } else if(uHasMask>0.5){\n' +
-                '  base=mix(vec3(0.6471,0.6510,0.6902),vec3(0.76,0.78,0.81),texture2D(uMask,uvClamped).r);\n' +
-                ' }\n' +
                 ' if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){\n' +
-                '  gl_FragColor=vec4(base,1.0);return;\n' +
+                '  gl_FragColor=vec4(frame,1.0);return;\n' +
+                ' }\n' +
+                ' vec3 base=frame;\n' +
+                ' if(uHasFond>0.5){\n' +
+                '  base=texture2D(uFond,uv).rgb;\n' +
+                ' } else if(uHasMask>0.5){\n' +
+                '  base=mix(vec3(0.6471,0.6510,0.6902),vec3(0.76,0.78,0.81),texture2D(uMask,uv).r);\n' +
                 ' }\n' +
                 ' if(uHasWeather<0.5){\n' +
                 '  gl_FragColor=vec4(base,1.0);return;\n' +
@@ -2982,7 +2983,7 @@
             var isEurope = isEuropeDomain();
 
             if (isEurope) {
-                var scale = Math.min(width / 2200.0, height / 1640.0) * t.scale;
+                var scale = Math.max(width / 2200.0, height / 1640.0) * t.scale;
                 return {
                     x: width / 2 + t.x - 1100.0 * scale,
                     y: height / 2 + t.y - 820.0 * scale,
