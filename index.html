@@ -1156,7 +1156,7 @@
          data-base-url="output/arpege_france"
          data-model="arpege_france"
          data-logo="logo.png"
-         data-variable="geopotentiel_500"
+         data-variable="temperature"
          data-timezone="Europe/Paris"
          data-animation="1">
         
@@ -1193,12 +1193,12 @@
                     <!-- Sélecteur direct de Calque Météo -->
                     <select id="direct-layer-select" class="amfm-select-layer" aria-label="Sélection du paramètre météorologique">
                         <optgroup label="🗺️ Synoptique & Altitude">
-                            <option value="geopotentiel_500" selected>🗺️ Géop. Z500 & Pression au sol (dam/hPa)</option>
+                            <option value="geopotentiel_500">🗺️ Géop. Z500 & Pression au sol (dam/hPa)</option>
                             <option value="temperature_850">🌡️ Température à 850 hPa (~1 500 m)</option>
                             <option value="pression">🧭 Pression niveau mer (hPa)</option>
                         </optgroup>
                         <optgroup label="🌡️ Températures">
-                            <option value="temperature">🌡️ Température à 2 m (°C)</option>
+                            <option value="temperature" selected>🌡️ Température à 2 m (°C)</option>
                             <option value="temperature_min_24h">❄️ Température minimale Tn (24h)</option>
                             <option value="temperature_max_24h">☀️ Température maximale Tx (24h)</option>
                             <option value="temperature_ressentie">❄️ Température ressentie (°C)</option>
