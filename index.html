@@ -1,4 +1,4 @@
-﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -1684,7 +1684,9 @@
         }
     };
     var KEY = "amfm_logo_pref";
-    var current = localStorage.getItem(KEY) || "mcp";
+    // Nettoyage de l'ancienne valeur forcée pour toujours démarrer sur Météo-Climat Pro
+    localStorage.removeItem(KEY);
+    var current = "mcp"; // Toujours Météo-Climat Pro par défaut
 
     function applyLogo(key) {
         var cfg = LOGOS[key] || LOGOS.mcp;
