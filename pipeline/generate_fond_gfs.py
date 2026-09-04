@@ -142,10 +142,13 @@ def generate(domain):
         geom = feat.get("geometry")
         if not geom:
             continue
-        france_shapes.append(shapely.geometry.shape(geom))
+        s = shapely.geometry.shape(geom)
+        if not s.intersects(bounds_box):
+            continue
+        france_shapes.append(s)
         depts_d.append(polygon_path(iter_rings(geom), dom))
-    france_union = unary_union(france_shapes)
-    france_mask = france_union.buffer(0.015)
+    france_union = unary_union(france_shapes) if france_shapes else shapely.geometry.Polygon()
+    france_mask = france_union.buffer(0.015) if not france_union.is_empty else shapely.geometry.Polygon()
 
     def extract_lines(collection):
         out = []
