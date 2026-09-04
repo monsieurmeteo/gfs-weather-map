@@ -1,4 +1,4 @@
-﻿﻿(function () {
+(function () {
     'use strict';
 
     function whenReady(callback) {
@@ -2220,7 +2220,9 @@
                 uk:         { isFrance: false, latitude: 54.2, longitude: -2.8, scale: 2.8 },
                 allemagne:  { isFrance: false, latitude: 51.3, longitude: 10.5, scale: 2.8 },
                 espagne:    { isFrance: false, latitude: 40.2, longitude: -3.8, scale: 2.6 },
-                italie:     { isFrance: false, latitude: 42.6, longitude: 12.6, scale: 2.8 }
+                italie:     { isFrance: false, latitude: 42.6, longitude: 12.6, scale: 2.8 },
+                antilles:   { isFrance: false, latitude: 16.5, longitude: -62.0, scale: 1.8 },
+                etats_unis: { isFrance: false, latitude: 38.5, longitude: -96.0, scale: 1.0 }
             };
 
             var MODEL_FAMILY = {
@@ -2413,14 +2415,16 @@
                     if (regSel) {
                         var grpFr = regSel.querySelector('#optgroup-fr');
                         var grpEu = regSel.querySelector('#optgroup-eu');
+                        var grpWorld = regSel.querySelector('#optgroup-world');
                         if (grpFr) { grpFr.hidden = !isFranceOnly; grpFr.style.display = isFranceOnly ? '' : 'none'; }
                         if (grpEu) { grpEu.hidden = isFranceOnly; grpEu.style.display = isFranceOnly ? 'none' : ''; }
+                        if (grpWorld) { grpWorld.hidden = isFranceOnly; grpWorld.style.display = isFranceOnly ? 'none' : ''; }
                         // Filtrage intelligent : montrer uniquement les options pertinentes
                         var allOpts = regSel.querySelectorAll('option');
                         for (var oi = 0; oi < allOpts.length; oi++) {
                             var opt = allOpts[oi];
                             if (isFranceOnly) {
-                                opt.hidden = opt.classList.contains('opt-eu');
+                                opt.hidden = opt.classList.contains('opt-eu') || opt.classList.contains('opt-world');
                             } else {
                                 opt.hidden = opt.classList.contains('opt-fr');
                             }
@@ -4182,11 +4186,13 @@
                     var isFr = (currentModel.indexOf('_france') !== -1);
                     var grpFr = regSel.querySelector('#optgroup-fr');
                     var grpEu = regSel.querySelector('#optgroup-eu');
+                    var grpWorld = regSel.querySelector('#optgroup-world');
                     if (grpFr) { grpFr.hidden = !isFr; grpFr.style.display = isFr ? '' : 'none'; }
                     if (grpEu) { grpEu.hidden = isFr; grpEu.style.display = isFr ? 'none' : ''; }
+                    if (grpWorld) { grpWorld.hidden = isFr; grpWorld.style.display = isFr ? 'none' : ''; }
                     var allOpts = regSel.querySelectorAll('option');
                     for (var oi = 0; oi < allOpts.length; oi++) {
-                        allOpts[oi].hidden = isFr ? allOpts[oi].classList.contains('opt-eu') : allOpts[oi].classList.contains('opt-fr');
+                        allOpts[oi].hidden = isFr ? (allOpts[oi].classList.contains('opt-eu') || allOpts[oi].classList.contains('opt-world')) : allOpts[oi].classList.contains('opt-fr');
                     }
                 }
                 renderStep(currentStep);
