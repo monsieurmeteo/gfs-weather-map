@@ -68,11 +68,13 @@ jobs:
           echo "max_hours=$MAX_HOURS" >> "$GITHUB_OUTPUT"
           echo "models=$MODELS"       >> "$GITHUB_OUTPUT"
 
-      - name: Générer les fonds (Europe + France)
+      - name: Générer les fonds (Europe + France + Antilles + États-Unis)
         if: steps.vars.outputs.mode != 'front'
         run: |
           python -u pipeline/generate_fond_gfs.py --domain europe
           python -u pipeline/generate_fond_gfs.py --domain france
+          python -u pipeline/generate_fond_gfs.py --domain antilles
+          python -u pipeline/generate_fond_gfs.py --domain etats_unis
 
       - name: Upload fonds (artefact partagé)
         if: steps.vars.outputs.mode != 'front'
@@ -202,6 +204,64 @@ jobs:
             lead_min: 73
             lead_max: 102
 
+          # ── GFS Arc Antillais (3 groupes) ───────────────────────────────────
+          - id: gfs-ant-00-072
+            model: gfs
+            domain: antilles
+            lead_min: 0
+            lead_max: 72
+          - id: gfs-ant-075-168
+            model: gfs
+            domain: antilles
+            lead_min: 75
+            lead_max: 168
+          - id: gfs-ant-171-384
+            model: gfs
+            domain: antilles
+            lead_min: 171
+            lead_max: 384
+
+          # ── GFS États-Unis (3 groupes) ──────────────────────────────────────
+          - id: gfs-usa-00-072
+            model: gfs
+            domain: etats_unis
+            lead_min: 0
+            lead_max: 72
+          - id: gfs-usa-075-168
+            model: gfs
+            domain: etats_unis
+            lead_min: 75
+            lead_max: 168
+          - id: gfs-usa-171-384
+            model: gfs
+            domain: etats_unis
+            lead_min: 171
+            lead_max: 384
+
+          # ── AIFS Arc Antillais (2 groupes, max 240 h) ───────────────────────
+          - id: aifs-ant-00-120
+            model: aifs
+            domain: antilles
+            lead_min: 0
+            lead_max: 120
+          - id: aifs-ant-126-240
+            model: aifs
+            domain: antilles
+            lead_min: 126
+            lead_max: 240
+
+          # ── AIFS États-Unis (2 groupes, max 240 h) ──────────────────────────
+          - id: aifs-usa-00-120
+            model: aifs
+            domain: etats_unis
+            lead_min: 0
+            lead_max: 120
+          - id: aifs-usa-126-240
+            model: aifs
+            domain: etats_unis
+            lead_min: 126
+            lead_max: 240
+
     steps:
       - uses: actions/checkout@v4
 
@@ -300,8 +360,10 @@ jobs:
         run: |
           # La base restaurée contient d'anciennes dalles du modèle en cours :
           # on les purge pour que la fusion des chunks les remplace à 100%.
-          rm -rf output/gfs output/gfs_france output/arpege output/arpege_france
-          echo "Répertoires GFS/ARPEGE purgés (seront recréés par les chunks)"
+          rm -rf output/gfs output/gfs_france output/gfs_antilles output/gfs_etats_unis \
+                 output/arpege output/arpege_france \
+                 output/aifs output/aifs_france output/aifs_antilles output/aifs_etats_unis
+          echo "Répertoires GFS/ARPEGE/AIFS purgés (seront recréés par les chunks)"
 
       - name: Téléchargement de TOUS les chunks (fusion automatique)
         uses: actions/download-artifact@v4
@@ -315,6 +377,8 @@ jobs:
         run: |
           python -u pipeline/generate_fond_gfs.py --domain europe
           python -u pipeline/generate_fond_gfs.py --domain france
+          python -u pipeline/generate_fond_gfs.py --domain antilles
+          python -u pipeline/generate_fond_gfs.py --domain etats_unis
       - name: Assemblage des manifests index.json
         run: python -u pipeline/assemble.py
 
