@@ -1,0 +1,45 @@
+{
+  "generated_at": "2026-09-04T22:04:21.361459+00:00",
+  "total_active": 3,
+  "storms": [
+    {
+      "id": "ep132026",
+      "name": "HU Marie",
+      "category": "Ouragan Catégorie 1",
+      "wind_kmh": 137,
+      "pressure_hpa": 972,
+      "lat": 20.2,
+      "lon": -118.6,
+      "basin": "pacifique_est",
+      "movement": "285° à 13 km/h",
+      "source": "NOAA / NHC",
+      "updated_at": "2026-09-04T21:00:00.000Z"
+    },
+    {
+      "id": "ep122026",
+      "name": "HU Lowell",
+      "category": "Ouragan Catégorie 4 (Majeur)",
+      "wind_kmh": 209,
+      "pressure_hpa": 926,
+      "lat": 13.2,
+      "lon": -160.7,
+      "basin": "pacifique_est",
+      "movement": "255° à 11 km/h",
+      "source": "NOAA / NHC",
+      "updated_at": "2026-09-04T21:00:00.000Z"
+    },
+    {
+      "id": "ep112026",
+      "name": "HU Karina",
+      "category": "Ouragan Catégorie 1",
+      "wind_kmh": 121,
+      "pressure_hpa": 978,
+      "lat": 20.6,
+      "lon": -141.1,
+      "basin": "pacifique_est",
+      "movement": "280° à 16 km/h",
+      "source": "NOAA / NHC",
+      "updated_at": "2026-09-04T21:00:00.000Z"
+    }
+  ]
+}
