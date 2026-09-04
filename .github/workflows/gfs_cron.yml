@@ -75,6 +75,7 @@ jobs:
           python -u pipeline/generate_fond_gfs.py --domain france
           python -u pipeline/generate_fond_gfs.py --domain antilles
           python -u pipeline/generate_fond_gfs.py --domain etats_unis
+          python -u pipeline/generate_fond_gfs.py --domain ocean_indien
 
       - name: Upload fonds (artefact partagé)
         if: steps.vars.outputs.mode != 'front'
@@ -385,6 +386,7 @@ jobs:
           python -u pipeline/generate_fond_gfs.py --domain france
           python -u pipeline/generate_fond_gfs.py --domain antilles
           python -u pipeline/generate_fond_gfs.py --domain etats_unis
+          python -u pipeline/generate_fond_gfs.py --domain ocean_indien
       - name: Assemblage des manifests index.json
         run: python -u pipeline/assemble.py
 
