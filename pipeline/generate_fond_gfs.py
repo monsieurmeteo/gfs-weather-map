@@ -84,6 +84,16 @@ def generate(domain):
             os.path.join(BASE_DIR, "output", m, "maps")
             for m in ("gfs", "arpege", "aifs", "icon_eu")
         ]
+    elif domain == "antilles":
+        out_dirs = [
+            os.path.join(BASE_DIR, "output", m, "maps")
+            for m in ("gfs_antilles", "aifs_antilles")
+        ]
+    elif domain == "etats_unis":
+        out_dirs = [
+            os.path.join(BASE_DIR, "output", m, "maps")
+            for m in ("gfs_etats_unis", "aifs_etats_unis")
+        ]
     else:
         out_dirs = [
             os.path.join(BASE_DIR, "output", m, "maps")
