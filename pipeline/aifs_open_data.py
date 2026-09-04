@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 aifs_open_data.py — Pipeline ECMWF AIFS 0.25° (modèle IA, open data)
@@ -424,6 +424,29 @@ def render_domain(all_fields, run_dt, domain, out_dir, model_label, resolution,
     return n_ok
 
 
+def warmup_domain(run_dt, prior_leads, dom_obj):
+    state_warm = {"max_gust": None, "cum_precip": None}
+    for lh in prior_leads:
+        try:
+            f = collect_lead(run_dt, lh)
+            gust = f.get("GUST")
+            apcp = f.get("APCP")
+            if gust is not None:
+                val, lat, lon = gust
+                g = dom_obj.regrid(val * 3.6, lat, lon)
+                if g is not None:
+                    state_warm["max_gust"] = (g if state_warm["max_gust"] is None
+                                              else np.maximum(state_warm["max_gust"], g))
+            if apcp is not None:
+                val, lat, lon = apcp
+                a = dom_obj.regrid(val, lat, lon)
+                if a is not None:
+                    state_warm["cum_precip"] = a
+        except Exception as e:
+            log("  échauffement H+%03d ignoré (%s)" % (lh, e))
+    return state_warm
+
+
 def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
     max_lead = max(3, min(int(max_hours), MAX_LEAD))
     run_dt = latest_run()
@@ -435,27 +458,7 @@ def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
         log("Aucune échéance dans l'intervalle [%s, %s]" % (lead_min, lead_max))
         return
 
-    # Échauffement cumulatif : échéances antérieures (rafales + pluie)
-    state_warm = {"max_gust": None, "cum_precip": None}
     prior = [lh for lh in all_leads if lh < lead_min]
-    for lh in prior:
-        try:
-            f = collect_lead(run_dt, lh)
-            gust = f.get("GUST")
-            apcp = f.get("APCP")
-            if gust is not None:
-                val, lat, lon = gust
-                g = EUROPE.regrid(val * 3.6, lat, lon)
-                if g is not None:
-                    state_warm["max_gust"] = (g if state_warm["max_gust"] is None
-                                              else np.maximum(state_warm["max_gust"], g))
-            if apcp is not None:
-                val, lat, lon = apcp
-                a = EUROPE.regrid(val, lat, lon)
-                if a is not None:
-                    state_warm["cum_precip"] = a
-        except Exception as e:
-            log("  échauffement H+%03d ignoré (%s)" % (lh, e))
 
     all_fields = {}
     for lh in chunk_leads:
@@ -471,26 +474,26 @@ def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
                       os.path.join(base, "aifs", "maps"),
                       "ECMWF AIFS 0.25° Europe", "0.25° (~25 km)",
                       lead_min=lead_min, lead_max=lead_max,
-                      init_state=state_warm)
+                      init_state=warmup_domain(run_dt, prior, EUROPE) if prior else None)
     if domain in ("both", "france"):
         render_domain(all_fields, run_dt, FRANCE,
                       os.path.join(base, "aifs_france", "maps"),
                       "ECMWF AIFS 0.25° France", "0.25° (~25 km)",
                       lead_min=lead_min, lead_max=lead_max,
-                      init_state=state_warm)
+                      init_state=warmup_domain(run_dt, prior, FRANCE) if prior else None)
     # ── domaines mondiaux (ajout pur, sans modifier europe/france) ───────────
     if domain in ("world", "antilles"):
         render_domain(all_fields, run_dt, ANTILLES,
                       os.path.join(base, "aifs_antilles", "maps"),
                       "ECMWF AIFS 0.25° Arc Antillais", "0.25° (~25 km)",
                       lead_min=lead_min, lead_max=lead_max,
-                      init_state=state_warm)
+                      init_state=warmup_domain(run_dt, prior, ANTILLES) if prior else None)
     if domain in ("world", "etats_unis"):
         render_domain(all_fields, run_dt, ETATS_UNIS,
                       os.path.join(base, "aifs_etats_unis", "maps"),
                       "ECMWF AIFS 0.25° États-Unis", "0.25° (~25 km)",
                       lead_min=lead_min, lead_max=lead_max,
-                      init_state=state_warm)
+                      init_state=warmup_domain(run_dt, prior, ETATS_UNIS) if prior else None)
     print("[AIFS] Pipeline terminé avec succès.", flush=True)
 
 
