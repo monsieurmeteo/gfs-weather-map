@@ -4297,9 +4297,15 @@
                         var s = data.storms[i];
                         var pill = document.createElement('button');
                         pill.type = 'button';
-                        pill.className = 'cyclone-pill';
-                        pill.innerHTML = '🌀 <strong>' + s.name + '</strong> (' + s.category + ' • ' + s.wind_kmh + ' km/h)';
-                        pill.title = 'Cliquer pour centrer la carte sur ' + s.name + ' (Bassin ' + s.basin + ')';
+                        var isInvest = (s.type === 'invest');
+                        pill.className = isInvest ? 'cyclone-pill cyclone-pill-invest' : 'cyclone-pill';
+                        if (isInvest) {
+                            pill.innerHTML = '🟡 <strong>' + s.name + '</strong> (' + (s.probability || 'En surveillance') + ')';
+                            pill.title = 'Surveillance INVEST : ' + s.name + ' — ' + (s.probability || '') + ' (Bassin ' + s.basin + ')';
+                        } else {
+                            pill.innerHTML = '🔴 <strong>' + s.name + '</strong> (' + s.category + ' • ' + s.wind_kmh + ' km/h)';
+                            pill.title = 'Cyclone Actif : ' + s.name + ' — ' + s.category + ' (Bassin ' + s.basin + ')';
+                        }
                         (function(storm) {
                             pill.addEventListener('click', function(e) {
                                 e.preventDefault();
@@ -4332,7 +4338,11 @@
 
             // 2) Notification & recentrage
             if (typeof setToolHint === 'function') {
-                setToolHint('Centrage sur ' + storm.name + ' (' + storm.category + ' - ' + storm.wind_kmh + ' km/h, ' + storm.pressure_hpa + ' hPa)');
+                if (storm.type === 'invest') {
+                    setToolHint('🟡 Surveillance INVEST : ' + storm.name + ' (' + (storm.probability || '') + ') — Bassin ' + storm.basin);
+                } else {
+                    setToolHint('🔴 Cyclone Actif : ' + storm.name + ' (' + storm.category + ' - ' + storm.wind_kmh + ' km/h, ' + storm.pressure_hpa + ' hPa)');
+                }
             }
         }
 
