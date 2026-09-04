@@ -624,18 +624,6 @@
     127.681
   ],
   [
-    "Tokyo (Japon)",
-    14000000,
-    35.676,
-    139.65
-  ],
-  [
-    "Hong Kong",
-    7400000,
-    22.319,
-    114.169
-  ],
-  [
     "Haikou (Hainan)",
     2800000,
     20.044,
@@ -792,201 +780,219 @@
     79.861
   ],
   [
-    "Montréal (Canada)",
+    "Montréal",
     1780000,
     45.5017,
     -73.5673
   ],
   [
-    "Toronto (Canada)",
+    "Toronto",
     2790000,
     43.6532,
     -79.3832
   ],
   [
-    "Vancouver (Canada)",
+    "Vancouver",
     675000,
     49.2827,
     -123.1207
   ],
   [
-    "Calgary (Canada)",
+    "Calgary",
     1300000,
     51.0447,
     -114.0719
   ],
   [
-    "Ottawa (Canada)",
+    "Ottawa",
     1010000,
     45.4215,
     -75.6972
   ],
   [
-    "Québec (Canada)",
+    "Québec",
     549000,
     46.8139,
     -71.208
   ],
   [
-    "Edmonton (Canada)",
+    "Edmonton",
     1010000,
     53.5461,
     -113.4938
   ],
   [
-    "Winnipeg (Canada)",
+    "Winnipeg",
     749000,
     49.8951,
     -97.1384
   ],
   [
-    "Halifax (Canada)",
+    "Halifax",
     440000,
     44.6488,
     -63.5752
   ],
   [
-    "Osaka (Japon)",
+    "Tokyo",
+    14000000,
+    35.6762,
+    139.6503
+  ],
+  [
+    "Osaka",
     2750000,
     34.6937,
     135.5023
   ],
   [
-    "Kyoto (Japon)",
+    "Kyoto",
     1460000,
     35.0116,
     135.7681
   ],
   [
-    "Sapporo (Hokkaido)",
+    "Sapporo",
     1970000,
     43.0618,
     141.3545
   ],
   [
-    "Nagoya (Japon)",
+    "Nagoya",
     2320000,
     35.1815,
     136.9066
   ],
   [
-    "Fukuoka (Japon)",
+    "Fukuoka",
     1610000,
     33.5904,
     130.4017
   ],
   [
-    "Hiroshima (Japon)",
+    "Hiroshima",
     1200000,
     34.3853,
     132.4553
   ],
   [
-    "Sendai (Japon)",
+    "Sendai",
     1090000,
     38.2682,
     140.8694
   ],
   [
-    "Pékin / Beijing (Chine)",
+    "Okinawa",
+    320000,
+    26.2124,
+    127.6809
+  ],
+  [
+    "Pékin",
     21500000,
     39.9042,
     116.4074
   ],
   [
-    "Shanghai (Chine)",
+    "Shanghai",
     24870000,
     31.2304,
     121.4737
   ],
   [
-    "Canton / Guangzhou (Chine)",
+    "Hong Kong",
+    7500000,
+    22.3193,
+    114.1694
+  ],
+  [
+    "Canton",
     18670000,
     23.1291,
     113.2644
   ],
   [
-    "Shenzhen (Chine)",
-    1756000,
+    "Shenzhen",
+    17560000,
     22.5431,
     114.0579
   ],
   [
-    "Wuhan (Chine)",
+    "Wuhan",
     11000000,
     30.5928,
     114.3055
   ],
   [
-    "Chengdu (Chine)",
+    "Chengdu",
     16000000,
     30.5728,
     104.0668
   ],
   [
-    "Xi'an (Chine)",
+    "Xi'an",
     12950000,
     34.3416,
     108.9398
   ],
   [
-    "Tianjin (Chine)",
-    13860000,
-    39.3434,
-    117.3616
-  ],
-  [
-    "Séoul (Corée du Sud)",
+    "Séoul",
     9770000,
     37.5665,
     126.978
   ],
   [
-    "Busan (Corée du Sud)",
+    "Busan",
     3440000,
     35.1796,
     129.0756
   ],
   [
-    "Incheon (Corée du Sud)",
+    "Incheon",
     2950000,
     37.4563,
     126.7052
   ],
   [
-    "Daegu (Corée du Sud)",
+    "Daegu",
     2430000,
     35.8714,
     128.6014
   ],
   [
-    "New Delhi (Inde)",
+    "New Delhi",
     16780000,
     28.6139,
     77.209
   ],
   [
-    "Bengaluru / Bangalore (Inde)",
+    "Mumbai",
+    12480000,
+    19.076,
+    72.8777
+  ],
+  [
+    "Bangalore",
     8440000,
     12.9716,
     77.5946
   ],
   [
-    "Chennai (Inde)",
+    "Chennai",
     7080000,
     13.0827,
     80.2707
   ],
   [
-    "Hyderabad (Inde)",
+    "Kolkata",
+    4496000,
+    22.5726,
+    88.3639
+  ],
+  [
+    "Hyderabad",
     6800000,
     17.385,
     78.4867
-  ],
-  [
-    "Ahmedabad (Inde)",
-    5570000,
-    23.0225,
-    72.5714
   ]
 ]
