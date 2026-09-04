@@ -23,7 +23,7 @@ import numpy as np
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
-from domains import EUROPE, FRANCE  # noqa: E402
+from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS  # noqa: E402
 from render import (  # noqa: E402
     save_webp, write_hkv, write_places, write_manifest,
     render_z500_with_isobars, render_pression_with_isobars,
@@ -478,6 +478,19 @@ def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
                       "ECMWF AIFS 0.25° France", "0.25° (~25 km)",
                       lead_min=lead_min, lead_max=lead_max,
                       init_state=state_warm)
+    # ── domaines mondiaux (ajout pur, sans modifier europe/france) ───────────
+    if domain in ("world", "antilles"):
+        render_domain(all_fields, run_dt, ANTILLES,
+                      os.path.join(base, "aifs_antilles", "maps"),
+                      "ECMWF AIFS 0.25° Arc Antillais", "0.25° (~25 km)",
+                      lead_min=lead_min, lead_max=lead_max,
+                      init_state=state_warm)
+    if domain in ("world", "etats_unis"):
+        render_domain(all_fields, run_dt, ETATS_UNIS,
+                      os.path.join(base, "aifs_etats_unis", "maps"),
+                      "ECMWF AIFS 0.25° États-Unis", "0.25° (~25 km)",
+                      lead_min=lead_min, lead_max=lead_max,
+                      init_state=state_warm)
     print("[AIFS] Pipeline terminé avec succès.", flush=True)
 
 
@@ -486,7 +499,8 @@ def main():
     ap = argparse.ArgumentParser(description="Pipeline ECMWF AIFS 0.25°")
     ap.add_argument("--max-hours", type=int, default=MAX_LEAD,
                     help="Échéance max en heures (défaut 360)")
-    ap.add_argument("--domain", choices=["both", "europe", "france"],
+    ap.add_argument("--domain", choices=["both", "europe", "france",
+                                          "antilles", "etats_unis", "world"],
                     default="europe", help="Domaine(s) à générer")
     ap.add_argument("--lead-min", type=int, default=0)
     ap.add_argument("--lead-max", type=int, default=None)
