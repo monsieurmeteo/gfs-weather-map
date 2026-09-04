@@ -31,9 +31,9 @@ DOMAINS = {
     # ── Domaines mondiaux (GFS / ECMWF AIFS uniquement) ─────────────────────
     "antilles": {
         "projection": "mercator",
-        "south": 8.0, "west": -88.0, "north": 28.0, "east": -55.0,
+        "south": 7.0, "west": -75.0, "north": 32.0, "east": -30.0,
         "width": 2200, "height": 1320,
-        "label": "Arc Antillais & Caraïbes",
+        "label": "Arc Antillais & Atlantique Tropical",
     },
     "etats_unis": {
         "projection": "mercator",
