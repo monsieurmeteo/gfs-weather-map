@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")  # bruit cfgrib/xarray dans les logs CI
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
-from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS, OCEAN_INDIEN  # noqa: E402
+from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS, OCEAN_INDIEN, PACIFIQUE_OUEST, PACIFIQUE_SUD, PACIFIQUE_EST, OCEAN_INDIEN_NORD  # noqa: E402
 from render import (  # noqa: E402
     LAYER_ORDER, save_webp, write_hkv, write_places, write_manifest,
     render_z500_with_isobars, render_pression_with_isobars,
@@ -513,7 +513,7 @@ def main():
     ap.add_argument("--max-hours", type=int, default=384,
                     help="Échéance max GFS en heures (24-384, défaut 384)")
     ap.add_argument("--domain", choices=["both", "europe", "france",
-                                          "antilles", "etats_unis", "ocean_indien", "world"],
+                                          "antilles", "etats_unis", "ocean_indien", "pacifique_ouest", "pacifique_sud", "pacifique_est", "ocean_indien_nord", "cyclones", "world"],
                     default="both",
                     help="Domaine à générer : both (défaut), europe, france, antilles, etats_unis, world")
     ap.add_argument("--lead-min", type=int, default=0,
