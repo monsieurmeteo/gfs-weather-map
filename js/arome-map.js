@@ -4272,3 +4272,73 @@
         document.querySelectorAll('[data-amfm-app]').forEach(initMap);
     });
 }());
+
+
+        // ────────────────────────────────────────────────────────────────────
+        // 🌀 TRACKER TEMPS RÉEL DES CYCLONES & TYPHONS MONDIAUX (NHC & JTWC)
+        // ────────────────────────────────────────────────────────────────────
+        var activeCyclonesData = [];
+
+        function initCycloneTracker() {
+            var bar = document.getElementById('cyclone-alert-bar');
+            var container = document.getElementById('cyclone-items');
+            if (!bar || !container) return;
+
+            fetch('cyclones_actifs.json?t=' + Date.now())
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(data) {
+                    if (!data || !data.storms || data.storms.length === 0) {
+                        bar.style.display = 'none';
+                        return;
+                    }
+                    activeCyclonesData = data.storms;
+                    container.innerHTML = '';
+                    for (var i = 0; i < data.storms.length; i++) {
+                        var s = data.storms[i];
+                        var pill = document.createElement('button');
+                        pill.type = 'button';
+                        pill.className = 'cyclone-pill';
+                        pill.innerHTML = '🌀 <strong>' + s.name + '</strong> (' + s.category + ' • ' + s.wind_kmh + ' km/h)';
+                        pill.title = 'Cliquer pour centrer la carte sur ' + s.name + ' (Bassin ' + s.basin + ')';
+                        (function(storm) {
+                            pill.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                focusOnCyclone(storm);
+                            });
+                        })(s);
+                        container.appendChild(pill);
+                    }
+                    bar.style.display = 'flex';
+                })
+                .catch(function(err) {
+                    console.warn('Cyclone Tracker :', err);
+                });
+        }
+
+        function focusOnCyclone(storm) {
+            if (!storm) return;
+            // 1) Si le modèle actuel n'est pas sur ce bassin, on bascule dessus
+            var targetModel = 'gfs_' + storm.basin;
+            var selectModel = document.getElementById('select-model');
+            if (selectModel && currentModel !== targetModel && currentModel !== 'aifs_' + storm.basin) {
+                for (var i = 0; i < selectModel.options.length; i++) {
+                    if (selectModel.options[i].value === targetModel) {
+                        selectModel.value = targetModel;
+                        selectModel.dispatchEvent(new Event('change'));
+                        break;
+                    }
+                }
+            }
+
+            // 2) Notification & recentrage
+            if (typeof setToolHint === 'function') {
+                setToolHint('Centrage sur ' + storm.name + ' (' + storm.category + ' - ' + storm.wind_kmh + ' km/h, ' + storm.pressure_hpa + ' hPa)');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            initCycloneTracker();
+        });
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            initCycloneTracker();
+        }
