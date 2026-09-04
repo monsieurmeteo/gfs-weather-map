@@ -18,7 +18,7 @@ import datetime
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
-from domains import EUROPE, FRANCE
+from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS
 from render import LAYER_META, write_manifest, write_places
 import gfs_open_data
 import arpege_open_data
@@ -142,6 +142,28 @@ def main():
     })
     assemble_model("aifs_france", FRANCE, {
         "model_name": "ECMWF AIFS 0.25° France",
+        "provider": "ECMWF — open data (data.ecmwf.int)",
+        "resolution": "0.25° (~25 km)",
+    })
+
+    # ── domaines mondiaux (GFS + AIFS uniquement) ────────────────────────────
+    assemble_model("gfs_antilles", ANTILLES, {
+        "model_name": "GFS 0.25° Arc Antillais",
+        "provider": "NOAA (NOMADS) — open data",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("gfs_etats_unis", ETATS_UNIS, {
+        "model_name": "GFS 0.25° États-Unis",
+        "provider": "NOAA (NOMADS) — open data",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("aifs_antilles", ANTILLES, {
+        "model_name": "ECMWF AIFS 0.25° Arc Antillais",
+        "provider": "ECMWF — open data (data.ecmwf.int)",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("aifs_etats_unis", ETATS_UNIS, {
+        "model_name": "ECMWF AIFS 0.25° États-Unis",
         "provider": "ECMWF — open data (data.ecmwf.int)",
         "resolution": "0.25° (~25 km)",
     })
