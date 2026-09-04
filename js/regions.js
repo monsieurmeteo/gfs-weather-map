@@ -64,7 +64,13 @@ const Europe1Regions = {
                     { name: "CLERMONT-FERRAND", lat: 45.78, lon: 3.08 },
                     { name: "BOURGES", lat: 47.08, lon: 2.39 }
                 ]
-            }
+            },
+            antilles: { id: 'ant', name: "ARC ANTILLAIS", geoUrl: '', padding: [20, 20, 20, 20], center: [16.5, -62.0], zoom: 5.5, cities: [
+                { name: "FORT-DE-FRANCE", lat: 14.61, lon: -61.08 }, { name: "POINTE-À-PITRE", lat: 16.24, lon: -61.53 }, { name: "BASSE-TERRE", lat: 15.99, lon: -61.72 }, { name: "SAINT-MARTIN", lat: 18.07, lon: -63.08 }, { name: "SAINT-BARTH", lat: 17.90, lon: -62.83 }, { name: "MARIE-GALANTE", lat: 15.93, lon: -61.28 }, { name: "LA DÉSIRADE", lat: 16.31, lon: -61.04 }, { name: "LES SAINTES", lat: 15.86, lon: -61.59 }, { name: "KINGSTON", lat: 17.99, lon: -76.79 }, { name: "BRIDGETOWN", lat: 13.10, lon: -59.61 }, { name: "PORT OF SPAIN", lat: 10.65, lon: -61.52 }, { name: "CASTRIES", lat: 14.01, lon: -60.99 }, { name: "KINGSTOWN", lat: 13.16, lon: -61.22 }, { name: "SAINT-DOMINGUE", lat: 18.48, lon: -69.93 }, { name: "LA HAVANE", lat: 23.13, lon: -82.38 }, { name: "SAN JUAN", lat: 18.47, lon: -66.11 }
+            ] },
+            etats_unis: { id: 'usa', name: "ÉTATS-UNIS", geoUrl: '', padding: [20, 20, 20, 20], center: [38.5, -96.0], zoom: 3.8, cities: [
+                { name: "NEW YORK", lat: 40.71, lon: -74.01 }, { name: "LOS ANGELES", lat: 34.05, lon: -118.24 }, { name: "CHICAGO", lat: 41.88, lon: -87.63 }, { name: "HOUSTON", lat: 29.76, lon: -95.37 }, { name: "MIAMI", lat: 25.77, lon: -80.19 }, { name: "WASHINGTON", lat: 38.91, lon: -77.03 }, { name: "DALLAS", lat: 32.78, lon: -96.80 }, { name: "PHOENIX", lat: 33.45, lon: -112.07 }, { name: "SAN FRANCISCO", lat: 37.77, lon: -122.42 }, { name: "SEATTLE", lat: 47.61, lon: -122.33 }, { name: "DENVER", lat: 39.74, lon: -104.98 }, { name: "ATLANTA", lat: 33.75, lon: -84.39 }, { name: "BOSTON", lat: 42.36, lon: -71.06 }, { name: "NEW ORLEANS", lat: 29.95, lon: -90.07 }, { name: "LAS VEGAS", lat: 36.17, lon: -115.14 }, { name: "MINNEAPOLIS", lat: 44.98, lon: -93.27 }
+            ] }
         };
 
 window.Europe1Regions = Europe1Regions;
