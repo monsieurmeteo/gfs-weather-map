@@ -37,9 +37,9 @@ DOMAINS = {
     },
     "etats_unis": {
         "projection": "mercator",
-        "south": 24.0, "west": -130.0, "north": 52.0, "east": -60.0,
+        "south": 20.0, "west": -140.0, "north": 65.0, "east": -50.0,
         "width": 2200, "height": 1320,
-        "label": "États-Unis",
+        "label": "Amérique du Nord (Canada & États-Unis)",
     },
     "ocean_indien": {
         "projection": "mercator",
@@ -49,9 +49,9 @@ DOMAINS = {
     },
     "pacifique_ouest": {
         "projection": "mercator",
-        "south": 0.0, "west": 105.0, "north": 38.0, "east": 174.0,
+        "south": 0.0, "west": 100.0, "north": 48.0, "east": 155.0,
         "width": 2200, "height": 1320,
-        "label": "Pacifique Nord-Ouest (Typhons • Philippines • Taïwan • Japon)",
+        "label": "Asie de l'Est & Typhons (Chine • Japon • Corée • Taïwan • Philippines)",
     },
     "pacifique_sud": {
         "projection": "mercator",
@@ -67,9 +67,9 @@ DOMAINS = {
     },
     "ocean_indien_nord": {
         "projection": "mercator",
-        "south": 2.0, "west": 52.0, "north": 28.0, "east": 98.0,
+        "south": 2.0, "west": 60.0, "north": 36.0, "east": 98.0,
         "width": 2200, "height": 1320,
-        "label": "Océan Indien Nord (Golfe du Bengale • Mer d'Arabie • Inde)",
+        "label": "Asie du Sud & Cyclones (Inde • Sri Lanka • Golfe du Bengale • Mer d'Arabie)",
     },
 }
 
