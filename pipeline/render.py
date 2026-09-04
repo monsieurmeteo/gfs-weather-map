@@ -155,6 +155,19 @@ def write_places(domain, out_dir):
             for c in cities_eu:
                 out.append(c)
 
+    # Villes mondiales (Antilles & USA)
+    src_world = os.path.join(base_dir, "config", "cities_world.json")
+    if os.path.exists(src_world):
+        with open(src_world, encoding="utf-8") as f:
+            cities_world = json.load(f)
+            for c in cities_world:
+                try:
+                    lat, lon = float(c[2]), float(c[3])
+                    if w <= lon <= e and s <= lat <= n:
+                        out.append(c)
+                except (IndexError, TypeError, ValueError):
+                    continue
+
     if os.path.exists(src_fr):
         with open(src_fr, encoding="utf-8") as f:
             rows = json.load(f)
