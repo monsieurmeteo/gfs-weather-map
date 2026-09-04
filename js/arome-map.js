@@ -854,16 +854,47 @@
                 offY = mapRect.y * ratio;
             } else {
                 var isEuropeExport = isEuropeDomain();
-                var isFranceExport = !isEuropeExport;
-                if (isEuropeExport) {
-                    // Vue Europe Standard (2200x1640) : cadrage plein cadre 100% de la projection Lambert
+                var isWorld = isWorldDomain();
+                var isFranceExport = !isEuropeExport && !isWorld;
+                var natH = isWorld ? 1320.0 : 1640.0;
+
+                if (isScreen) {
+                    // Capture d'écran HD EXACTE : reproduction au pixel près de la vue affichée à l'écran (x2 pour netteté Retina/4K)
+                    var ratio = 2.0;
+                    outW = Math.round(vw * ratio);
+                    outH = Math.round(vh * ratio);
+                    var mapRect = computeMapRect(vw, vh);
+                    hScale = (mapRect.w / 2200.0) * ratio;
+                    vScale = (mapRect.h / natH) * ratio;
+                    offX = mapRect.x * ratio;
+                    offY = mapRect.y * ratio;
+                } else if (transform.scale > 1.08) {
+                    // 🌟 Vue zoomée (qu'on soit en France, en Europe ou sur un domaine mondial : reproduction HD exacte du cadrage actif)
                     outW = 2200;
-                    outH = 1640;
+                    outH = Math.round(natH);
+                    var viewRect = computeMapRect(vw, vh);
+                    var u0 = (0 - viewRect.x) / viewRect.w;
+                    var u1 = (vw - viewRect.x) / viewRect.w;
+                    var v0 = (0 - viewRect.y) / viewRect.h;
+                    var v1 = (vh - viewRect.y) / viewRect.h;
+                    var vueW = Math.max(0.01, u1 - u0);
+                    var vueH = Math.max(0.01, v1 - v0);
+                    var k = Math.max(outW / (vueW * 2200.0), outH / (vueH * natH));
+                    hScale = k;
+                    vScale = k;
+                    var uc = (u0 + u1) / 2;
+                    var vc = (v0 + v1) / 2;
+                    offX = outW / 2 - uc * 2200.0 * k;
+                    offY = outH / 2 - vc * natH * k;
+                } else if (isEuropeExport || isWorld) {
+                    // Vue globale standard Europe ou Monde (Antilles, USA, Océan Indien)
+                    outW = 2200;
+                    outH = Math.round(natH);
                     hScale = 1.0;
                     vScale = 1.0;
                     offX = 0;
                     offY = 0;
-                } else if (isFranceExport && transform.scale <= 1.15) {
+                } else if (isFranceExport) {
                     // Vue France entière : boîte Météo-NPDC (West: -5.8°, East: +10.2°, North: 51.6°, South: 41.1°)
                     outW = 2200;
                     outH = 1640;
@@ -880,34 +911,15 @@
                     var cy = (fy0 + fy1) / 2; // 792.5
                     offX = outW / 2 - cx * scale;
                     offY = outH / 2 - cy * scale;
-                } else {
-                    // Vue Zoomée Région / Libre : reproduction exacte de la vue
-                    outW = 2200;
-                    outH = 1640;
-                    var viewRect = computeMapRect(vw, vh);
-                    var u0 = (0 - viewRect.x) / viewRect.w;
-                    var u1 = (vw - viewRect.x) / viewRect.w;
-                    var v0 = (0 - viewRect.y) / viewRect.h;
-                    var v1 = (vh - viewRect.y) / viewRect.h;
-                    var vueW = Math.max(0.01, u1 - u0);
-                    var vueH = Math.max(0.01, v1 - v0);
-                    var k = Math.max(outW / (vueW * 2200.0), outH / (vueH * 1640.0));
-                    hScale = k;
-                    vScale = k;
-                    var uc = (u0 + u1) / 2;
-                    var vc = (v0 + v1) / 2;
-                    offX = outW / 2 - uc * 2200.0 * k;
-                    offY = outH / 2 - vc * 1640.0 * k;
                 }
             }
 
             // Zone réellement couverte par la carte dans le canvas d'export
-            // (évite que titre / logo / légende débordent sur le fond noir)
             var mapRect = {
                 left: Math.max(0, offX),
                 right: Math.min(outW, offX + 2200 * hScale),
                 top: Math.max(0, offY),
-                bottom: Math.min(outH, offY + 1640 * vScale)
+                bottom: Math.min(outH, offY + (isWorld ? 1320.0 : 1640.0) * vScale)
             };
             if (mapRect.right <= mapRect.left || mapRect.bottom <= mapRect.top) {
                 mapRect = { left: 0, right: outW, top: 0, bottom: outH };
@@ -1247,7 +1259,7 @@
                             var u = proj.u;
                             var v = proj.v;
                             var sx = u * 2200 * hScale + offX;
-                            var sy = v * 1640 * vScale + offY;
+                            var sy = v * (isWorldDomain() ? 1320.0 : 1640.0) * vScale + offY;
                             if (sx < 25 || sx > output.width - 25 || sy < 25 || sy > output.height - 25) {
                                 continue;
                             }
@@ -3059,13 +3071,13 @@
         // ────────────────────────────────────────────────────────────────────
         function isEuropeDomain() {
             if (!currentModel) return false;
-            if (currentModel.indexOf('_france') !== -1 || currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1) return false;
+            if (currentModel.indexOf('_france') !== -1 || currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1 || currentModel.indexOf('_ocean_indien') !== -1) return false;
             return (currentModel === 'gfs' || currentModel === 'arpege' || currentModel === 'icon_eu' || currentModel === 'aifs');
         }
 
         function isWorldDomain() {
             if (!currentModel) return false;
-            return (currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1);
+            return (currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1 || currentModel.indexOf('_ocean_indien') !== -1);
         }
 
         function computeMapRect(width, height, t) {
