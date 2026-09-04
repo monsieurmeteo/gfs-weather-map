@@ -94,6 +94,11 @@ def generate(domain):
             os.path.join(BASE_DIR, "output", m, "maps")
             for m in ("gfs_etats_unis", "aifs_etats_unis")
         ]
+    elif domain == "ocean_indien":
+        out_dirs = [
+            os.path.join(BASE_DIR, "output", m, "maps")
+            for m in ("gfs_ocean_indien", "aifs_ocean_indien")
+        ]
     else:
         out_dirs = [
             os.path.join(BASE_DIR, "output", m, "maps")
