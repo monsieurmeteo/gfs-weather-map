@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
     'use strict';
 
     function whenReady(callback) {
@@ -166,7 +166,11 @@
         var currentWeatherImage = null;
         var logoImage = new Image();
         logoImage.crossOrigin = 'anonymous';
-        logoImage.src = app.dataset.logo || 'logo.png';
+        logoImage.src = (app && app.dataset && app.dataset.logo) ? app.dataset.logo : 'logo.png';
+        window.amfmSetLogo = function (src) {
+            if (logoImage) logoImage.src = src;
+            if (app) app.dataset.logo = src;
+        };
         var franceMaskImage = new Image();
         franceMaskImage.crossOrigin = 'anonymous';
         franceMaskImage.src = resolvePath('maps/mask_france.png');
@@ -1366,7 +1370,7 @@
                     .normalize('NFD').replace(/[̀-ͯ]/g, '')
                     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
                 link.href = url;
-                link.download = 'MeteoClimatPro_' + (manifest ? manifest.model_name.replace(/[^a-zA-Z0-9]/g, '_') : 'AROME') + '_' + (slug || 'carte') + (isLandscape ? '_paysage_16x9' : '') + '_' + Date.now() + '.' + ext;
+                link.download = ((document.getElementById('amfm-logo-navbar') && document.getElementById('amfm-logo-navbar').src.indexOf('mm') !== -1) ? 'MonsieurMeteo_' : 'MeteoClimatPro_') + (manifest ? manifest.model_name.replace(/[^a-zA-Z0-9]/g, '_') : 'AROME') + '_' + (slug || 'carte') + (isLandscape ? '_paysage_16x9' : '') + '_' + Date.now() + '.' + ext;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
