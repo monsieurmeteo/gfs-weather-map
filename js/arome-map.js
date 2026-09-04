@@ -3071,13 +3071,17 @@
         // ────────────────────────────────────────────────────────────────────
         function isEuropeDomain() {
             if (!currentModel) return false;
-            if (currentModel.indexOf('_france') !== -1 || currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1 || currentModel.indexOf('_ocean_indien') !== -1) return false;
+            if (currentModel.indexOf('_france') !== -1 || isWorldDomain()) return false;
             return (currentModel === 'gfs' || currentModel === 'arpege' || currentModel === 'icon_eu' || currentModel === 'aifs');
         }
 
         function isWorldDomain() {
             if (!currentModel) return false;
-            return (currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1 || currentModel.indexOf('_ocean_indien') !== -1);
+            var worldSuffixes = ['_antilles', '_ocean_indien', '_pacifique_ouest', '_pacifique_sud', '_pacifique_est', '_ocean_indien_nord', '_etats_unis'];
+            for (var i = 0; i < worldSuffixes.length; i++) {
+                if (currentModel.indexOf(worldSuffixes[i]) !== -1) return true;
+            }
+            return false;
         }
 
         function computeMapRect(width, height, t) {
