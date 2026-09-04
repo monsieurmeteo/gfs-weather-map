@@ -290,6 +290,11 @@ def update_active_cyclones(out_file="cyclones_actifs.json"):
     target_path = os.path.join(base_dir, out_file)
     with open(target_path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
+    # Double sauvegarde sécurisée dans output/
+    out_dir = os.path.join(base_dir, "output")
+    if os.path.exists(out_dir):
+        with open(os.path.join(out_dir, out_file), "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
 
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {cyclone_count} cyclone(s) & {invest_count} INVEST(s) actif(s) mondialement -> {target_path}")
     return result
