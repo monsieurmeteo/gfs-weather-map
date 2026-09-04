@@ -47,6 +47,30 @@ DOMAINS = {
         "width": 2200, "height": 1320,
         "label": "Océan Indien Sud-Ouest (Madagascar • Réunion • Maurice)",
     },
+    "pacifique_ouest": {
+        "projection": "mercator",
+        "south": 0.0, "west": 105.0, "north": 38.0, "east": 174.0,
+        "width": 2200, "height": 1320,
+        "label": "Pacifique Nord-Ouest (Typhons • Philippines • Taïwan • Japon)",
+    },
+    "pacifique_sud": {
+        "projection": "mercator",
+        "south": -36.0, "west": 130.0, "north": -8.5, "east": 180.0,
+        "width": 2200, "height": 1320,
+        "label": "Pacifique Sud-Ouest (Nouvelle-Calédonie • Vanuatu • Fidji • Australie)",
+    },
+    "pacifique_est": {
+        "projection": "mercator",
+        "south": 2.0, "west": -170.0, "north": 40.0, "east": -100.0,
+        "width": 2200, "height": 1320,
+        "label": "Pacifique Nord-Est (Ouragans • Mexique • Hawaï)",
+    },
+    "ocean_indien_nord": {
+        "projection": "mercator",
+        "south": 2.0, "west": 52.0, "north": 28.0, "east": 98.0,
+        "width": 2200, "height": 1320,
+        "label": "Océan Indien Nord (Golfe du Bengale • Mer d'Arabie • Inde)",
+    },
 }
 
 
@@ -201,3 +225,8 @@ FRANCE = Domain("france")
 ANTILLES   = Domain("antilles")
 ETATS_UNIS = Domain("etats_unis")
 OCEAN_INDIEN = Domain("ocean_indien")
+PACIFIQUE_OUEST   = Domain("pacifique_ouest")
+PACIFIQUE_SUD     = Domain("pacifique_sud")
+PACIFIQUE_EST     = Domain("pacifique_est")
+OCEAN_INDIEN_NORD = Domain("ocean_indien_nord")
+
