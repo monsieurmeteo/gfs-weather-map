@@ -2221,8 +2221,8 @@
                 allemagne:  { isFrance: false, latitude: 51.3, longitude: 10.5, scale: 2.8 },
                 espagne:    { isFrance: false, latitude: 40.2, longitude: -3.8, scale: 2.6 },
                 italie:     { isFrance: false, latitude: 42.6, longitude: 12.6, scale: 2.8 },
-                antilles:   { isFrance: false, latitude: 16.5, longitude: -62.0, scale: 1.8 },
-                etats_unis: { isFrance: false, latitude: 38.5, longitude: -96.0, scale: 1.0 }
+                antilles:   { isFrance: false, reset: true },
+                etats_unis: { isFrance: false, reset: true }
             };
 
             var MODEL_FAMILY = {
@@ -2463,6 +2463,10 @@
                     currentModel = modelKey;
                     var modelSel2 = document.getElementById('select-model');
                     if (modelSel2) modelSel2.value = modelKey;
+                    if (regSel) {
+                        if (modelKey.indexOf('_antilles') !== -1) regSel.value = 'antilles';
+                        else if (modelKey.indexOf('_etats_unis') !== -1) regSel.value = 'etats_unis';
+                    }
                     renderStep(0);
                     updateUrl();
 
@@ -2483,9 +2487,12 @@
                         }
                     }
                 })
-                .catch(function () {
+                .catch(function(err) {
+                    if (token !== switchToken) return;
+                    console.error('[switchModel] Erreur chargement manifeste', target.path, err);
                     baseUrl = prevBaseUrl;
                     app.dataset.baseUrl = prevBaseUrl;
+                    currentModel = 'gfs';
                     app.dataset.model = 'gfs';
                     if (titleSpan) titleSpan.textContent = 'GFS Europe';
                     if (badge) badge.textContent = '0,25°';
@@ -2500,12 +2507,20 @@
         if (modelSelect) {
             modelSelect.addEventListener('change', function(e) {
                 var nextModel = e.target.value;
+                var isNextWorld = (nextModel.indexOf('_antilles') !== -1 || nextModel.indexOf('_etats_unis') !== -1);
+                var isCurrentWorld = (currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1);
                 var isNextFrance = (nextModel.indexOf('_france') !== -1);
                 var isCurrentFrance = (currentModel.indexOf('_france') !== -1);
                 var regSel = document.getElementById('select-region');
 
-                if (isNextFrance !== isCurrentFrance) {
-                    // Bascule de domaine (France <-> Europe) : reset immédiat et complet du cadrage
+                if (isNextWorld) {
+                    pendingFocus = null;
+                    transform = { scale: 1, x: 0, y: 0 };
+                    if (regSel) {
+                        regSel.value = (nextModel.indexOf('_antilles') !== -1) ? 'antilles' : 'etats_unis';
+                    }
+                } else if (isCurrentWorld || (isNextFrance !== isCurrentFrance)) {
+                    // Bascule de domaine (Monde / France / Europe) : reset immédiat et complet du cadrage
                     pendingFocus = null;
                     transform = { scale: 1, x: 0, y: 0 };
                     if (regSel) {
@@ -2514,7 +2529,7 @@
                 } else {
                     // Même domaine : on conserve la région active
                     var activeRegion = regSel ? regSel.value : '';
-                    if (activeRegion && activeRegion !== 'france' && activeRegion !== 'europe') {
+                    if (activeRegion && activeRegion !== 'france' && activeRegion !== 'europe' && activeRegion !== 'antilles' && activeRegion !== 'etats_unis') {
                         var cfg = REGION_CONFIG[activeRegion];
                         if (cfg && cfg.latitude !== undefined) {
                             pendingFocus = {
@@ -3044,21 +3059,28 @@
         // ────────────────────────────────────────────────────────────────────
         function isEuropeDomain() {
             if (!currentModel) return false;
-            if (currentModel.indexOf('_france') !== -1) return false;
+            if (currentModel.indexOf('_france') !== -1 || currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1) return false;
             return (currentModel === 'gfs' || currentModel === 'arpege' || currentModel === 'icon_eu' || currentModel === 'aifs');
+        }
+
+        function isWorldDomain() {
+            if (!currentModel) return false;
+            return (currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1);
         }
 
         function computeMapRect(width, height, t) {
             t = t || transform;
             var isEurope = isEuropeDomain();
+            var isWorld = isWorldDomain();
 
-            if (isEurope) {
-                var scale = Math.min(width / 2200.0, height / 1640.0) * t.scale;
+            if (isEurope || isWorld) {
+                var natH = isWorld ? 1320.0 : 1640.0;
+                var scale = Math.min(width / 2200.0, height / natH) * t.scale;
                 return {
                     x: width / 2 + t.x - 1100.0 * scale,
-                    y: height / 2 + t.y - 820.0 * scale,
+                    y: height / 2 + t.y - (natH / 2.0) * scale,
                     w: 2200.0 * scale,
-                    h: 1640.0 * scale
+                    h: natH * scale
                 };
             }
 
@@ -3446,10 +3468,12 @@
             var w = viewport.clientWidth;
             var h = viewport.clientHeight;
             var isEurope = isEuropeDomain();
-            var s = isEurope ? Math.min(w / 2200.0, h / 1640.0) : Math.max(w / 2200.0, h / 1640.0);
+            var isWorld = isWorldDomain();
+            var natH = isWorld ? 1320.0 : 1640.0;
+            var s = (isEurope || isWorld) ? Math.min(w / 2200.0, h / natH) : Math.max(w / 2200.0, h / 1640.0);
             var totalScale = s * transform.scale;
             var rasterW = 2200.0 * totalScale;
-            var rasterH = 1640.0 * totalScale;
+            var rasterH = natH * totalScale;
             // Déplacement libre à la souris (pan) avec limites souples
             var maxX = Math.max(w * 0.9, (rasterW - w) / 2 + w * 0.6);
             var maxY = Math.max(h * 0.9, (rasterH - h) / 2 + h * 0.6);
@@ -3487,7 +3511,12 @@
         function resetView() {
             transform = { scale: 1, x: 0, y: 0 };
             var regSel = document.getElementById('select-region');
-            if (regSel) regSel.value = (currentModel.indexOf('_france') !== -1) ? 'france' : 'europe';
+            if (regSel) {
+                if (currentModel.indexOf('_antilles') !== -1) regSel.value = 'antilles';
+                else if (currentModel.indexOf('_etats_unis') !== -1) regSel.value = 'etats_unis';
+                else if (currentModel.indexOf('_france') !== -1) regSel.value = 'france';
+                else regSel.value = 'europe';
+            }
             applyTransform();
             if (typeof updateUrl === 'function') updateUrl();
         }
