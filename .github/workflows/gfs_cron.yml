@@ -294,6 +294,12 @@ jobs:
               --domain "${{ matrix.domain }}" \
               --lead-min "${{ matrix.lead_min }}" \
               --lead-max "${{ matrix.lead_max }}"
+          elif [ "${{ matrix.model }}" = "aifs" ]; then
+            python -u pipeline/aifs_open_data.py \
+              --max-hours "$MAX_HOURS" \
+              --domain "${{ matrix.domain }}" \
+              --lead-min "${{ matrix.lead_min }}" \
+              --lead-max "${{ matrix.lead_max }}"
           else
             python -u pipeline/arpege_open_data.py \
               --max-hours "$MAX_HOURS" \
