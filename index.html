@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -311,7 +311,7 @@
         .amfm-legend {
             position: absolute;
             left: max(14px, env(safe-area-inset-left));
-            bottom: calc(max(10px, env(safe-area-inset-bottom)) + 58px);
+            bottom: calc(max(22px, env(safe-area-inset-bottom)) + 58px);
             z-index: 100;
             background: var(--amfm-surface);
             backdrop-filter: blur(20px);
@@ -357,7 +357,7 @@
         /* Timeline Inférieure Compacte (~48 px) */
         .amfm-timeline {
             position: absolute;
-            bottom: max(10px, env(safe-area-inset-bottom));
+            bottom: max(22px, env(safe-area-inset-bottom));
             left: max(12px, env(safe-area-inset-left));
             right: max(12px, env(safe-area-inset-right));
             z-index: 100;
@@ -426,50 +426,59 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Style Slider */
+        /* Style Slider — Zone cliquable ergonomique (sans vide mort) */
         input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
             width: 100%;
-            height: 6px;
-            border-radius: 3px;
-            background: rgba(255, 255, 255, 0.16);
+            height: 24px;
+            background: transparent;
             outline: none;
             cursor: pointer;
+            margin: 0;
+            padding: 0;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.22);
             transition: background 0.2s ease;
         }
-        input[type="range"]:hover {
-            background: rgba(255, 255, 255, 0.26);
+        input[type="range"]:hover::-webkit-slider-runnable-track {
+            background: rgba(255, 255, 255, 0.35);
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 18px;
-            height: 18px;
+            width: 22px;
+            height: 22px;
+            margin-top: -7px;
             border-radius: 50%;
             background: var(--amfm-accent);
-            box-shadow: 0 0 10px var(--amfm-accent), 0 2px 4px rgba(0,0,0,0.6);
-            border: 2px solid #ffffff;
-            cursor: pointer;
+            box-shadow: 0 0 12px var(--amfm-accent), 0 2px 5px rgba(0,0,0,0.7);
+            border: 2.5px solid #ffffff;
+            cursor: grab;
             transition: transform 0.15s ease;
         }
         input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.15);
-            box-shadow: 0 0 14px #38bdf8;
-        }
-        input[type="range"]::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--amfm-accent);
-            box-shadow: 0 0 10px var(--amfm-accent);
-            border: 2px solid #ffffff;
-            cursor: pointer;
+            transform: scale(1.2);
+            box-shadow: 0 0 16px #38bdf8;
         }
         input[type="range"]::-moz-range-track {
-            height: 6px;
-            border-radius: 3px;
-            background: rgba(255, 255, 255, 0.16);
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.22);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--amfm-accent);
+            box-shadow: 0 0 12px var(--amfm-accent);
+            border: 2.5px solid #ffffff;
+            cursor: grab;
         }
 
         /* Sonde de Pixel */
@@ -1147,7 +1156,7 @@
         @media (max-height: 500px) and (orientation: landscape) {
             .amfm-legend { display: none; }
             .amfm-header { top: 4px; }
-            .amfm-timeline { bottom: 4px; }
+            .amfm-timeline { bottom: 16px; }
         }
         /* 🎨 Logo Switcher Pro (MCP ⟷ Monsieur Météo) */
         .amfm-brand-btn {
