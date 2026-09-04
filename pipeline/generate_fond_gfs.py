@@ -138,15 +138,29 @@ def generate(domain):
                                       dom.east + 0.5, dom.north + 0.5)
     france_shapes = []
     depts_d = []
-    for feat in depts.get("features", []):
-        geom = feat.get("geometry")
-        if not geom:
-            continue
-        s = shapely.geometry.shape(geom)
-        if not s.intersects(bounds_box):
-            continue
-        france_shapes.append(s)
-        depts_d.append(polygon_path(iter_rings(geom), dom))
+    if domain == "etats_unis":
+        us_states_path = os.path.join(BASE_DIR, "config", "us-states.json")
+        if os.path.exists(us_states_path):
+            with open(us_states_path, encoding="utf-8") as f:
+                us_states = json.load(f)
+            for feat in us_states.get("features", []):
+                geom = feat.get("geometry")
+                if not geom:
+                    continue
+                s = shapely.geometry.shape(geom)
+                if not s.intersects(bounds_box):
+                    continue
+                depts_d.append(polygon_path(iter_rings(geom), dom))
+    else:
+        for feat in depts.get("features", []):
+            geom = feat.get("geometry")
+            if not geom:
+                continue
+            s = shapely.geometry.shape(geom)
+            if not s.intersects(bounds_box):
+                continue
+            france_shapes.append(s)
+            depts_d.append(polygon_path(iter_rings(geom), dom))
     france_union = unary_union(france_shapes) if france_shapes else shapely.geometry.Polygon()
     france_mask = france_union.buffer(0.015) if not france_union.is_empty else shapely.geometry.Polygon()
 
@@ -187,8 +201,15 @@ def generate(domain):
         dept_stroke = "#000000"
         dept_width = "1.2"
         dept_opacity = "0.95"
+    elif domain == "etats_unis":
+        # Style États-Unis : côtes/frontières nationales noires, frontières des 50 États nettes
+        nat_stroke = "#000000"
+        nat_width = "2.2"
+        dept_stroke = "#334155"
+        dept_width = "1.2"
+        dept_opacity = "0.90"
     else:
-        # Style Europe : lisibilité synoptique d'origine Météociel inchangée
+        # Style Europe & Antilles : lisibilité synoptique d'origine Météociel inchangée
         nat_stroke = NATURAL
         nat_width = "1.8"
         dept_stroke = DEPT
