@@ -27,6 +27,20 @@ DOMAINS = {
         "width": 2200, "height": 1640,
         "label": "France",
     },
+
+    # ── Domaines mondiaux (GFS / ECMWF AIFS uniquement) ─────────────────────
+    "antilles": {
+        "projection": "mercator",
+        "south": 8.0, "west": -88.0, "north": 28.0, "east": -55.0,
+        "width": 2200, "height": 1320,
+        "label": "Arc Antillais & Caraïbes",
+    },
+    "etats_unis": {
+        "projection": "mercator",
+        "south": 24.0, "west": -130.0, "north": 52.0, "east": -60.0,
+        "width": 2200, "height": 1320,
+        "label": "États-Unis",
+    },
 }
 
 
@@ -178,3 +192,5 @@ class Domain:
 # Instances partagées
 EUROPE = Domain("europe")
 FRANCE = Domain("france")
+ANTILLES   = Domain("antilles")
+ETATS_UNIS = Domain("etats_unis")
