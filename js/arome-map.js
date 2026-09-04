@@ -2341,7 +2341,17 @@
                 aifs: { path: 'output/aifs', name: 'ECMWF AIFS Europe', badge: '0,25°' },
                 aifs_france: { path: 'output/aifs_france', name: 'ECMWF AIFS France', badge: '0,25°' },
                 aifs_antilles: { path: 'output/aifs_antilles', name: 'ECMWF AIFS Arc Antillais', badge: '0,25°' },
-                aifs_etats_unis: { path: 'output/aifs_etats_unis', name: 'ECMWF AIFS États-Unis', badge: '0,25°' }
+                aifs_etats_unis: { path: 'output/aifs_etats_unis', name: 'ECMWF AIFS États-Unis', badge: '0,25°' },
+                gfs_ocean_indien: { path: 'output/gfs_ocean_indien', name: 'GFS Océan Indien Sud-Ouest', badge: '0,25°' },
+                aifs_ocean_indien: { path: 'output/aifs_ocean_indien', name: 'AIFS Océan Indien Sud-Ouest', badge: '0,25°' },
+                gfs_pacifique_ouest: { path: 'output/gfs_pacifique_ouest', name: 'GFS Pacifique Ouest / Typhons', badge: '0,25°' },
+                aifs_pacifique_ouest: { path: 'output/aifs_pacifique_ouest', name: 'AIFS Pacifique Ouest / Typhons', badge: '0,25°' },
+                gfs_pacifique_sud: { path: 'output/gfs_pacifique_sud', name: 'GFS Pacifique Sud & Océanie', badge: '0,25°' },
+                aifs_pacifique_sud: { path: 'output/aifs_pacifique_sud', name: 'AIFS Pacifique Sud & Océanie', badge: '0,25°' },
+                gfs_pacifique_est: { path: 'output/gfs_pacifique_est', name: 'GFS Pacifique Est & Hawaï', badge: '0,25°' },
+                aifs_pacifique_est: { path: 'output/aifs_pacifique_est', name: 'AIFS Pacifique Est & Hawaï', badge: '0,25°' },
+                gfs_ocean_indien_nord: { path: 'output/gfs_ocean_indien_nord', name: 'GFS Bengale & Mer d\'Arabie', badge: '0,25°' },
+                aifs_ocean_indien_nord: { path: 'output/aifs_ocean_indien_nord', name: 'AIFS Bengale & Mer d\'Arabie', badge: '0,25°' }
             };
             var target = modelMap[modelKey] || modelMap.gfs;
             var prevBaseUrl = baseUrl;
@@ -4321,27 +4331,32 @@
                 });
         }
 
-        function focusOnCyclone(storm) {
+                function focusOnCyclone(storm) {
             if (!storm) return;
-            // 1) Si le modèle actuel n'est pas sur ce bassin, on bascule dessus
             var targetModel = 'gfs_' + storm.basin;
+            var focus = {
+                latitude: Number(storm.lat),
+                longitude: Number(storm.lon),
+                scale: 3.2
+            };
+
             var selectModel = document.getElementById('select-model');
-            if (selectModel && currentModel !== targetModel && currentModel !== 'aifs_' + storm.basin) {
-                for (var i = 0; i < selectModel.options.length; i++) {
-                    if (selectModel.options[i].value === targetModel) {
-                        selectModel.value = targetModel;
-                        selectModel.dispatchEvent(new Event('change'));
-                        break;
-                    }
+            if (currentModel !== targetModel && currentModel !== 'aifs_' + storm.basin) {
+                pendingFocus = focus;
+                if (selectModel) {
+                    selectModel.value = targetModel;
                 }
+                switchModel(targetModel);
+            } else {
+                focusLocation(focus);
             }
 
-            // 2) Notification & recentrage
+            // Notification d'alerte immédiate
             if (typeof setToolHint === 'function') {
                 if (storm.type === 'invest') {
-                    setToolHint('🟡 Surveillance INVEST : ' + storm.name + ' (' + (storm.probability || '') + ') — Bassin ' + storm.basin);
+                    setToolHint('🟡 Zoom direct sur ' + storm.name + ' (' + (storm.probability || '') + ')');
                 } else {
-                    setToolHint('🔴 Cyclone Actif : ' + storm.name + ' (' + storm.category + ' - ' + storm.wind_kmh + ' km/h, ' + storm.pressure_hpa + ' hPa)');
+                    setToolHint('🔴 Zoom direct sur ' + storm.name + ' (' + storm.category + ' • ' + storm.wind_kmh + ' km/h, ' + storm.pressure_hpa + ' hPa)');
                 }
             }
         }
