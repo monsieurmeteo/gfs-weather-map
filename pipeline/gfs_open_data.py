@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")  # bruit cfgrib/xarray dans les logs CI
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
-from domains import EUROPE, FRANCE  # noqa: E402
+from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS  # noqa: E402
 from render import (  # noqa: E402
     LAYER_ORDER, save_webp, write_hkv, write_places, write_manifest,
     render_z500_with_isobars, render_pression_with_isobars,
@@ -497,6 +497,13 @@ def run_all(max_hours=384, domain="both", lead_min=0, lead_max=None, run_time=No
     if domain in ("both", "france"):
         run_model(run_dt, FRANCE, os.path.join(base, "gfs_france", "maps"),
                   leads[-1], leads, lead_min=lead_min)
+    # ── domaines mondiaux (ajout pur, sans modifier europe/france) ───────────
+    if domain in ("world", "antilles"):
+        run_model(run_dt, ANTILLES, os.path.join(base, "gfs_antilles", "maps"),
+                  leads[-1], leads, lead_min=lead_min)
+    if domain in ("world", "etats_unis"):
+        run_model(run_dt, ETATS_UNIS, os.path.join(base, "gfs_etats_unis", "maps"),
+                  leads[-1], leads, lead_min=lead_min)
     print("[GFS] Pipeline terminé avec succès.", flush=True)
 
 
@@ -505,8 +512,10 @@ def main():
     ap = argparse.ArgumentParser(description="Pipeline GFS 0.25° Europe & France")
     ap.add_argument("--max-hours", type=int, default=384,
                     help="Échéance max GFS en heures (24-384, défaut 384)")
-    ap.add_argument("--domain", choices=["both", "europe", "france"], default="both",
-                    help="Domaine à générer : both (défaut), europe, france")
+    ap.add_argument("--domain", choices=["both", "europe", "france",
+                                          "antilles", "etats_unis", "world"],
+                    default="both",
+                    help="Domaine à générer : both (défaut), europe, france, antilles, etats_unis, world")
     ap.add_argument("--lead-min", type=int, default=0,
                     help="Échéance de début (ex: 0, 39, 75...)")
     ap.add_argument("--lead-max", type=int, default=None,
