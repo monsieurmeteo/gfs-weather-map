@@ -2226,23 +2226,36 @@
             };
 
             var MODEL_FAMILY = {
-                arpege: { eu: 'arpege', fr: 'arpege_france' },
-                arpege_france: { eu: 'arpege', fr: 'arpege_france' },
-                icon_eu: { eu: 'icon_eu', fr: 'icon_eu_france' },
-                icon_eu_france: { eu: 'icon_eu', fr: 'icon_eu_france' },
-                gfs: { eu: 'gfs', fr: 'gfs_france' },
-                gfs_france: { eu: 'gfs', fr: 'gfs_france' },
-                aifs: { eu: 'aifs', fr: 'aifs_france' },
-                aifs_france: { eu: 'aifs', fr: 'aifs_france' }
+                arpege: { eu: 'arpege', fr: 'arpege_france', ant: 'gfs_antilles', usa: 'gfs_etats_unis' },
+                arpege_france: { eu: 'arpege', fr: 'arpege_france', ant: 'gfs_antilles', usa: 'gfs_etats_unis' },
+                icon_eu: { eu: 'icon_eu', fr: 'icon_eu_france', ant: 'gfs_antilles', usa: 'gfs_etats_unis' },
+                icon_eu_france: { eu: 'icon_eu', fr: 'icon_eu_france', ant: 'gfs_antilles', usa: 'gfs_etats_unis' },
+                gfs: { eu: 'gfs', fr: 'gfs_france', ant: 'gfs_antilles', usa: 'gfs_etats_unis' },
+                gfs_france: { eu: 'gfs', fr: 'gfs_france', ant: 'gfs_antilles', usa: 'gfs_etats_unis' },
+                gfs_antilles: { eu: 'gfs', fr: 'gfs_france', ant: 'gfs_antilles', usa: 'gfs_etats_unis' },
+                gfs_etats_unis: { eu: 'gfs', fr: 'gfs_france', ant: 'gfs_antilles', usa: 'gfs_etats_unis' },
+                aifs: { eu: 'aifs', fr: 'aifs_france', ant: 'aifs_antilles', usa: 'aifs_etats_unis' },
+                aifs_france: { eu: 'aifs', fr: 'aifs_france', ant: 'aifs_antilles', usa: 'aifs_etats_unis' },
+                aifs_antilles: { eu: 'aifs', fr: 'aifs_france', ant: 'aifs_antilles', usa: 'aifs_etats_unis' },
+                aifs_etats_unis: { eu: 'aifs', fr: 'aifs_france', ant: 'aifs_antilles', usa: 'aifs_etats_unis' }
             };
 
             regionSelect.addEventListener('change', function (e) {
                 var val = e.target.value || 'france';
-                var family = MODEL_FAMILY[currentModel] || { eu: 'arpege', fr: 'arpege_france' };
+                var family = MODEL_FAMILY[currentModel] || { eu: 'gfs', fr: 'gfs_france', ant: 'gfs_antilles', usa: 'gfs_etats_unis' };
                 var cfg = REGION_CONFIG[val] || { isFrance: true, reset: true };
 
+                if (val === 'antilles' || val === 'etats_unis') {
+                    var targetM = (val === 'antilles') ? family.ant : family.usa;
+                    transform = { scale: 1, x: 0, y: 0 };
+                    switchModel(targetM);
+                    resetView();
+                    updateUrl();
+                    return;
+                }
+
                 if (val === 'europe') {
-                    if (currentModel.indexOf('_france') !== -1) {
+                    if (currentModel.indexOf('_france') !== -1 || currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1) {
                         transform = { scale: 1, x: 0, y: 0 };
                         switchModel(family.eu);
                     } else {
@@ -2307,12 +2320,16 @@
                 probabilites_france: { path: 'output/probabilites_france', name: 'PROBABILITÉS France', badge: '24h' },
                 gfs: { path: 'output/gfs', name: 'GFS Europe', badge: '0,25°' },
                 gfs_france: { path: 'output/gfs_france', name: 'GFS France', badge: '0,25°' },
+                gfs_antilles: { path: 'output/gfs_antilles', name: 'GFS Arc Antillais', badge: '0,25°' },
+                gfs_etats_unis: { path: 'output/gfs_etats_unis', name: 'GFS États-Unis', badge: '0,25°' },
                 arpege: { path: 'output/arpege', name: 'ARPEGE Europe', badge: '0,25°' },
                 arpege_france: { path: 'output/arpege_france', name: 'ARPEGE France', badge: '0,1°' },
                 icon_eu: { path: 'output/icon_eu', name: 'ICON-EU Europe', badge: '7 km' },
                 icon_eu_france: { path: 'output/icon_eu_france', name: 'ICON-EU France', badge: '7 km' },
                 aifs: { path: 'output/aifs', name: 'ECMWF AIFS Europe', badge: '0,25°' },
-                aifs_france: { path: 'output/aifs_france', name: 'ECMWF AIFS France', badge: '0,25°' }
+                aifs_france: { path: 'output/aifs_france', name: 'ECMWF AIFS France', badge: '0,25°' },
+                aifs_antilles: { path: 'output/aifs_antilles', name: 'ECMWF AIFS Arc Antillais', badge: '0,25°' },
+                aifs_etats_unis: { path: 'output/aifs_etats_unis', name: 'ECMWF AIFS États-Unis', badge: '0,25°' }
             };
             var target = modelMap[modelKey] || modelMap.gfs;
             var prevBaseUrl = baseUrl;
