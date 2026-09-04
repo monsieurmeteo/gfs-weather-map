@@ -41,6 +41,12 @@ DOMAINS = {
         "width": 2200, "height": 1320,
         "label": "États-Unis",
     },
+    "ocean_indien": {
+        "projection": "mercator",
+        "south": -28.5, "west": 38.0, "north": -8.5, "east": 74.0,
+        "width": 2200, "height": 1320,
+        "label": "Océan Indien Sud-Ouest (Madagascar • Réunion • Maurice)",
+    },
 }
 
 
@@ -194,3 +200,4 @@ EUROPE = Domain("europe")
 FRANCE = Domain("france")
 ANTILLES   = Domain("antilles")
 ETATS_UNIS = Domain("etats_unis")
+OCEAN_INDIEN = Domain("ocean_indien")
