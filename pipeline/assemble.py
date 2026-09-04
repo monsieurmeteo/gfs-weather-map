@@ -18,7 +18,7 @@ import datetime
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
-from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS
+from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS, PACIFIQUE_OUEST, OCEAN_INDIEN_NORD
 from render import LAYER_META, write_manifest, write_places
 import gfs_open_data
 import arpege_open_data
@@ -163,7 +163,27 @@ def main():
         "resolution": "0.25° (~25 km)",
     })
     assemble_model("aifs_etats_unis", ETATS_UNIS, {
-        "model_name": "ECMWF AIFS 0.25° États-Unis",
+        "model_name": "ECMWF AIFS 0.25° Amérique du Nord",
+        "provider": "ECMWF — open data (data.ecmwf.int)",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("gfs_pacifique_ouest", PACIFIQUE_OUEST, {
+        "model_name": "GFS 0.25° Asie de l'Est & Typhons",
+        "provider": "NOAA (NOMADS) — open data",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("aifs_pacifique_ouest", PACIFIQUE_OUEST, {
+        "model_name": "ECMWF AIFS 0.25° Asie de l'Est",
+        "provider": "ECMWF — open data (data.ecmwf.int)",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("gfs_ocean_indien_nord", OCEAN_INDIEN_NORD, {
+        "model_name": "GFS 0.25° Asie du Sud & Inde",
+        "provider": "NOAA (NOMADS) — open data",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("aifs_ocean_indien_nord", OCEAN_INDIEN_NORD, {
+        "model_name": "ECMWF AIFS 0.25° Asie du Sud & Inde",
         "provider": "ECMWF — open data (data.ecmwf.int)",
         "resolution": "0.25° (~25 km)",
     })
