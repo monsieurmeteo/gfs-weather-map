@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -1351,8 +1351,22 @@
                     </select>
                 </div>
 
-                <!-- Droite : Exports + Outils + Échéance -->
+                <!-- Droite : Outils Carte + Exports + Logo -->
                 <div class="amfm-nav-actions">
+                    <!-- Outils d'affichage Carte (Villes, Valeurs, Recentrage) -->
+                    <div class="amfm-btn-group">
+                        <button type="button" class="amfm-btn amfm-btn-toggle is-active" data-amfm-toggle-cities aria-pressed="true" aria-label="Afficher ou masquer les villes" title="Afficher/Masquer les villes">
+                            <i class="fa-solid fa-city" aria-hidden="true"></i> <span>Villes</span>
+                        </button>
+                        <button type="button" class="amfm-btn amfm-btn-toggle" data-amfm-toggle-values aria-pressed="false" aria-label="Afficher ou masquer les valeurs météo" title="Afficher/Masquer les valeurs météo sur la carte">
+                            <i class="fa-solid fa-hashtag" aria-hidden="true"></i> <span>Valeurs</span>
+                        </button>
+                    </div>
+
+                    <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-reset aria-label="Recentrer la carte météo" title="Recentrer la carte">
+                        <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+                    </button>
+
                     <button type="button" id="amfm-logo-action-btn" class="amfm-btn amfm-btn-logo-switch" title="Changer de logo : Météo-Climat Pro ⟷ Monsieur Météo" aria-label="Changer de logo">
                         <i class="fa-solid fa-repeat" aria-hidden="true"></i> <span id="amfm-logo-action-text">Monsieur Météo</span>
                     </button>
@@ -1370,18 +1384,6 @@
                             <i class="fa-solid fa-film" aria-hidden="true"></i> <span>GIF</span>
                         </button>
                     </div>
-
-                    <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-reset aria-label="Recentrer la carte météo" title="Recentrer sur la France">
-                        <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
-                    </button>
-
-                    <button type="button" class="amfm-btn amfm-btn-icon is-active" data-amfm-toggle-cities aria-pressed="true" aria-label="Afficher ou masquer les villes" title="Afficher/Masquer les villes">
-                        <i class="fa-solid fa-city" aria-hidden="true"></i>
-                    </button>
-
-                    <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-values aria-pressed="false" aria-label="Afficher ou masquer la grille de valeurs météo" title="Afficher/Masquer les valeurs météo sur la carte">
-                        <i class="fa-solid fa-hashtag" aria-hidden="true"></i>
-                    </button>
 
                     <!-- Outils Avancés : Météogramme & Mode TV -->
                     <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-diagram aria-pressed="false" aria-label="Météogramme temporel au clic" title="📈 Météogramme temporel (Cliquer sur la carte pour voir l'évolution 16j)">
