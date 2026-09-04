@@ -68,8 +68,7 @@ jobs:
           echo "max_hours=$MAX_HOURS" >> "$GITHUB_OUTPUT"
           echo "models=$MODELS"       >> "$GITHUB_OUTPUT"
 
-      - name: Générer les fonds (Europe + France + Antilles + États-Unis)
-        if: steps.vars.outputs.mode != 'front'
+      - name: Générer les fonds et tracker mondial (Token 0)
         run: |
           python -u pipeline/generate_fond_gfs.py --domain europe
           python -u pipeline/generate_fond_gfs.py --domain france
@@ -78,6 +77,9 @@ jobs:
           python -u pipeline/generate_fond_gfs.py --domain ocean_indien
           python -u pipeline/generate_fond_gfs.py --domain pacifique_ouest
           python -u pipeline/generate_fond_gfs.py --domain pacifique_sud
+          python -u pipeline/generate_fond_gfs.py --domain pacifique_est
+          python -u pipeline/generate_fond_gfs.py --domain ocean_indien_nord
+          python -u pipeline/cyclone_tracker.py
           python -u pipeline/generate_fond_gfs.py --domain pacifique_est
           python -u pipeline/generate_fond_gfs.py --domain ocean_indien_nord
           python -u pipeline/cyclone_tracker.py
@@ -268,6 +270,64 @@ jobs:
             lead_min: 126
             lead_max: 240
 
+          # ── GFS Asie de l'Est & Typhons (Chine • Japon • Corée) ─────────────
+          - id: gfs-pac-00-072
+            model: gfs
+            domain: pacifique_ouest
+            lead_min: 0
+            lead_max: 72
+          - id: gfs-pac-075-168
+            model: gfs
+            domain: pacifique_ouest
+            lead_min: 75
+            lead_max: 168
+          - id: gfs-pac-171-384
+            model: gfs
+            domain: pacifique_ouest
+            lead_min: 171
+            lead_max: 384
+
+          # ── AIFS Asie de l'Est (Chine • Japon • Corée, max 240 h) ───────────
+          - id: aifs-pac-00-120
+            model: aifs
+            domain: pacifique_ouest
+            lead_min: 0
+            lead_max: 120
+          - id: aifs-pac-126-240
+            model: aifs
+            domain: pacifique_ouest
+            lead_min: 126
+            lead_max: 240
+
+          # ── GFS Asie du Sud & Inde ──────────────────────────────────────────
+          - id: gfs-ind-00-072
+            model: gfs
+            domain: ocean_indien_nord
+            lead_min: 0
+            lead_max: 72
+          - id: gfs-ind-075-168
+            model: gfs
+            domain: ocean_indien_nord
+            lead_min: 75
+            lead_max: 168
+          - id: gfs-ind-171-384
+            model: gfs
+            domain: ocean_indien_nord
+            lead_min: 171
+            lead_max: 384
+
+          # ── AIFS Asie du Sud & Inde (max 240 h) ─────────────────────────────
+          - id: aifs-ind-00-120
+            model: aifs
+            domain: ocean_indien_nord
+            lead_min: 0
+            lead_max: 120
+          - id: aifs-ind-126-240
+            model: aifs
+            domain: ocean_indien_nord
+            lead_min: 126
+            lead_max: 240
+
     steps:
       - uses: actions/checkout@v4
 
@@ -372,9 +432,9 @@ jobs:
         run: |
           # La base restaurée contient d'anciennes dalles du modèle en cours :
           # on les purge pour que la fusion des chunks les remplace à 100%.
-          rm -rf output/gfs output/gfs_france output/gfs_antilles output/gfs_etats_unis \
+          rm -rf output/gfs output/gfs_france output/gfs_antilles output/gfs_etats_unis output/gfs_pacifique_ouest output/gfs_ocean_indien_nord \
                  output/arpege output/arpege_france \
-                 output/aifs output/aifs_france output/aifs_antilles output/aifs_etats_unis
+                 output/aifs output/aifs_france output/aifs_antilles output/aifs_etats_unis output/aifs_pacifique_ouest output/aifs_ocean_indien_nord
           echo "Répertoires GFS/ARPEGE/AIFS purgés (seront recréés par les chunks)"
 
       - name: Téléchargement de TOUS les chunks (fusion automatique)
@@ -405,8 +465,11 @@ jobs:
           mkdir -p _site
           cp index.html _site/
           cp logo*.png _site/ 2>/dev/null || true
+          cp cyclones_actifs.json _site/ 2>/dev/null || true
+          cp output/cyclones_actifs.json _site/ 2>/dev/null || true
           touch _site/.nojekyll
           cp -r js _site/
+          cp -r config _site/ 2>/dev/null || true
           cp -r output _site/
 
       - uses: actions/configure-pages@v5
