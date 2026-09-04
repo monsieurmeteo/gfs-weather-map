@@ -2212,29 +2212,71 @@
 
         var regionSelect = app.querySelector('[data-amfm-region-select]');
         if (regionSelect) {
-            var REGION_CONFIG = {
-                europe:     { isFrance: false, latitude: 49.0, longitude: 8.0, scale: 1.0 },
-                france:     { isFrance: true,  reset: true },
-                hdf:        { isFrance: true,  latitude: 49.85, longitude: 2.82, scale: 2.65 },
-                normandie:  { isFrance: true,  latitude: 48.95, longitude: -0.07, scale: 2.85 },
-                idf:        { isFrance: true,  latitude: 48.65, longitude: 2.50, scale: 4.20 },
-                grandest:   { isFrance: true,  latitude: 48.65, longitude: 5.80, scale: 2.25 },
-                bretagne:   { isFrance: true,  latitude: 48.00, longitude: -3.08, scale: 2.80 },
-                pdl:        { isFrance: true,  latitude: 47.30, longitude: -0.85, scale: 2.75 },
-                cvl:        { isFrance: true,  latitude: 47.45, longitude: 1.60, scale: 2.55 },
-                bfc:        { isFrance: true,  latitude: 47.10, longitude: 5.00, scale: 2.65 },
-                naq:        { isFrance: true,  latitude: 44.95, longitude: 0.40, scale: 1.85 },
-                ara:        { isFrance: true,  latitude: 45.30, longitude: 4.65, scale: 2.25 },
-                occitanie:  { isFrance: true,  latitude: 43.50, longitude: 2.25, scale: 2.25 },
-                paca:       { isFrance: true,  latitude: 43.85, longitude: 6.00, scale: 2.85 },
-                corse:      { isFrance: true,  latitude: 42.10, longitude: 9.05, scale: 4.20 },
-                belgique:   { isFrance: true,  latitude: 50.25, longitude: 4.40, scale: 3.10 },
-                uk:         { isFrance: false, latitude: 54.2, longitude: -2.8, scale: 2.8 },
-                allemagne:  { isFrance: false, latitude: 51.3, longitude: 10.5, scale: 2.8 },
-                espagne:    { isFrance: false, latitude: 40.2, longitude: -3.8, scale: 2.6 },
-                italie:     { isFrance: false, latitude: 42.6, longitude: 12.6, scale: 2.8 },
-                antilles:   { isFrance: false, reset: true },
-                etats_unis: { isFrance: false, reset: true }
+                        var REGION_CONFIG = {
+                europe:     { isDomain: 'eu', latitude: 49.0, longitude: 8.0, scale: 1.0 },
+                france:     { isDomain: 'fr', reset: true },
+                hdf:        { isDomain: 'fr', latitude: 49.85, longitude: 2.82, scale: 2.65 },
+                normandie:  { isDomain: 'fr', latitude: 48.95, longitude: -0.07, scale: 2.85 },
+                idf:        { isDomain: 'fr', latitude: 48.65, longitude: 2.50, scale: 4.20 },
+                grandest:   { isDomain: 'fr', latitude: 48.65, longitude: 5.80, scale: 2.25 },
+                bretagne:   { isDomain: 'fr', latitude: 48.00, longitude: -3.08, scale: 2.80 },
+                pdl:        { isDomain: 'fr', latitude: 47.30, longitude: -0.85, scale: 2.75 },
+                cvl:        { isDomain: 'fr', latitude: 47.45, longitude: 1.60, scale: 2.55 },
+                bfc:        { isDomain: 'fr', latitude: 47.10, longitude: 5.00, scale: 2.65 },
+                naq:        { isDomain: 'fr', latitude: 44.95, longitude: 0.40, scale: 1.85 },
+                ara:        { isDomain: 'fr', latitude: 45.30, longitude: 4.65, scale: 2.25 },
+                occitanie:  { isDomain: 'fr', latitude: 43.50, longitude: 2.25, scale: 2.25 },
+                paca:       { isDomain: 'fr', latitude: 43.85, longitude: 6.00, scale: 2.85 },
+                corse:      { isDomain: 'fr', latitude: 42.10, longitude: 9.05, scale: 4.20 },
+
+                // 🇪🇺 Pays d'Europe (domaine Europe Lambert)
+                belgique:   { isDomain: 'eu', latitude: 50.50, longitude: 4.50, scale: 3.60 },
+                suisse:     { isDomain: 'eu', latitude: 46.80, longitude: 8.20, scale: 3.80 },
+                autriche:   { isDomain: 'eu', latitude: 47.50, longitude: 14.00, scale: 3.20 },
+                portugal:   { isDomain: 'eu', latitude: 39.50, longitude: -8.00, scale: 3.00 },
+                espagne:    { isDomain: 'eu', latitude: 40.20, longitude: -3.80, scale: 2.40 },
+                italie:     { isDomain: 'eu', latitude: 42.50, longitude: 12.50, scale: 2.60 },
+                allemagne:  { isDomain: 'eu', latitude: 51.20, longitude: 10.40, scale: 2.40 },
+                paysbas:    { isDomain: 'eu', latitude: 52.20, longitude: 5.30, scale: 3.60 },
+                uk:         { isDomain: 'eu', latitude: 54.20, longitude: -2.80, scale: 2.80 },
+                irlande:    { isDomain: 'eu', latitude: 53.30, longitude: -7.80, scale: 3.40 },
+                grece:      { isDomain: 'eu', latitude: 38.50, longitude: 23.00, scale: 2.80 },
+                pologne:    { isDomain: 'eu', latitude: 52.00, longitude: 19.50, scale: 2.30 },
+                suede:      { isDomain: 'eu', latitude: 59.50, longitude: 16.50, scale: 2.10 },
+                norvege:    { isDomain: 'eu', latitude: 61.50, longitude: 9.00, scale: 2.10 },
+                finlande:   { isDomain: 'eu', latitude: 63.00, longitude: 26.50, scale: 2.10 },
+                danemark:   { isDomain: 'eu', latitude: 56.00, longitude: 10.50, scale: 3.60 },
+                islande:    { isDomain: 'eu', latitude: 64.80, longitude: -18.50, scale: 3.20 },
+                rep_tcheque:{ isDomain: 'eu', latitude: 49.80, longitude: 15.50, scale: 3.50 },
+                hongrie:    { isDomain: 'eu', latitude: 47.15, longitude: 19.50, scale: 3.50 },
+                roumanie:   { isDomain: 'eu', latitude: 45.80, longitude: 25.00, scale: 2.80 },
+                croatie:    { isDomain: 'eu', latitude: 45.00, longitude: 16.00, scale: 3.20 },
+
+                // 🌍 Maghreb & Méditerranée
+                maroc:      { isDomain: 'eu', latitude: 31.80, longitude: -6.50, scale: 2.30 },
+                algerie:    { isDomain: 'eu', latitude: 35.50, longitude: 3.50, scale: 2.10 },
+                tunisie:    { isDomain: 'eu', latitude: 35.50, longitude: 9.80, scale: 3.20 },
+                egypte:     { isDomain: 'eu', latitude: 29.50, longitude: 31.00, scale: 2.20 },
+                turquie:    { isDomain: 'eu', latitude: 39.00, longitude: 35.00, scale: 2.20 },
+                russie:     { isDomain: 'eu', latitude: 56.00, longitude: 40.00, scale: 1.90 },
+
+                // 🌎 Amérique du Nord
+                canada:     { isDomain: 'usa', latitude: 49.00, longitude: -95.00, scale: 1.80 },
+                etats_unis: { isDomain: 'usa', reset: true },
+
+                // 🌏 Asie & Eurasie
+                japon:      { isDomain: 'pacifique_ouest', latitude: 36.50, longitude: 138.00, scale: 2.60 },
+                chine:      { isDomain: 'pacifique_ouest', latitude: 32.00, longitude: 115.00, scale: 1.80 },
+                coree:      { isDomain: 'pacifique_ouest', latitude: 36.50, longitude: 128.00, scale: 3.60 },
+                inde:       { isDomain: 'ocean_indien_nord', latitude: 22.00, longitude: 78.00, scale: 1.90 },
+
+                // 🌀 Outre-Mer & Bassins cycloniques
+                antilles:           { isDomain: 'antilles', reset: true },
+                ocean_indien:       { isDomain: 'ocean_indien', reset: true },
+                pacifique_ouest:    { isDomain: 'pacifique_ouest', reset: true },
+                pacifique_sud:      { isDomain: 'pacifique_sud', reset: true },
+                pacifique_est:      { isDomain: 'pacifique_est', reset: true },
+                ocean_indien_nord:  { isDomain: 'ocean_indien_nord', reset: true }
             };
 
             var MODEL_FAMILY = {
@@ -2252,54 +2294,44 @@
                 aifs_etats_unis: { eu: 'aifs', fr: 'aifs_france', ant: 'aifs_antilles', usa: 'aifs_etats_unis' }
             };
 
-            regionSelect.addEventListener('change', function (e) {
+                        regionSelect.addEventListener('change', function (e) {
                 var val = e.target.value || 'france';
-                var family = MODEL_FAMILY[currentModel] || { eu: 'gfs', fr: 'gfs_france', ant: 'gfs_antilles', usa: 'gfs_etats_unis' };
-                var cfg = REGION_CONFIG[val] || { isFrance: true, reset: true };
+                var cfg = REGION_CONFIG[val] || { isDomain: 'fr', reset: true };
 
-                if (val === 'antilles' || val === 'etats_unis') {
-                    var targetM = (val === 'antilles') ? family.ant : family.usa;
-                    transform = { scale: 1, x: 0, y: 0 };
-                    switchModel(targetM);
-                    resetView();
-                    updateUrl();
-                    return;
-                }
+                // Détermination du modèle cible
+                var family = 'gfs';
+                if (currentModel && currentModel.indexOf('aifs') !== -1) family = 'aifs';
+                else if (currentModel && currentModel.indexOf('arpege') !== -1) family = 'arpege';
+                else if (currentModel && currentModel.indexOf('icon') !== -1) family = 'icon_eu';
 
-                if (val === 'europe') {
-                    if (currentModel.indexOf('_france') !== -1 || currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1) {
-                        transform = { scale: 1, x: 0, y: 0 };
-                        switchModel(family.eu);
-                    } else {
-                        resetView();
-                    }
-                    updateUrl();
-                    return;
-                }
-
-                if (val === 'france') {
-                    if (currentModel.indexOf('_france') === -1) {
-                        transform = { scale: 1, x: 0, y: 0 };
-                        switchModel(family.fr);
-                    } else {
-                        resetView();
-                    }
-                    updateUrl();
-                    return;
-                }
-
-                // Région française ou Pays étranger
-                var targetModel = cfg.isFrance ? family.fr : family.eu;
-                var focus = {
-                    latitude: cfg.latitude,
-                    longitude: cfg.longitude,
-                    scale: cfg.scale
-                };
-                if (currentModel !== targetModel) {
-                    pendingFocus = focus;
-                    switchModel(targetModel);
+                var targetModel = 'gfs';
+                if (cfg.isDomain === 'fr') {
+                    targetModel = (family === 'aifs') ? 'aifs_france' : ((family === 'arpege') ? 'arpege_france' : 'gfs_france');
+                } else if (cfg.isDomain === 'eu') {
+                    targetModel = (family === 'aifs') ? 'aifs' : ((family === 'arpege') ? 'arpege' : 'gfs');
                 } else {
-                    focusLocation(focus);
+                    targetModel = (family === 'aifs' ? 'aifs_' : 'gfs_') + cfg.isDomain;
+                }
+
+                if (cfg.reset) {
+                    transform = { scale: 1, x: 0, y: 0 };
+                    if (currentModel !== targetModel) {
+                        switchModel(targetModel);
+                    } else {
+                        resetView();
+                    }
+                } else {
+                    var focus = {
+                        latitude: cfg.latitude,
+                        longitude: cfg.longitude,
+                        scale: cfg.scale || 2.5
+                    };
+                    if (currentModel !== targetModel) {
+                        pendingFocus = focus;
+                        switchModel(targetModel);
+                    } else {
+                        focusLocation(focus);
+                    }
                 }
                 updateUrl();
             });
