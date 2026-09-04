@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-04T22:12:03.638413+00:00",
+  "generated_at": "2026-09-04T22:37:46.184885+00:00",
   "total_active": 4,
   "cyclones_count": 3,
   "invests_count": 1,
@@ -50,7 +50,7 @@
       "updated_at": "2026-09-04T21:00:00.000Z"
     },
     {
-      "id": "NHC_DISTURB_8604",
+      "id": "NHC_DISTURB_8297",
       "name": "INVEST (Offshore of Southweste)",
       "type": "invest",
       "status_badge": "🟡",
@@ -62,7 +62,7 @@
       "lon": -110.0,
       "basin": "pacifique_est",
       "source": "NOAA / NHC (Outlook)",
-      "updated_at": "2026-09-04T22:12:02.618448+00:00"
+      "updated_at": "2026-09-04T22:37:45.763329+00:00"
     }
   ]
 }
