@@ -18,7 +18,7 @@ import datetime
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
-from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS, PACIFIQUE_OUEST, OCEAN_INDIEN_NORD
+from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS, PACIFIQUE_EST, PACIFIQUE_OUEST, PACIFIQUE_SUD, OCEAN_INDIEN, OCEAN_INDIEN_NORD
 from render import LAYER_META, write_manifest, write_places
 import gfs_open_data
 import arpege_open_data
@@ -164,6 +164,16 @@ def main():
     })
     assemble_model("aifs_etats_unis", ETATS_UNIS, {
         "model_name": "ECMWF AIFS 0.25° Amérique du Nord",
+        "provider": "ECMWF — open data (data.ecmwf.int)",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("gfs_pacifique_est", PACIFIQUE_EST, {
+        "model_name": "GFS 0.25° Pacifique Est & Hawaï",
+        "provider": "NOAA (NOMADS) — open data",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("aifs_pacifique_est", PACIFIQUE_EST, {
+        "model_name": "ECMWF AIFS 0.25° Pacifique Est",
         "provider": "ECMWF — open data (data.ecmwf.int)",
         "resolution": "0.25° (~25 km)",
     })
