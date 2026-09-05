@@ -37,9 +37,9 @@ DOMAINS = {
     },
     "etats_unis": {
         "projection": "mercator",
-        "south": 20.0, "west": -140.0, "north": 65.0, "east": -50.0,
+        "south": 23.0, "west": -128.0, "north": 51.85, "east": -66.0,
         "width": 2200, "height": 1320,
-        "label": "Amérique du Nord (Canada & États-Unis)",
+        "label": "États-Unis (CONUS)",
     },
     "ocean_indien": {
         "projection": "mercator",

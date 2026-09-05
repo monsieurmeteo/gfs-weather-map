@@ -163,7 +163,7 @@ def main():
         "resolution": "0.25° (~25 km)",
     })
     assemble_model("aifs_etats_unis", ETATS_UNIS, {
-        "model_name": "ECMWF AIFS 0.25° Amérique du Nord",
+        "model_name": "ECMWF AIFS 0.25° États-Unis",
         "provider": "ECMWF — open data (data.ecmwf.int)",
         "resolution": "0.25° (~25 km)",
     })

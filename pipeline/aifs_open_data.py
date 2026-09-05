@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 aifs_open_data.py — Pipeline ECMWF AIFS 0.25° (modèle IA, open data)
@@ -23,7 +23,11 @@ import numpy as np
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
-from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS, PACIFIQUE_EST, PACIFIQUE_OUEST, PACIFIQUE_SUD, OCEAN_INDIEN, OCEAN_INDIEN_NORD, OCEAN_INDIEN, PACIFIQUE_OUEST, PACIFIQUE_SUD, PACIFIQUE_EST, OCEAN_INDIEN_NORD  # noqa: E402
+from domains import (  # noqa: E402
+    EUROPE, FRANCE, ANTILLES, ETATS_UNIS,
+    PACIFIQUE_EST, PACIFIQUE_OUEST, PACIFIQUE_SUD,
+    OCEAN_INDIEN, OCEAN_INDIEN_NORD,
+)
 from render import (  # noqa: E402
     save_webp, write_hkv, write_places, write_manifest,
     render_z500_with_isobars, render_pression_with_isobars,
@@ -494,6 +498,36 @@ def run_all(max_hours=MAX_LEAD, domain="europe", lead_min=0, lead_max=None):
                       "ECMWF AIFS 0.25° États-Unis", "0.25° (~25 km)",
                       lead_min=lead_min, lead_max=lead_max,
                       init_state=warmup_domain(run_dt, prior, ETATS_UNIS) if prior else None)
+    if domain in ("world", "pacifique_est"):
+        render_domain(all_fields, run_dt, PACIFIQUE_EST,
+                      os.path.join(base, "aifs_pacifique_est", "maps"),
+                      "ECMWF AIFS 0.25° Pacifique Est", "0.25° (~25 km)",
+                      lead_min=lead_min, lead_max=lead_max,
+                      init_state=warmup_domain(run_dt, prior, PACIFIQUE_EST) if prior else None)
+    if domain in ("world", "pacifique_ouest"):
+        render_domain(all_fields, run_dt, PACIFIQUE_OUEST,
+                      os.path.join(base, "aifs_pacifique_ouest", "maps"),
+                      "ECMWF AIFS 0.25° Pacifique Ouest", "0.25° (~25 km)",
+                      lead_min=lead_min, lead_max=lead_max,
+                      init_state=warmup_domain(run_dt, prior, PACIFIQUE_OUEST) if prior else None)
+    if domain in ("world", "ocean_indien_nord"):
+        render_domain(all_fields, run_dt, OCEAN_INDIEN_NORD,
+                      os.path.join(base, "aifs_ocean_indien_nord", "maps"),
+                      "ECMWF AIFS 0.25° Océan Indien Nord", "0.25° (~25 km)",
+                      lead_min=lead_min, lead_max=lead_max,
+                      init_state=warmup_domain(run_dt, prior, OCEAN_INDIEN_NORD) if prior else None)
+    if domain in ("world", "ocean_indien"):
+        render_domain(all_fields, run_dt, OCEAN_INDIEN,
+                      os.path.join(base, "aifs_ocean_indien", "maps"),
+                      "ECMWF AIFS 0.25° Océan Indien", "0.25° (~25 km)",
+                      lead_min=lead_min, lead_max=lead_max,
+                      init_state=warmup_domain(run_dt, prior, OCEAN_INDIEN) if prior else None)
+    if domain in ("world", "pacifique_sud"):
+        render_domain(all_fields, run_dt, PACIFIQUE_SUD,
+                      os.path.join(base, "aifs_pacifique_sud", "maps"),
+                      "ECMWF AIFS 0.25° Pacifique Sud", "0.25° (~25 km)",
+                      lead_min=lead_min, lead_max=lead_max,
+                      init_state=warmup_domain(run_dt, prior, PACIFIQUE_SUD) if prior else None)
     print("[AIFS] Pipeline terminé avec succès.", flush=True)
 
 

@@ -70,18 +70,7 @@ jobs:
 
       - name: Générer les fonds et tracker mondial (Token 0)
         run: |
-          python -u pipeline/generate_fond_gfs.py --domain europe
-          python -u pipeline/generate_fond_gfs.py --domain france
-          python -u pipeline/generate_fond_gfs.py --domain antilles
-          python -u pipeline/generate_fond_gfs.py --domain etats_unis
-          python -u pipeline/generate_fond_gfs.py --domain ocean_indien
-          python -u pipeline/generate_fond_gfs.py --domain pacifique_ouest
-          python -u pipeline/generate_fond_gfs.py --domain pacifique_sud
-          python -u pipeline/generate_fond_gfs.py --domain pacifique_est
-          python -u pipeline/generate_fond_gfs.py --domain ocean_indien_nord
-          python -u pipeline/cyclone_tracker.py
-          python -u pipeline/generate_fond_gfs.py --domain pacifique_est
-          python -u pipeline/generate_fond_gfs.py --domain ocean_indien_nord
+          python -u pipeline/generate_fond_gfs.py --domain all
           python -u pipeline/cyclone_tracker.py
 
       - name: Upload fonds (artefact partagé)
@@ -534,15 +523,7 @@ jobs:
 
       - name: Génération des fonds et frontières universels
         run: |
-          python -u pipeline/generate_fond_gfs.py --domain europe
-          python -u pipeline/generate_fond_gfs.py --domain france
-          python -u pipeline/generate_fond_gfs.py --domain antilles
-          python -u pipeline/generate_fond_gfs.py --domain etats_unis
-          python -u pipeline/generate_fond_gfs.py --domain ocean_indien
-          python -u pipeline/generate_fond_gfs.py --domain pacifique_ouest
-          python -u pipeline/generate_fond_gfs.py --domain pacifique_sud
-          python -u pipeline/generate_fond_gfs.py --domain pacifique_est
-          python -u pipeline/generate_fond_gfs.py --domain ocean_indien_nord
+          python -u pipeline/generate_fond_gfs.py --domain all
           python -u pipeline/cyclone_tracker.py
       - name: Assemblage des manifests index.json
         run: python -u pipeline/assemble.py

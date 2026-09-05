@@ -2544,16 +2544,15 @@
                 .catch(function(err) {
                     if (token !== switchToken) return;
                     console.error('[switchModel] Erreur chargement manifeste', target.path, err);
-                    baseUrl = prevBaseUrl;
-                    app.dataset.baseUrl = prevBaseUrl;
-                    currentModel = 'gfs';
-                    app.dataset.model = 'gfs';
-                    if (titleSpan) titleSpan.textContent = 'GFS Europe';
-                    if (badge) badge.textContent = '0,25°';
-                    var modelSel = document.getElementById('select-model');
-                    if (modelSel) modelSel.value = 'gfs';
-                    showError('Modèle ' + target.name + ' non encore disponible — génération en cours.');
+                    showError('Modèle ' + target.name + ' non disponible — affichage GFS Europe.');
                     window.setTimeout(function() { clearError(); }, 4000);
+                    if (modelKey !== 'gfs') {
+                        var modelSel = document.getElementById('select-model');
+                        if (modelSel) modelSel.value = 'gfs';
+                        var regSel = document.getElementById('select-region');
+                        if (regSel) regSel.value = 'europe';
+                        switchModel('gfs');
+                    }
                 });
         }
 
@@ -3627,15 +3626,22 @@
                     !Number.isFinite(longitude)) {
                 return;
             }
-            var isEurope = (manifest && manifest.bounds && (manifest.bounds.projection === 'lambert' || manifest.bounds.west < -20)) || (currentModel === 'gfs') || (currentModel === 'arpege');
+            var isEurope = isEuropeDomain();
+            var isWorld = isWorldDomain();
+            var isFit = isEurope || isWorld;
+
+            var natW = (manifest && manifest.width) ? Number(manifest.width) : 2200.0;
+            var natH = (manifest && manifest.height) ? Number(manifest.height) : (isWorld ? 1320.0 : 1640.0);
+
             var proj = projectCoords(latitude, longitude);
             var u = proj.u;
             var v = proj.v;
             var scale = clamp(Number(pendingFocus.scale) || 1.0, 1.0, maxScale);
-            var s = isEurope ? Math.min(width / 2200.0, height / 1640.0) : Math.max(width / 2200.0, height / 1640.0);
+            var s = isFit ? Math.min(width / natW, height / natH) : Math.max(width / natW, height / natH);
             transform.scale = scale;
-            transform.x = 2200.0 * s * scale * (0.5 - u);
-            transform.y = 1640.0 * s * scale * (0.5 - v) + (height * 0.04);
+            transform.x = natW * s * scale * (0.5 - u);
+            var yOffset = (!isFit && !pendingFocus.isCyclone) ? (height * 0.04) : 0;
+            transform.y = natH * s * scale * (0.5 - v) + yOffset;
             pendingFocus = null;
             applyTransform();
         }
@@ -4371,17 +4377,37 @@
 
                 function focusOnCyclone(storm) {
             if (!storm) return;
-            var targetModel = 'gfs_' + storm.basin;
+            var lat = Number(storm.lat !== undefined ? storm.lat : storm.latitude);
+            var lon = Number(storm.lon !== undefined ? storm.lon : storm.longitude);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+            var basin = String(storm.basin || '').toLowerCase();
+            var targetModel = 'gfs_' + basin;
+            var targetRegion = basin;
+
+            // Détection fine du domaine selon coordonnées géographiques
+            if (basin === 'al' || basin === 'caraibes' || basin === 'antilles' || (lon >= -90 && lon <= -25 && lat >= 5 && lat <= 35)) {
+                targetModel = (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_antilles' : 'gfs_antilles';
+                targetRegion = 'antilles';
+            } else if (basin === 'ep' || basin === 'pacifique_est' || (lon >= -170 && lon <= -100 && lat >= 2 && lat <= 40)) {
+                targetModel = (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_pacifique_est' : 'gfs_pacifique_est';
+                targetRegion = 'pacifique_est';
+            } else if (basin === 'etats_unis' || (lon >= -128 && lon <= -65 && lat >= 23 && lat <= 52)) {
+                targetModel = (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_etats_unis' : 'gfs_etats_unis';
+                targetRegion = 'etats_unis';
+            }
+
             var focus = {
-                latitude: Number(storm.lat),
-                longitude: Number(storm.lon),
-                scale: 2.8
+                latitude: lat,
+                longitude: lon,
+                scale: 3.2,
+                isCyclone: true
             };
 
             // 1. Synchroniser le menu région sur le bassin du cyclone
             var selectRegion = document.getElementById('select-region');
-            if (selectRegion && storm.basin) {
-                selectRegion.value = storm.basin;
+            if (selectRegion && targetRegion && selectRegion.querySelector('option[value="' + targetRegion + '"]')) {
+                selectRegion.value = targetRegion;
             }
 
             // 2. Synchroniser le sélecteur de modèle
@@ -4391,7 +4417,7 @@
             }
 
             // 3. Bascule de modèle ou centrage direct
-            if (currentModel !== targetModel && currentModel !== 'aifs_' + storm.basin) {
+            if (currentModel !== targetModel && currentModel !== ('aifs_' + basin)) {
                 pendingFocus = focus;
                 switchModel(targetModel);
             } else {
