@@ -197,6 +197,26 @@ def main():
         "provider": "ECMWF — open data (data.ecmwf.int)",
         "resolution": "0.25° (~25 km)",
     })
+    assemble_model("gfs_ocean_indien", OCEAN_INDIEN, {
+        "model_name": "GFS 0.25° Océan Indien / Mascareignes",
+        "provider": "NOAA (NOMADS) — open data",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("aifs_ocean_indien", OCEAN_INDIEN, {
+        "model_name": "ECMWF AIFS 0.25° Océan Indien",
+        "provider": "ECMWF — open data (data.ecmwf.int)",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("gfs_pacifique_sud", PACIFIQUE_SUD, {
+        "model_name": "GFS 0.25° Pacifique Sud & Océanie",
+        "provider": "NOAA (NOMADS) — open data",
+        "resolution": "0.25° (~25 km)",
+    })
+    assemble_model("aifs_pacifique_sud", PACIFIQUE_SUD, {
+        "model_name": "ECMWF AIFS 0.25° Pacifique Sud & Océanie",
+        "provider": "ECMWF — open data (data.ecmwf.int)",
+        "resolution": "0.25° (~25 km)",
+    })
 
     # Nettoyage automatique des dalles orphelines pour maintenir l'archive ultra-légère (< 200 Mo)
     prune_stale_files()
