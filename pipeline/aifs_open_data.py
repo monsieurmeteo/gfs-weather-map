@@ -23,7 +23,7 @@ import numpy as np
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
-from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS, OCEAN_INDIEN, PACIFIQUE_OUEST, PACIFIQUE_SUD, PACIFIQUE_EST, OCEAN_INDIEN_NORD  # noqa: E402
+from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS, PACIFIQUE_EST, PACIFIQUE_OUEST, PACIFIQUE_SUD, OCEAN_INDIEN, OCEAN_INDIEN_NORD, OCEAN_INDIEN, PACIFIQUE_OUEST, PACIFIQUE_SUD, PACIFIQUE_EST, OCEAN_INDIEN_NORD  # noqa: E402
 from render import (  # noqa: E402
     save_webp, write_hkv, write_places, write_manifest,
     render_z500_with_isobars, render_pression_with_isobars,
