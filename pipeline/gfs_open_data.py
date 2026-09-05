@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")  # bruit cfgrib/xarray dans les logs CI
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "pipeline"))
 
-from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS, OCEAN_INDIEN, PACIFIQUE_OUEST, PACIFIQUE_SUD, PACIFIQUE_EST, OCEAN_INDIEN_NORD  # noqa: E402
+from domains import EUROPE, FRANCE, ANTILLES, ETATS_UNIS, PACIFIQUE_EST, PACIFIQUE_OUEST, PACIFIQUE_SUD, OCEAN_INDIEN, OCEAN_INDIEN_NORD, OCEAN_INDIEN, PACIFIQUE_OUEST, PACIFIQUE_SUD, PACIFIQUE_EST, OCEAN_INDIEN_NORD  # noqa: E402
 from render import (  # noqa: E402
     LAYER_ORDER, save_webp, write_hkv, write_places, write_manifest,
     render_z500_with_isobars, render_pression_with_isobars,
@@ -503,6 +503,21 @@ def run_all(max_hours=384, domain="both", lead_min=0, lead_max=None, run_time=No
                   leads[-1], leads, lead_min=lead_min)
     if domain in ("world", "etats_unis"):
         run_model(run_dt, ETATS_UNIS, os.path.join(base, "gfs_etats_unis", "maps"),
+                  leads[-1], leads, lead_min=lead_min)
+    if domain in ("world", "pacifique_est"):
+        run_model(run_dt, PACIFIQUE_EST, os.path.join(base, "gfs_pacifique_est", "maps"),
+                  leads[-1], leads, lead_min=lead_min)
+    if domain in ("world", "pacifique_ouest"):
+        run_model(run_dt, PACIFIQUE_OUEST, os.path.join(base, "gfs_pacifique_ouest", "maps"),
+                  leads[-1], leads, lead_min=lead_min)
+    if domain in ("world", "ocean_indien_nord"):
+        run_model(run_dt, OCEAN_INDIEN_NORD, os.path.join(base, "gfs_ocean_indien_nord", "maps"),
+                  leads[-1], leads, lead_min=lead_min)
+    if domain in ("world", "ocean_indien"):
+        run_model(run_dt, OCEAN_INDIEN, os.path.join(base, "gfs_ocean_indien", "maps"),
+                  leads[-1], leads, lead_min=lead_min)
+    if domain in ("world", "pacifique_sud"):
+        run_model(run_dt, PACIFIQUE_SUD, os.path.join(base, "gfs_pacifique_sud", "maps"),
                   leads[-1], leads, lead_min=lead_min)
     print("[GFS] Pipeline terminé avec succès.", flush=True)
 
