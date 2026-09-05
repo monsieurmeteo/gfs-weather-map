@@ -4356,6 +4356,12 @@
                         })(s);
                         container.appendChild(pill);
                     }
+                    var closeBtn = document.getElementById('cyclone-close-btn');
+                    if (closeBtn) {
+                        closeBtn.onclick = function() {
+                            bar.style.display = 'none';
+                        };
+                    }
                     bar.style.display = 'flex';
                 })
                 .catch(function(err) {
@@ -4369,24 +4375,33 @@
             var focus = {
                 latitude: Number(storm.lat),
                 longitude: Number(storm.lon),
-                scale: 3.2
+                scale: 2.8
             };
 
+            // 1. Synchroniser le menu région sur le bassin du cyclone
+            var selectRegion = document.getElementById('select-region');
+            if (selectRegion && storm.basin) {
+                selectRegion.value = storm.basin;
+            }
+
+            // 2. Synchroniser le sélecteur de modèle
             var selectModel = document.getElementById('select-model');
+            if (selectModel && selectModel.querySelector('option[value="' + targetModel + '"]')) {
+                selectModel.value = targetModel;
+            }
+
+            // 3. Bascule de modèle ou centrage direct
             if (currentModel !== targetModel && currentModel !== 'aifs_' + storm.basin) {
                 pendingFocus = focus;
-                if (selectModel) {
-                    selectModel.value = targetModel;
-                }
                 switchModel(targetModel);
             } else {
                 focusLocation(focus);
             }
 
-            // Notification d'alerte immédiate
+            // 4. Notification d'alerte immédiate
             if (typeof setToolHint === 'function') {
                 if (storm.type === 'invest') {
-                    setToolHint('🟡 Zoom direct sur ' + storm.name + ' (' + (storm.probability || '') + ')');
+                    setToolHint('🟡 Zoom direct sur ' + storm.name + ' (' + (storm.probability || 'En surveillance') + ')');
                 } else {
                     setToolHint('🔴 Zoom direct sur ' + storm.name + ' (' + storm.category + ' • ' + storm.wind_kmh + ' km/h, ' + storm.pressure_hpa + ' hPa)');
                 }
