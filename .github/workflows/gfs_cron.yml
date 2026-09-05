@@ -357,6 +357,64 @@ jobs:
             lead_min: 126
             lead_max: 240
 
+          # ── GFS Océan Indien (Réunion • Maurice • Madagascar) ───────────────
+          - id: gfs-oi-00-072
+            model: gfs
+            domain: ocean_indien
+            lead_min: 0
+            lead_max: 72
+          - id: gfs-oi-075-168
+            model: gfs
+            domain: ocean_indien
+            lead_min: 75
+            lead_max: 168
+          - id: gfs-oi-171-384
+            model: gfs
+            domain: ocean_indien
+            lead_min: 171
+            lead_max: 384
+
+          # ── AIFS Océan Indien (max 240 h) ───────────────────────────────────
+          - id: aifs-oi-00-120
+            model: aifs
+            domain: ocean_indien
+            lead_min: 0
+            lead_max: 120
+          - id: aifs-oi-126-240
+            model: aifs
+            domain: ocean_indien
+            lead_min: 126
+            lead_max: 240
+
+          # ── GFS Pacifique Sud (Nouvelle-Calédonie • Fidji • Vanuatu) ─────────
+          - id: gfs-ps-00-072
+            model: gfs
+            domain: pacifique_sud
+            lead_min: 0
+            lead_max: 72
+          - id: gfs-ps-075-168
+            model: gfs
+            domain: pacifique_sud
+            lead_min: 75
+            lead_max: 168
+          - id: gfs-ps-171-384
+            model: gfs
+            domain: pacifique_sud
+            lead_min: 171
+            lead_max: 384
+
+          # ── AIFS Pacifique Sud (max 240 h) ──────────────────────────────────
+          - id: aifs-ps-00-120
+            model: aifs
+            domain: pacifique_sud
+            lead_min: 0
+            lead_max: 120
+          - id: aifs-ps-126-240
+            model: aifs
+            domain: pacifique_sud
+            lead_min: 126
+            lead_max: 240
+
     steps:
       - uses: actions/checkout@v4
 
@@ -461,7 +519,7 @@ jobs:
         run: |
           # La base restaurée contient d'anciennes dalles du modèle en cours :
           # on les purge pour que la fusion des chunks les remplace à 100%.
-          rm -rf output/gfs output/gfs_france output/gfs_antilles output/gfs_etats_unis output/gfs_pacifique_ouest output/gfs_ocean_indien_nord output/gfs_pacifique_est \
+          rm -rf output/gfs output/gfs_france output/gfs_antilles output/gfs_etats_unis output/gfs_pacifique_ouest output/gfs_ocean_indien_nord output/gfs_pacifique_est output/gfs_ocean_indien output/gfs_pacifique_sud \
                  output/arpege output/arpege_france \
                  output/aifs output/aifs_france output/aifs_antilles output/aifs_etats_unis output/aifs_pacifique_ouest output/aifs_ocean_indien_nord
           echo "Répertoires GFS/ARPEGE/AIFS purgés (seront recréés par les chunks)"
