@@ -3449,12 +3449,14 @@
             return '#38bdf8';
         }
 
-        function getCleanStormName(storm) {
-            if (!storm || !storm.name) return 'CYCLONE';
-            var n = String(storm.name).trim();
-            // Supprimer les préfixes techniques sur la carte (HU, TS, TD, TY, STY, STS, TC, PTC)
+        function getCleanStormName(storm, toUpper) {
+            if (!storm) return toUpper ? 'CYCLONE' : 'Cyclone';
+            var raw = (typeof storm === 'string') ? storm : (storm.name || 'Cyclone');
+            var n = String(raw).trim();
+            // Supprimer les préfixes techniques sur la carte, bandeau et modale (HU, TS, TD, TY, STY, STS, TC, PTC)
             n = n.replace(/^(HU|TS|TD|TY|STY|STS|TC|PTC)\s+/i, '').trim();
-            return n.toUpperCase() || 'CYCLONE';
+            if (!n) n = 'Cyclone';
+            return toUpper ? n.toUpperCase() : n;
         }
 
         var cycloneAnimFrame = null;
@@ -3830,7 +3832,7 @@
                 if (cycloneLabelMode === 'name_only') {
                     // MODE NOM SEUL (Grand format épuré, idéal téléchargement et diffusion)
                     ctx.save();
-                    var nameOnlyText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + getCleanStormName(storm);
+                    var nameOnlyText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + getCleanStormName(storm, true);
                     var nameFontSize = Math.round(18 * sf);
                     ctx.font = '900 ' + nameFontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif';
                     var nameWidth = ctx.measureText(nameOnlyText).width;
@@ -3890,7 +3892,7 @@
                 } else if (cycloneLabelMode === 'full') {
                     // MODE DÉTAILS COMPLETS (Titre + vents/pression/déplacement)
                     ctx.save();
-                    var titleText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + getCleanStormName(storm) + (storm.category ? ' · ' + storm.category : '');
+                    var titleText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + getCleanStormName(storm, true) + (storm.category ? ' · ' + storm.category : '');
                     var subtitleText = '💨 ' + (storm.wind_kmh || '--') + ' km/h  ·  ⏱️ ' + (storm.pressure_hpa ? storm.pressure_hpa + ' hPa' : '--');
                     if (storm.movement) {
                         subtitleText += '  ·  ' + storm.movement;
@@ -5123,13 +5125,14 @@
                     var pill = document.createElement('button');
                     pill.type = 'button';
                     var isInvest = (s.type === 'invest');
+                    var cName = getCleanStormName(s, false);
                     pill.className = isInvest ? 'cyclone-pill cyclone-pill-invest' : 'cyclone-pill';
                     if (isInvest) {
-                        pill.innerHTML = '🟡 <strong>' + s.name + '</strong> (' + (s.probability || 'En surveillance') + ')';
-                        pill.title = 'Surveillance INVEST : ' + s.name + ' — ' + (s.probability || '') + ' (Bassin ' + s.basin + ')';
+                        pill.innerHTML = '🟡 <strong>' + cName + '</strong> (' + (s.probability || 'En surveillance') + ')';
+                        pill.title = 'Surveillance INVEST : ' + cName + ' — ' + (s.probability || '') + ' (Bassin ' + s.basin + ')';
                     } else {
-                        pill.innerHTML = '🔴 <strong>' + s.name + '</strong> (' + s.category + ' • ' + s.wind_kmh + ' km/h)';
-                        pill.title = 'Cyclone Actif : ' + s.name + ' — ' + s.category + ' (Bassin ' + s.basin + ')';
+                        pill.innerHTML = '🔴 <strong>' + cName + '</strong> (' + s.category + ' • ' + s.wind_kmh + ' km/h)';
+                        pill.title = 'Cyclone Actif : ' + cName + ' — ' + s.category + ' (Bassin ' + s.basin + ')';
                     }
                     (function(storm) {
                         pill.addEventListener('click', function(e) {
@@ -5239,7 +5242,7 @@
                         '<div class="amfm-cyclone-card-header">' +
                             '<div class="amfm-cyclone-name-group">' +
                                 '<span class="amfm-cyclone-status-badge">' + (isInvest ? '🟡 INVEST' : '🔴 CYCLONE') + '</span>' +
-                                '<h3 class="amfm-cyclone-name">' + s.name + '</h3>' +
+                                '<h3 class="amfm-cyclone-name">' + getCleanStormName(s, false) + '</h3>' +
                             '</div>' +
                             '<span class="amfm-cyclone-cat-badge">' + s.category + '</span>' +
                         '</div>' +
@@ -5385,10 +5388,11 @@
 
             // 4. Notification d'alerte immédiate
             if (typeof setToolHint === 'function') {
+                var cName = getCleanStormName(storm, false);
                 if (storm.type === 'invest') {
-                    setToolHint('🟡 Zoom direct sur ' + storm.name + ' (' + (storm.probability || 'En surveillance') + ')');
+                    setToolHint('🟡 Zoom direct sur ' + cName + ' (' + (storm.probability || 'En surveillance') + ')');
                 } else {
-                    setToolHint('🔴 Zoom direct sur ' + storm.name + ' (' + storm.category + ' • ' + storm.wind_kmh + ' km/h, ' + storm.pressure_hpa + ' hPa)');
+                    setToolHint('🔴 Zoom direct sur ' + cName + ' (' + storm.category + ' • ' + storm.wind_kmh + ' km/h, ' + storm.pressure_hpa + ' hPa)');
                 }
             }
         }

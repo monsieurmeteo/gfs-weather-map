@@ -219,9 +219,12 @@ def fetch_nhc_storms():
                 fcst_track = parse_kmz_track(item.get("forecastTrack", {}).get("kmzFile") if item.get("forecastTrack") else None)
                 past_track = parse_kmz_best_track(item.get("bestTrackGIS", {}).get("kmzFile") if item.get("bestTrackGIS") else None)
 
+                clean_name = re.sub(r"^(HU|TS|TD|TY|STY|STS|TC|PTC)\s+", "", name, flags=re.I).strip()
+
                 storms.append({
                     "id": item.get("id", f"NHC_{name}"),
-                    "name": f"{classification} {name}".strip(),
+                    "name": clean_name or name,
+                    "classification": classification,
                     "type": "cyclone",
                     "status_badge": "🔴",
                     "category": cat,

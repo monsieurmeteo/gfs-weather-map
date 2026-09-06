@@ -6,7 +6,7 @@
   "storms": [
     {
       "id": "ep122026",
-      "name": "HU Lowell",
+      "name": "Lowell",
       "type": "cyclone",
       "status_badge": "🔴",
       "category": "Ouragan Catégorie 2",
@@ -1042,7 +1042,7 @@
     },
     {
       "id": "ep132026",
-      "name": "HU Marie",
+      "name": "Marie",
       "type": "cyclone",
       "status_badge": "🔴",
       "category": "Ouragan Catégorie 1",
@@ -2093,7 +2093,7 @@
     },
     {
       "id": "ep112026",
-      "name": "TS Karina",
+      "name": "Karina",
       "type": "cyclone",
       "status_badge": "🔴",
       "category": "Tempête Tropicale",
