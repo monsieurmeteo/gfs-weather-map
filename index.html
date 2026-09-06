@@ -1130,30 +1130,72 @@
             }
         }
 
-        /* 📱 RESPONSIVE */
-        @media (max-width: 1024px) {
+        /* 📱 RESPONSIVE & COMPACT NAVIGATION BAR */
+        .amfm-btn-download span,
+        .amfm-btn-toggle span,
+        .amfm-btn-commune span {
+            display: none !important;
+        }
+        #amfm-logo-action-btn {
+            display: none !important;
+        }
+        .amfm-headline {
+            display: none !important;
+        }
+        .amfm-select-sea {
+            max-width: 135px;
+            font-size: 11.5px;
+        }
+        .amfm-navbar {
+            gap: 6px;
+        }
+        .amfm-nav-actions {
+            gap: 4px;
+        }
+        .amfm-btn-group {
+            gap: 3px;
+        }
+
+        @media (max-width: 1650px) {
+            .amfm-btn-arome-link span,
+            .amfm-btn-arome-link i.fa-arrow-up-right-from-square {
+                display: none !important;
+            }
+            .amfm-title-text {
+                display: none !important;
+            }
+            .amfm-badge {
+                display: none !important;
+            }
+        }
+        @media (max-width: 1320px) {
             .amfm-navbar {
-                flex-wrap: wrap;
-                gap: 8px;
-                padding: 8px 10px;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+                padding: 6px 10px !important;
             }
             .amfm-nav-controls {
-                order: 3;
-                width: 100%;
-                max-width: 100%;
+                order: 3 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                justify-content: flex-start !important;
+                gap: 6px !important;
             }
-            .amfm-headline { display: none; }
+            .amfm-select-layer,
+            .amfm-select-model,
+            .amfm-select-region {
+                min-width: 0 !important;
+                flex: 1 !important;
+            }
         }
         @media (max-width: 650px) {
-            .amfm-btn-download span,
-            .amfm-btn-commune span {
-                display: none;
-            }
-            .amfm-title-text { display: none; }
             .amfm-legend {
                 bottom: calc(max(10px, env(safe-area-inset-bottom)) + 60px);
                 width: 180px;
                 padding: 6px 10px;
+            }
+            .amfm-select-sea {
+                display: none !important;
             }
         }
         @media (max-height: 500px) and (orientation: landscape) {

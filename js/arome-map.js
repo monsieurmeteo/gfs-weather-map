@@ -64,6 +64,47 @@
     }
 
     function initMap(app) {
+        var urlInitParams = new URLSearchParams(window.location.search);
+        var urlInitModel = urlInitParams.get('model');
+        var initialModelMap = {
+            consensus: { path: 'output/consensus', name: 'CONSENSUS Europe', badge: 'Moyenne' },
+            consensus_france: { path: 'output/consensus_france', name: 'CONSENSUS France HD', badge: '0,1°' },
+            probabilites: { path: 'output/probabilites', name: 'PROBABILITÉS Europe', badge: '24h' },
+            probabilites_france: { path: 'output/probabilites_france', name: 'PROBABILITÉS France', badge: '24h' },
+            gfs: { path: 'output/gfs', name: 'GFS Europe', badge: '0,25°' },
+            gfs_france: { path: 'output/gfs_france', name: 'GFS France', badge: '0,25°' },
+            gfs_antilles: { path: 'output/gfs_antilles', name: 'GFS Arc Antillais', badge: '0,25°' },
+            gfs_etats_unis: { path: 'output/gfs_etats_unis', name: 'GFS États-Unis', badge: '0,25°' },
+            arpege: { path: 'output/arpege', name: 'ARPEGE Europe', badge: '0,25°' },
+            arpege_france: { path: 'output/arpege_france', name: 'ARPEGE France', badge: '0,1°' },
+            icon_eu: { path: 'output/icon_eu', name: 'ICON-EU Europe', badge: '7 km' },
+            icon_eu_france: { path: 'output/icon_eu_france', name: 'ICON-EU France', badge: '7 km' },
+            aifs: { path: 'output/aifs', name: 'ECMWF AIFS Europe', badge: '0,25°' },
+            aifs_france: { path: 'output/aifs_france', name: 'ECMWF AIFS France', badge: '0,25°' },
+            aifs_antilles: { path: 'output/aifs_antilles', name: 'ECMWF AIFS Arc Antillais', badge: '0,25°' },
+            aifs_etats_unis: { path: 'output/aifs_etats_unis', name: 'ECMWF AIFS États-Unis', badge: '0,25°' },
+            gfs_ocean_indien: { path: 'output/gfs_ocean_indien', name: 'GFS Océan Indien Sud-Ouest', badge: '0,25°' },
+            aifs_ocean_indien: { path: 'output/aifs_ocean_indien', name: 'AIFS Océan Indien Sud-Ouest', badge: '0,25°' },
+            gfs_pacifique_ouest: { path: 'output/gfs_pacifique_ouest', name: 'GFS Pacifique Ouest / Typhons', badge: '0,25°' },
+            aifs_pacifique_ouest: { path: 'output/aifs_pacifique_ouest', name: 'AIFS Pacifique Ouest / Typhons', badge: '0,25°' },
+            gfs_pacifique_sud: { path: 'output/gfs_pacifique_sud', name: 'GFS Pacifique Sud & Océanie', badge: '0,25°' },
+            aifs_pacifique_sud: { path: 'output/aifs_pacifique_sud', name: 'AIFS Pacifique Sud & Océanie', badge: '0,25°' },
+            gfs_pacifique_est: { path: 'output/gfs_pacifique_est', name: 'GFS Pacifique Est & Hawaï', badge: '0,25°' },
+            aifs_pacifique_est: { path: 'output/aifs_pacifique_est', name: 'AIFS Pacifique Est & Hawaï', badge: '0,25°' },
+            gfs_ocean_indien_nord: { path: 'output/gfs_ocean_indien_nord', name: 'GFS Bengale & Mer d\'Arabie', badge: '0,25°' },
+            aifs_ocean_indien_nord: { path: 'output/aifs_ocean_indien_nord', name: 'AIFS Bengale & Mer d\'Arabie', badge: '0,25°' }
+        };
+        if (urlInitModel && initialModelMap[urlInitModel]) {
+            app.dataset.model = urlInitModel;
+            app.dataset.baseUrl = initialModelMap[urlInitModel].path;
+            var initTitleSpan = document.querySelector('.amfm-title-text');
+            if (initTitleSpan) initTitleSpan.textContent = initialModelMap[urlInitModel].name;
+            var initBadge = document.querySelector('.amfm-badge');
+            if (initBadge) initBadge.textContent = initialModelMap[urlInitModel].badge;
+            var initModelSel = document.getElementById('select-model');
+            if (initModelSel) initModelSel.value = urlInitModel;
+        }
+
         var baseUrl = (app.dataset.baseUrl || '').replace(/\/+$/, '');
         var requestedLayer = app.dataset.variable || 'temperature';
         var timezone = app.dataset.timezone || 'Europe/Paris';
@@ -2658,15 +2699,19 @@
                     regSel.value = reg;
                     regSel.dispatchEvent(new Event('change'));
                 }
-            } else if (regSel && regSel.querySelector('option[value="hdf"]')) {
-                // Comportement AROME : démarrage sur Hauts-de-France si pas de paramètre region
-                regSel.value = 'hdf';
-                regSel.dispatchEvent(new Event('change'));
+            } else if (regSel) {
+                var isFrMod = (currentModel.indexOf('_france') !== -1);
+                var defaultReg = isFrMod ? 'hdf' : (currentModel.indexOf('_antilles') !== -1 ? 'antilles' : 'europe');
+                if (regSel.querySelector('option[value="' + defaultReg + '"]')) {
+                    regSel.value = defaultReg;
+                    regSel.dispatchEvent(new Event('change'));
+                }
             }
             var heure = parseInt(params.get('heure'), 10);
             if (!isNaN(heure)) {
                 var steps = availableSteps();
                 if (heure >= 0 && heure < steps.length) {
+                    currentStep = heure;
                     renderStep(heure);
                 }
             }
