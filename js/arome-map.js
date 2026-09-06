@@ -166,6 +166,10 @@
         var captureGifButton = app.querySelector('[data-amfm-capture-gif]');
         var toggleCitiesButton = app.querySelector('[data-amfm-toggle-cities]');
         var toggleValuesButton = app.querySelector('[data-amfm-toggle-values]');
+        var toggleCyclonesButton = app.querySelector('[data-amfm-toggle-cyclones]');
+        var btnToggleCycloneCone = document.getElementById('btn-toggle-cyclone-cone');
+        var btnToggleCycloneTracks = document.getElementById('btn-toggle-cyclone-tracks');
+        var btnToggleCycloneLabels = document.getElementById('btn-toggle-cyclone-labels');
         var toggleSeaButton = app.querySelector('[data-amfm-toggle-sea]');
         var seaSelect = app.querySelector('[data-amfm-select-sea]');
         var pinButton = app.querySelector('[data-amfm-pin]');
@@ -208,6 +212,10 @@
         var placeBuckets = new Map();
         var citiesVisible = true;
         var valuesVisible = false;
+        var cyclonesVisible = true;
+        var cycloneConeVisible = true;
+        var cycloneTracksVisible = true;
+        var cycloneLabelsVisible = true;
         var activeCyclonesData = [];
         var seaMode = 'none'; // 'none' (partout mer comprise par défaut), 'land' (terres seules), 'coast' (terres + littoral)
         var vectorDefinition = null;
@@ -1278,7 +1286,7 @@
             }
 
             // 🌀 CYCLONES & TYPHONS OVERLAYS dans l'export HD (Cône, trajectoires, badge et creux de pression)
-            if (activeCyclonesData && activeCyclonesData.length && manifest && manifest.bounds) {
+            if (cyclonesVisible && activeCyclonesData && activeCyclonesData.length && manifest && manifest.bounds) {
                 var exportMapRect = {
                     x: offX,
                     y: offY,
@@ -3499,7 +3507,7 @@
         }
 
         function drawCycloneOverlays(ctx, mapRect, width, height, isExport, occupied) {
-            if (!activeCyclonesData || !activeCyclonesData.length || !manifest || !manifest.bounds) {
+            if (!cyclonesVisible || !activeCyclonesData || !activeCyclonesData.length || !manifest || !manifest.bounds) {
                 return;
             }
             var sf = isExport ? Math.max(1.0, Math.min(mapRect.w / 1400.0, 2.2)) : 1.0;
@@ -3526,8 +3534,8 @@
                 var cy = mapRect.y + cProj.v * mapRect.h;
                 var catColor = getStormCategoryColor(storm.category);
 
-                // 1. CÔNE D'INCERTITUDE OFFICIEL (NHC / JTWC)
-                if (storm.cone_polygon && storm.cone_polygon.length > 2) {
+                // 1. CÔNE D'INCERTITUDE OFFICIEL (NHC / JTWC) — Style Broadcast Haute Lisibilité
+                if (cycloneConeVisible && storm.cone_polygon && storm.cone_polygon.length > 2) {
                     ctx.save();
                     ctx.beginPath();
                     var started = false;
@@ -3551,19 +3559,29 @@
                     }
                     if (started) {
                         ctx.closePath();
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+                        // Remplissage avec ombre portée pour détachement net sur fond rouge
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+                        ctx.shadowBlur = 10 * sf;
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
                         ctx.fill();
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
-                        ctx.lineWidth = 1.6 * sf;
-                        ctx.setLineDash([6 * sf, 4 * sf]);
+                        ctx.shadowBlur = 0;
+
+                        // Double passe de contour : Passe 1 Casing noir profond, Passe 2 Blanc tireté
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
+                        ctx.lineWidth = 3.8 * sf;
+                        ctx.stroke();
+
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2.0 * sf;
+                        ctx.setLineDash([7 * sf, 5 * sf]);
                         ctx.stroke();
                         ctx.setLineDash([]);
                     }
                     ctx.restore();
                 }
 
-                // 2. TRAJECTOIRE PASSÉE (BEST TRACK HISTORIQUE)
-                if (storm.past_track && storm.past_track.length > 1) {
+                // 2. TRAJECTOIRE PASSÉE (BEST TRACK HISTORIQUE) — Double passe Casing anti-fond rouge
+                if (cycloneTracksVisible && storm.past_track && storm.past_track.length > 1) {
                     ctx.save();
                     ctx.beginPath();
                     var pStarted = false;
@@ -3585,18 +3603,35 @@
                     }
                     if (pStarted) {
                         ctx.lineTo(cx, cy);
-                        ctx.strokeStyle = 'rgba(244, 63, 94, 0.82)';
-                        ctx.lineWidth = 2.2 * sf;
+                        // Passe 1 : Casing noir profond pour contraste absolu sur cartes rouges
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+                        ctx.lineWidth = 5.0 * sf;
+                        ctx.stroke();
+
+                        // Passe 2 : Ligne rouge vif
+                        ctx.strokeStyle = '#ff2b56';
+                        ctx.lineWidth = 2.5 * sf;
                         ctx.setLineDash([]);
                         ctx.stroke();
 
-                        ctx.fillStyle = '#f43f5e';
                         for (var pj = 0; pj < storm.past_track.length; pj += 4) {
                             var pjPt = projectCoords(storm.past_track[pj][1], storm.past_track[pj][0]);
                             var pjX = mapRect.x + pjPt.u * mapRect.w;
                             var pjY = mapRect.y + pjPt.v * mapRect.h;
+                            // Cercles concentriques : noir extérieur, blanc intermédiaire, rouge centre
                             ctx.beginPath();
-                            ctx.arc(pjX, pjY, 2.5 * sf, 0, Math.PI * 2);
+                            ctx.arc(pjX, pjY, 4.4 * sf, 0, Math.PI * 2);
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+                            ctx.fill();
+
+                            ctx.beginPath();
+                            ctx.arc(pjX, pjY, 3.2 * sf, 0, Math.PI * 2);
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fill();
+
+                            ctx.beginPath();
+                            ctx.arc(pjX, pjY, 2.0 * sf, 0, Math.PI * 2);
+                            ctx.fillStyle = '#ff2b56';
                             ctx.fill();
                         }
                     }
@@ -3604,7 +3639,7 @@
                 }
 
                 // 3. TRAJECTOIRE PRÉVISIONNELLE & JALONS D'INTENSITÉ (12h-120h)
-                if (storm.forecast_track && storm.forecast_track.length > 0) {
+                if (cycloneTracksVisible && storm.forecast_track && storm.forecast_track.length > 0) {
                     ctx.save();
                     ctx.beginPath();
                     ctx.moveTo(cx, cy);
@@ -3625,9 +3660,15 @@
                         ctx.lineTo(fpx, fpy);
                         validFcstPoints.push({ f: f, x: fpx, y: fpy });
                     }
-                    ctx.strokeStyle = '#00e5ff';
-                    ctx.lineWidth = 2.5 * sf;
-                    ctx.setLineDash([5 * sf, 4 * sf]);
+                    // Passe 1 : Casing noir solide
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+                    ctx.lineWidth = 5.2 * sf;
+                    ctx.stroke();
+
+                    // Passe 2 : Ligne cyan néon tiretée
+                    ctx.strokeStyle = '#00f2fe';
+                    ctx.lineWidth = 2.6 * sf;
+                    ctx.setLineDash([6 * sf, 4 * sf]);
                     ctx.stroke();
                     ctx.setLineDash([]);
 
@@ -3636,25 +3677,34 @@
                         var vf = vp.f;
                         var vCol = getStormCategoryColor(vf.cat_short);
 
+                        // Point avec double cerne (noir + blanc)
+                        ctx.beginPath();
+                        ctx.arc(vp.x, vp.y, 6.0 * sf, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+                        ctx.fill();
+
                         ctx.beginPath();
                         ctx.arc(vp.x, vp.y, 4.5 * sf, 0, Math.PI * 2);
                         ctx.fillStyle = vCol;
                         ctx.fill();
                         ctx.strokeStyle = '#ffffff';
-                        ctx.lineWidth = 1.5 * sf;
+                        ctx.lineWidth = 1.6 * sf;
                         ctx.stroke();
 
                         var isKey = (vf.lead_hours % 24 === 0) || (validFcstPoints.length <= 4) || (vi === validFcstPoints.length - 1);
                         if (isKey && vf.lead_hours > 0) {
                             var lbl = '+' + vf.lead_hours + 'h (' + (vf.cat_short || 'TS') + ')';
-                            ctx.font = 'bold ' + Math.round(10 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                            ctx.font = 'bold ' + Math.round(10.5 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
                             var tw = ctx.measureText(lbl).width;
                             var bx = vp.x + 8 * sf;
                             var by = vp.y - 8 * sf;
-                            var bw = tw + 8 * sf;
-                            var bh = 15 * sf;
+                            var bw = tw + 10 * sf;
+                            var bh = 17 * sf;
 
-                            ctx.fillStyle = 'rgba(11, 18, 32, 0.88)';
+                            ctx.save();
+                            ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+                            ctx.shadowBlur = 6 * sf;
+                            ctx.fillStyle = 'rgba(6, 11, 24, 0.96)';
                             ctx.beginPath();
                             if (typeof ctx.roundRect === 'function') {
                                 ctx.roundRect(bx, by - bh / 2, bw, bh, 4 * sf);
@@ -3662,14 +3712,16 @@
                                 ctx.rect(bx, by - bh / 2, bw, bh);
                             }
                             ctx.fill();
+                            ctx.shadowBlur = 0;
                             ctx.strokeStyle = vCol;
-                            ctx.lineWidth = 1 * sf;
+                            ctx.lineWidth = 1.5 * sf;
                             ctx.stroke();
 
                             ctx.fillStyle = '#ffffff';
                             ctx.textAlign = 'left';
                             ctx.textBaseline = 'middle';
-                            ctx.fillText(lbl, bx + 4 * sf, by);
+                            ctx.fillText(lbl, bx + 5 * sf, by);
+                            ctx.restore();
                         }
                     }
                     ctx.restore();
@@ -3722,7 +3774,7 @@
                 ctx.restore();
 
                 // 5. VALEUR MINIMALE ABSOLUE DE PRESSION (AU-DESSUS DE L'ŒIL)
-                if (storm.pressure_hpa && storm.pressure_hpa < 1015) {
+                if (cycloneLabelsVisible && storm.pressure_hpa && storm.pressure_hpa < 1015) {
                     ctx.save();
                     var pTxt = 'L · ' + storm.pressure_hpa + ' hPa';
                     ctx.font = 'bold ' + Math.round(11 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -3733,6 +3785,9 @@
                     var pbh = 17 * sf;
 
                     var pColor = storm.pressure_hpa < 925 ? '#a855f7' : (storm.pressure_hpa < 950 ? '#dc2626' : (storm.pressure_hpa < 980 ? '#ea580c' : '#0284c7'));
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                    ctx.shadowBlur = 6 * sf;
                     ctx.fillStyle = pColor;
                     ctx.beginPath();
                     if (typeof ctx.roundRect === 'function') {
@@ -3741,8 +3796,9 @@
                         ctx.rect(pbx, pby - pbh / 2, pbw, pbh);
                     }
                     ctx.fill();
+                    ctx.shadowBlur = 0;
                     ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 1.2 * sf;
+                    ctx.lineWidth = 1.4 * sf;
                     ctx.stroke();
 
                     ctx.fillStyle = '#ffffff';
@@ -3750,69 +3806,76 @@
                     ctx.textBaseline = 'middle';
                     ctx.fillText(pTxt, cx, pby);
                     ctx.restore();
+                    ctx.restore();
                 }
 
                 // 6. CARTOUCHE NOM & STATS DIRECTEMENT SOUS LE CYCLONE
-                ctx.save();
-                var titleText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + (storm.name || 'CYCLONE').toUpperCase() + (storm.category ? ' · ' + storm.category : '');
-                var subtitleText = '💨 ' + (storm.wind_kmh || '--') + ' km/h  ·  ⏱️ ' + (storm.pressure_hpa ? storm.pressure_hpa + ' hPa' : '--');
-                if (storm.movement) {
-                    subtitleText += '  ·  ' + storm.movement;
-                }
+                if (cycloneLabelsVisible) {
+                    ctx.save();
+                    var titleText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + (storm.name || 'CYCLONE').toUpperCase() + (storm.category ? ' · ' + storm.category : '');
+                    var subtitleText = '💨 ' + (storm.wind_kmh || '--') + ' km/h  ·  ⏱️ ' + (storm.pressure_hpa ? storm.pressure_hpa + ' hPa' : '--');
+                    if (storm.movement) {
+                        subtitleText += '  ·  ' + storm.movement;
+                    }
 
-                ctx.font = 'bold ' + Math.round(12 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                var titleWidth = ctx.measureText(titleText).width;
+                    ctx.font = 'bold ' + Math.round(12 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                    var titleWidth = ctx.measureText(titleText).width;
 
-                ctx.font = '600 ' + Math.round(10.5 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                var subWidth = ctx.measureText(subtitleText).width;
+                    ctx.font = '600 ' + Math.round(10.5 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                    var subWidth = ctx.measureText(subtitleText).width;
 
-                var cardW = Math.max(titleWidth, subWidth) + 24 * sf;
-                var cardH = 38 * sf;
-                var cardX = cx - cardW / 2;
-                var cardY = cy + 24 * sf;
+                    var cardW = Math.max(titleWidth, subWidth) + 24 * sf;
+                    var cardH = 38 * sf;
+                    var cardX = cx - cardW / 2;
+                    var cardY = cy + 24 * sf;
 
-                ctx.beginPath();
-                ctx.moveTo(cx, cy + 14 * sf);
-                ctx.lineTo(cx - 7 * sf, cardY);
-                ctx.lineTo(cx + 7 * sf, cardY);
-                ctx.closePath();
-                ctx.fillStyle = 'rgba(11, 18, 32, 0.94)';
-                ctx.fill();
-                ctx.strokeStyle = catColor;
-                ctx.lineWidth = 1.2 * sf;
-                ctx.stroke();
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+                    ctx.shadowBlur = 10 * sf;
 
-                ctx.beginPath();
-                if (typeof ctx.roundRect === 'function') {
-                    ctx.roundRect(cardX, cardY, cardW, cardH, 7 * sf);
-                } else {
-                    ctx.rect(cardX, cardY, cardW, cardH);
-                }
-                ctx.fillStyle = 'rgba(11, 18, 32, 0.94)';
-                ctx.fill();
-                ctx.strokeStyle = catColor;
-                ctx.lineWidth = 1.5 * sf;
-                ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy + 14 * sf);
+                    ctx.lineTo(cx - 7 * sf, cardY);
+                    ctx.lineTo(cx + 7 * sf, cardY);
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(6, 11, 24, 0.96)';
+                    ctx.fill();
+                    ctx.strokeStyle = catColor;
+                    ctx.lineWidth = 1.4 * sf;
+                    ctx.stroke();
 
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.font = 'bold ' + Math.round(12 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                ctx.fillStyle = '#ffffff';
-                ctx.fillText(titleText, cx, cardY + 12 * sf);
+                    ctx.beginPath();
+                    if (typeof ctx.roundRect === 'function') {
+                        ctx.roundRect(cardX, cardY, cardW, cardH, 7 * sf);
+                    } else {
+                        ctx.rect(cardX, cardY, cardW, cardH);
+                    }
+                    ctx.fillStyle = 'rgba(6, 11, 24, 0.96)';
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = catColor;
+                    ctx.lineWidth = 1.6 * sf;
+                    ctx.stroke();
 
-                ctx.font = '600 ' + Math.round(10.5 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                ctx.fillStyle = '#38bdf8';
-                ctx.fillText(subtitleText, cx, cardY + 26 * sf);
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = 'bold ' + Math.round(12 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(titleText, cx, cardY + 12 * sf);
 
-                ctx.restore();
+                    ctx.font = '600 ' + Math.round(10.5 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillText(subtitleText, cx, cardY + 26 * sf);
 
-                if (occupied && Array.isArray(occupied)) {
-                    occupied.push({
-                        left: cardX - 4,
-                        right: cardX + cardW + 4,
-                        top: cy - 35 * sf,
-                        bottom: cardY + cardH + 4
-                    });
+                    ctx.restore();
+
+                    if (occupied && Array.isArray(occupied)) {
+                        occupied.push({
+                            left: cardX - 4,
+                            right: cardX + cardW + 4,
+                            top: cy - 35 * sf,
+                            bottom: cardY + cardH + 4
+                        });
+                    }
                 }
             }
 
@@ -4173,8 +4236,16 @@
             transform.x = natW * s * scale * (0.5 - u);
             var yOffset = (!isFit && !pendingFocus.isCyclone) ? (height * 0.04) : 0;
             transform.y = natH * s * scale * (0.5 - v) + yOffset;
+            var sLabel = pendingFocus.searchLabel;
+            var pLat = latitude;
+            var pLon = longitude;
             pendingFocus = null;
             applyTransform();
+            if (sLabel && typeof dropSearchPin === 'function') {
+                window.setTimeout(function () {
+                    dropSearchPin(pLat, pLon, sLabel);
+                }, 60);
+            }
         }
 
         app.addEventListener('amfm:focus-location', function (event) {
@@ -4278,6 +4349,39 @@
                 valuesVisible = !valuesVisible;
                 toggleValuesButton.classList.toggle('is-active', valuesVisible);
                 toggleValuesButton.setAttribute('aria-pressed', valuesVisible ? 'true' : 'false');
+                scheduleRender();
+            });
+        }
+        if (toggleCyclonesButton) {
+            toggleCyclonesButton.addEventListener('click', function () {
+                cyclonesVisible = !cyclonesVisible;
+                toggleCyclonesButton.classList.toggle('is-active', cyclonesVisible);
+                toggleCyclonesButton.setAttribute('aria-pressed', cyclonesVisible ? 'true' : 'false');
+                checkCycloneAnimation();
+                scheduleRender();
+            });
+        }
+        if (btnToggleCycloneCone) {
+            btnToggleCycloneCone.addEventListener('click', function () {
+                cycloneConeVisible = !cycloneConeVisible;
+                btnToggleCycloneCone.classList.toggle('is-active', cycloneConeVisible);
+                btnToggleCycloneCone.classList.toggle('is-off', !cycloneConeVisible);
+                scheduleRender();
+            });
+        }
+        if (btnToggleCycloneTracks) {
+            btnToggleCycloneTracks.addEventListener('click', function () {
+                cycloneTracksVisible = !cycloneTracksVisible;
+                btnToggleCycloneTracks.classList.toggle('is-active', cycloneTracksVisible);
+                btnToggleCycloneTracks.classList.toggle('is-off', !cycloneTracksVisible);
+                scheduleRender();
+            });
+        }
+        if (btnToggleCycloneLabels) {
+            btnToggleCycloneLabels.addEventListener('click', function () {
+                cycloneLabelsVisible = !cycloneLabelsVisible;
+                btnToggleCycloneLabels.classList.toggle('is-active', cycloneLabelsVisible);
+                btnToggleCycloneLabels.classList.toggle('is-off', !cycloneLabelsVisible);
                 scheduleRender();
             });
         }
@@ -5180,6 +5284,365 @@
         window.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeCyclonesModal();
         });
+
+        // ── 🔍 MODULE DE RECHERCHE MONDIALE (Adresse, Ville, Pays) ───────────────
+        function dropSearchPin(lat, lon, label) {
+            var proj = projectCoords(lat, lon);
+            if (!proj || proj.u < 0 || proj.u > 1 || proj.v < 0 || proj.v > 1) {
+                return;
+            }
+            clearPinned();
+            var layer = manifest && manifest.layers && manifest.layers[currentLayer] ? manifest.layers[currentLayer] : null;
+            var value = null;
+            var estimated = false;
+            if (layer && typeof samplePalette === 'function') {
+                value = samplePalette(proj.u, proj.v, layer);
+                estimated = value !== null;
+            }
+            pinnedElement = document.createElement('div');
+            pinnedElement.className = 'amfm-probe amfm-probe-pinned amfm-probe-search';
+
+            var title = document.createElement('div');
+            title.className = 'amfm-probe-search-title';
+            title.innerHTML = '<i class="fa-solid fa-location-dot" style="color:#f59e0b;"></i> <span>' + (label || 'Position recherchée') + '</span>';
+            pinnedElement.appendChild(title);
+
+            if (value !== null && Number.isFinite(value)) {
+                var decimals = clamp(Number(layer.decimals) || 0, 0, 2);
+                var formatted = Number(value).toLocaleString('fr-FR', {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                });
+                var strong = document.createElement('strong');
+                strong.textContent = (estimated ? '≈ ' : '') + formatted + (layer.unit ? ' ' + layer.unit : '');
+                var lbl = document.createElement('span');
+                lbl.className = 'amfm-probe-label';
+                lbl.textContent = layer.label || currentLayer;
+                pinnedElement.appendChild(strong);
+                pinnedElement.appendChild(lbl);
+            }
+
+            var close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'amfm-probe-pin-close';
+            close.setAttribute('aria-label', 'Retirer l’épingle');
+            close.textContent = '×';
+            close.addEventListener('click', function (event) {
+                event.stopPropagation();
+                clearPinned();
+            });
+            pinnedElement.appendChild(close);
+            viewport.appendChild(pinnedElement);
+            pinnedPoint = { u: proj.u, v: proj.v };
+            positionPinned();
+        }
+
+        function isCoordsInCurrentDomain(lat, lon) {
+            if (!manifest || !manifest.bounds) return false;
+            var b = manifest.bounds;
+            var w = Number(b.west);
+            var e = Number(b.east);
+            var s = Number(b.south);
+            var n = Number(b.north);
+            if (!Number.isFinite(w) || !Number.isFinite(e) || !Number.isFinite(s) || !Number.isFinite(n)) return false;
+            var minLon = Math.min(w, e);
+            var maxLon = Math.max(w, e);
+            var minLat = Math.min(s, n);
+            var maxLat = Math.max(s, n);
+            return (lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon);
+        }
+
+        function findBestDomainForCoords(lat, lon) {
+            // 1. France métropolitaine
+            if (lat >= 41.2 && lat <= 51.3 && lon >= -5.2 && lon <= 9.6) {
+                return { domain: 'france', model: (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_france' : 'arpege_france' };
+            }
+            // 2. Arc Antillais & Caraïbes
+            if (lat >= 7.0 && lat <= 32.0 && lon >= -75.0 && lon <= -30.0) {
+                return { domain: 'antilles', model: (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_antilles' : 'gfs_antilles' };
+            }
+            // 3. États-Unis (CONUS)
+            if (lat >= 23.0 && lat <= 51.85 && lon >= -128.0 && lon <= -66.0) {
+                return { domain: 'etats_unis', model: (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_etats_unis' : 'gfs_etats_unis' };
+            }
+            // 4. Océan Indien Sud-Ouest (Réunion, Madagascar, Maurice)
+            if (lat >= -28.5 && lat <= -8.5 && lon >= 38.0 && lon <= 74.0) {
+                return { domain: 'ocean_indien', model: (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_ocean_indien' : 'gfs_ocean_indien' };
+            }
+            // 5. Océan Indien Nord (Inde, Sri Lanka, Mer d'Arabie, Golfe du Bengale)
+            if (lat >= 2.0 && lat <= 36.0 && lon >= 60.0 && lon <= 98.0) {
+                return { domain: 'ocean_indien_nord', model: (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_ocean_indien_nord' : 'gfs_ocean_indien_nord' };
+            }
+            // 6. Asie de l'Est & Pacifique Ouest (Chine, Japon, Corée, Philippines, Taïwan)
+            if (lat >= 0.0 && lat <= 48.0 && lon >= 100.0 && lon <= 155.0) {
+                return { domain: 'pacifique_ouest', model: (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_pacifique_ouest' : 'gfs_pacifique_ouest' };
+            }
+            // 7. Pacifique Sud & Océanie (Australie, Nouvelle-Calédonie, Fidji)
+            if (lat >= -36.0 && lat <= -8.5 && lon >= 130.0 && lon <= 180.0) {
+                return { domain: 'pacifique_sud', model: (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_pacifique_sud' : 'gfs_pacifique_sud' };
+            }
+            // 8. Pacifique Est & Hawaï
+            if (lat >= 2.0 && lat <= 40.0 && ((lon >= -170.0 && lon <= -100.0) || (lon >= 190.0 && lon <= 260.0))) {
+                return { domain: 'pacifique_est', model: (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_pacifique_est' : 'gfs_pacifique_est' };
+            }
+            // 9. Europe élargie (Europe, Maghreb, Proche-Orient, Atlantique Nord, Islande)
+            if (lat >= 18.0 && lat <= 75.0 && lon >= -60.0 && lon <= 50.0) {
+                return { domain: 'europe', model: (currentModel && currentModel.indexOf('arpege') !== -1) ? 'arpege' : ((currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs' : 'gfs') };
+            }
+            // Par défaut
+            return { domain: 'europe', model: 'gfs' };
+        }
+
+        function landOnLocation(lat, lon, label, scale) {
+            var zoomScale = scale || 3.5;
+            var inCurrent = isCoordsInCurrentDomain(lat, lon);
+            var focus = { latitude: lat, longitude: lon, scale: zoomScale, searchLabel: label };
+
+            if (inCurrent) {
+                focusLocation(focus);
+                dropSearchPin(lat, lon, label);
+                if (typeof setToolHint === 'function') {
+                    setToolHint('📍 ' + label);
+                }
+            } else {
+                var best = findBestDomainForCoords(lat, lon);
+                pendingFocus = focus;
+                if (typeof setToolHint === 'function') {
+                    setToolHint('✈️ Navigation vers ' + label + ' (Domaine ' + best.domain.toUpperCase() + ')…');
+                }
+                var selectEl = document.getElementById('select-model');
+                if (selectEl) {
+                    selectEl.value = best.model;
+                }
+                switchModel(best.model);
+            }
+        }
+
+        function initGlobalSearch() {
+            var input = document.getElementById('amfm-search-input');
+            var clearBtn = document.getElementById('amfm-search-clear');
+            var dropdown = document.getElementById('amfm-search-dropdown');
+            var wrapper = document.getElementById('amfm-search-wrapper');
+            if (!input || !dropdown || !wrapper) return;
+
+            var debounceTimer = null;
+            var currentSelectedIndex = -1;
+            var currentResults = [];
+
+            // Raccourcis clavier universels : Ctrl+K ou "/" pour focus la recherche
+            window.addEventListener('keydown', function (e) {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                    e.preventDefault();
+                    input.focus();
+                    input.select();
+                } else if (e.key === '/' && document.activeElement !== input && (!document.activeElement || (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'))) {
+                    e.preventDefault();
+                    input.focus();
+                    input.select();
+                }
+            });
+
+            function renderDropdown(items) {
+                currentResults = items || [];
+                currentSelectedIndex = -1;
+                dropdown.innerHTML = '';
+                if (!currentResults.length) {
+                    dropdown.innerHTML = '<div class="amfm-search-hint">Aucun résultat trouvé. Précisez la ville ou le pays.</div>';
+                    dropdown.style.display = 'flex';
+                    return;
+                }
+                for (var i = 0; i < currentResults.length; i++) {
+                    var it = currentResults[i];
+                    var div = document.createElement('div');
+                    div.className = 'amfm-search-item';
+                    div.dataset.index = i;
+                    div.innerHTML =
+                        '<i class="fa-solid ' + (it.icon || 'fa-location-dot') + ' amfm-search-item-icon" style="color:var(--amfm-accent);"></i>' +
+                        '<div class="amfm-search-item-info">' +
+                            '<span class="amfm-search-item-title">' + (it.title || '') + '</span>' +
+                            '<span class="amfm-search-item-sub">' + (it.subtitle || '') + '</span>' +
+                        '</div>' +
+                        '<span class="amfm-search-badge-domain">' + (it.domainBadge || '') + '</span>';
+                    div.addEventListener('click', (function (item) {
+                        return function () {
+                            selectItem(item);
+                        };
+                    })(it));
+                    dropdown.appendChild(div);
+                }
+                dropdown.style.display = 'flex';
+            }
+
+            function selectItem(item) {
+                if (!item) return;
+                input.value = item.title + (item.subtitle ? ', ' + item.subtitle : '');
+                if (clearBtn) clearBtn.style.display = 'inline-flex';
+                dropdown.style.display = 'none';
+                landOnLocation(item.lat, item.lon, item.title, item.scale);
+            }
+
+            function executeSearch(query) {
+                var q = query.trim();
+                if (q.length < 2) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+                var photonUrl = 'https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=6&lang=fr';
+                fetch(photonUrl)
+                    .then(function (res) {
+                        if (!res.ok) throw new Error('Photon status ' + res.status);
+                        return res.json();
+                    })
+                    .then(function (data) {
+                        var items = [];
+                        if (data && data.features && data.features.length) {
+                            data.features.forEach(function (feat) {
+                                var p = feat.properties || {};
+                                var geom = feat.geometry || {};
+                                var coords = geom.coordinates;
+                                if (!coords || coords.length < 2) return;
+                                var lon = Number(coords[0]);
+                                var lat = Number(coords[1]);
+                                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+                                var title = p.housenumber ? (p.housenumber + ' ' + (p.street || p.name || '')) : (p.name || p.street || p.city || '');
+                                var subParts = [];
+                                if (p.postcode) subParts.push(p.postcode);
+                                if (p.city && p.city !== title) subParts.push(p.city);
+                                else if (p.district) subParts.push(p.district);
+                                if (p.state) subParts.push(p.state);
+                                if (p.country) subParts.push(p.country);
+                                var subtitle = subParts.join(', ');
+
+                                var icon = 'fa-location-dot';
+                                if (p.osm_key === 'place' || p.type === 'city' || p.type === 'town') icon = 'fa-city';
+                                else if (p.osm_key === 'highway' || p.street) icon = 'fa-road';
+                                else if (p.osm_key === 'building' || p.osm_key === 'amenity') icon = 'fa-building';
+                                else if (p.osm_value === 'country') icon = 'fa-globe';
+
+                                var domainInfo = findBestDomainForCoords(lat, lon);
+                                var domainBadge = domainInfo ? domainInfo.domain.toUpperCase().replace('_', ' ') : 'MONDE';
+
+                                items.push({
+                                    title: title || subtitle,
+                                    subtitle: subtitle,
+                                    lat: lat,
+                                    lon: lon,
+                                    icon: icon,
+                                    domainBadge: domainBadge,
+                                    scale: (p.osm_value === 'country') ? 1.8 : ((p.type === 'city' || p.type === 'town') ? 2.8 : 3.6)
+                                });
+                            });
+                        }
+                        if (items.length) {
+                            renderDropdown(items);
+                        } else {
+                            fallbackOpenMeteo(q);
+                        }
+                    })
+                    .catch(function () {
+                        fallbackOpenMeteo(q);
+                    });
+            }
+
+            function fallbackOpenMeteo(q) {
+                var omUrl = 'https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) + '&count=6&language=fr&format=json';
+                fetch(omUrl)
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        var items = [];
+                        if (data && data.results && data.results.length) {
+                            data.results.forEach(function (r) {
+                                var subParts = [];
+                                if (r.admin1) subParts.push(r.admin1);
+                                if (r.country) subParts.push(r.country);
+                                var subtitle = subParts.join(', ');
+                                var domainInfo = findBestDomainForCoords(r.latitude, r.longitude);
+                                items.push({
+                                    title: r.name,
+                                    subtitle: subtitle,
+                                    lat: r.latitude,
+                                    lon: r.longitude,
+                                    icon: 'fa-city',
+                                    domainBadge: domainInfo ? domainInfo.domain.toUpperCase().replace('_', ' ') : 'MONDE',
+                                    scale: 2.8
+                                });
+                            });
+                        }
+                        renderDropdown(items);
+                    })
+                    .catch(function () {
+                        renderDropdown([]);
+                    });
+            }
+
+            input.addEventListener('input', function () {
+                var val = input.value;
+                if (clearBtn) clearBtn.style.display = val.length ? 'inline-flex' : 'none';
+                if (debounceTimer) clearTimeout(debounceTimer);
+                if (val.trim().length < 2) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+                debounceTimer = setTimeout(function () {
+                    executeSearch(val);
+                }, 260);
+            });
+
+            input.addEventListener('keydown', function (e) {
+                if (!currentResults.length || dropdown.style.display === 'none') {
+                    if (e.key === 'Enter' && input.value.trim().length >= 2) {
+                        e.preventDefault();
+                        executeSearch(input.value);
+                    }
+                    return;
+                }
+                var itemEls = dropdown.querySelectorAll('.amfm-search-item');
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    currentSelectedIndex = (currentSelectedIndex + 1) % currentResults.length;
+                    itemEls.forEach(function (el, idx) {
+                        el.classList.toggle('is-selected', idx === currentSelectedIndex);
+                        if (idx === currentSelectedIndex) el.scrollIntoView({ block: 'nearest' });
+                    });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    currentSelectedIndex = (currentSelectedIndex - 1 + currentResults.length) % currentResults.length;
+                    itemEls.forEach(function (el, idx) {
+                        el.classList.toggle('is-selected', idx === currentSelectedIndex);
+                        if (idx === currentSelectedIndex) el.scrollIntoView({ block: 'nearest' });
+                    });
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    var selectedIdx = currentSelectedIndex >= 0 ? currentSelectedIndex : 0;
+                    if (currentResults[selectedIdx]) {
+                        selectItem(currentResults[selectedIdx]);
+                    }
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    dropdown.style.display = 'none';
+                    input.blur();
+                }
+            });
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function () {
+                    input.value = '';
+                    clearBtn.style.display = 'none';
+                    dropdown.style.display = 'none';
+                    clearPinned();
+                    input.focus();
+                });
+            }
+
+            document.addEventListener('click', function (e) {
+                if (!wrapper.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+        }
+
+        initGlobalSearch();
     }
 
     whenReady(function () {

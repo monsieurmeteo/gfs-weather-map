@@ -109,6 +109,8 @@
         }
 
         .amfm-navbar {
+            position: relative;
+            z-index: 200;
             pointer-events: auto;
             background: var(--amfm-surface);
             backdrop-filter: blur(20px);
@@ -1295,6 +1297,8 @@
     
         /* 🌀 BANDEAU CYCLONES & TYPHONS EN DIRECT */
         .cyclone-alert-bar {
+            position: relative;
+            z-index: 50;
             pointer-events: auto;
             display: flex;
             align-items: center;
@@ -1403,6 +1407,213 @@
             background: #ffffff;
             color: #991b1b;
             transform: translateY(-1px);
+        }
+
+        /* 🌀 OPTIONS & BOUTONS VISIBILITÉ CYCLONES DANS LE BANDEAU */
+        .cyclone-toggles-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 2px 4px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin: 0 4px;
+            flex-shrink: 0;
+        }
+        .cyclone-opt-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .cyclone-opt-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .cyclone-opt-btn.is-active {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.45);
+        }
+        .cyclone-opt-btn.is-off {
+            opacity: 0.45;
+            text-decoration: line-through;
+        }
+
+        /* 🔍 BARRE DE RECHERCHE MONDIALE (Adresse, Ville, Pays) */
+        .amfm-search-wrapper {
+            position: relative;
+            flex: 1.1;
+            min-width: 170px;
+            max-width: 290px;
+            display: flex;
+            align-items: center;
+        }
+        .amfm-search-icon {
+            position: absolute;
+            left: 11px;
+            color: var(--amfm-accent);
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 2;
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+        .amfm-search-input {
+            width: 100%;
+            height: 38px;
+            background: rgba(14, 23, 40, 0.95);
+            border: 1px solid var(--amfm-border);
+            border-radius: 8px;
+            padding: 0 30px 0 32px;
+            color: #ffffff;
+            font-size: 12.5px;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+        .amfm-search-input::placeholder {
+            color: rgba(255, 255, 255, 0.45);
+            font-weight: 500;
+        }
+        .amfm-search-input:focus {
+            border-color: var(--amfm-border-focus);
+            background: rgba(15, 26, 48, 0.98);
+            box-shadow: 0 0 12px rgba(0, 210, 255, 0.35);
+        }
+        .amfm-search-wrapper:focus-within .amfm-search-icon {
+            color: #38bdf8;
+            transform: scale(1.1);
+        }
+        .amfm-search-clear {
+            position: absolute;
+            right: 8px;
+            background: transparent;
+            border: none;
+            color: var(--amfm-muted);
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            z-index: 2;
+            line-height: 1;
+        }
+        .amfm-search-clear:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.12);
+        }
+        .amfm-search-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            min-width: 320px;
+            max-width: 440px;
+            background: rgba(10, 16, 30, 0.98);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 210, 255, 0.35);
+            border-radius: 10px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
+            max-height: 380px;
+            overflow-y: auto;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            padding: 4px 0;
+        }
+        .amfm-search-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 9px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.15s ease;
+            text-align: left;
+            user-select: none;
+        }
+        .amfm-search-item:last-child {
+            border-bottom: none;
+        }
+        .amfm-search-item:hover, .amfm-search-item.is-selected {
+            background: rgba(0, 210, 255, 0.16);
+        }
+        .amfm-search-item-icon {
+            font-size: 14px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            opacity: 0.9;
+        }
+        .amfm-search-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: hidden;
+            flex: 1;
+        }
+        .amfm-search-item-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .amfm-search-item-sub {
+            font-size: 11px;
+            color: var(--amfm-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .amfm-search-badge-domain {
+            font-size: 9.5px;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+            margin-left: auto;
+            align-self: center;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .amfm-search-hint {
+            padding: 8px 12px;
+            font-size: 11px;
+            color: var(--amfm-muted);
+            text-align: center;
+            font-style: italic;
+        }
+
+        /* Épinglette Marqueur de Recherche sur la Carte */
+        .amfm-probe-search {
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 16px rgba(245, 158, 11, 0.6), 0 8px 24px rgba(0, 0, 0, 0.85) !important;
+        }
+        .amfm-probe-search-title {
+            font-size: 12px;
+            font-weight: 800;
+            color: #fef08a;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
         }
 
         /* 🌀 MODALE TOUS LES PHÉNOMÈNES CYCLONIQUES ACTIFS */
@@ -1749,17 +1960,28 @@
                             <option value="ocean_indien_nord" class="opt-world">🇮🇳 Océan Indien Nord (Bengale • Mer d'Arabie)</option>
                         </optgroup>
                     </select>
+
+                    <!-- Barre de Recherche Mondiale (Adresse, Ville, Pays) -->
+                    <div class="amfm-search-wrapper" id="amfm-search-wrapper">
+                        <i class="fa-solid fa-magnifying-glass amfm-search-icon" aria-hidden="true"></i>
+                        <input type="text" id="amfm-search-input" class="amfm-search-input" placeholder="Rechercher une adresse, ville, pays…" autocomplete="off" spellcheck="false" aria-label="Recherche mondiale par adresse, ville ou pays">
+                        <button type="button" id="amfm-search-clear" class="amfm-search-clear" style="display:none;" title="Effacer la recherche" aria-label="Effacer">✕</button>
+                        <div id="amfm-search-dropdown" class="amfm-search-dropdown" style="display:none;" role="listbox"></div>
+                    </div>
                 </div>
 
                 <!-- Droite : Outils Carte + Exports + Logo -->
                 <div class="amfm-nav-actions">
-                    <!-- Outils d'affichage Carte (Villes, Valeurs, Recentrage) -->
+                    <!-- Outils d'affichage Carte (Villes, Valeurs, Cyclones, Recentrage) -->
                     <div class="amfm-btn-group">
                         <button type="button" class="amfm-btn amfm-btn-toggle is-active" data-amfm-toggle-cities aria-pressed="true" aria-label="Afficher ou masquer les villes" title="Afficher/Masquer les villes">
                             <i class="fa-solid fa-city" aria-hidden="true"></i> <span>Villes</span>
                         </button>
                         <button type="button" class="amfm-btn amfm-btn-toggle" data-amfm-toggle-values aria-pressed="false" aria-label="Afficher ou masquer les valeurs météo" title="Afficher/Masquer les valeurs météo sur la carte">
                             <i class="fa-solid fa-hashtag" aria-hidden="true"></i> <span>Valeurs</span>
+                        </button>
+                        <button type="button" class="amfm-btn amfm-btn-toggle is-active" data-amfm-toggle-cyclones aria-pressed="true" aria-label="Afficher ou masquer les cyclones" title="Afficher/Masquer les cyclones, cônes et trajectoires sur la carte">
+                            <i class="fa-solid fa-hurricane" aria-hidden="true"></i> <span>Cyclones</span>
                         </button>
                     </div>
 
@@ -1818,6 +2040,11 @@
                 <button type="button" id="btn-open-cyclones-modal" class="cyclone-all-btn" title="Voir la liste complète des phénomènes et INVESTs actifs">
                     <i class="fa-solid fa-list-check"></i> Tous les phénomènes (<span id="cyclone-total-count">0</span>)
                 </button>
+                <div class="cyclone-toggles-group" id="cyclone-toggles-group">
+                    <button type="button" id="btn-toggle-cyclone-cone" class="cyclone-opt-btn is-active" title="Afficher / Masquer le Cône d'incertitude NHC/JTWC">Cône</button>
+                    <button type="button" id="btn-toggle-cyclone-tracks" class="cyclone-opt-btn is-active" title="Afficher / Masquer les trajectoires passées et prévisionnelles">Trajectoires</button>
+                    <button type="button" id="btn-toggle-cyclone-labels" class="cyclone-opt-btn is-active" title="Afficher / Masquer les cartouches et creux de pression">Infos</button>
+                </div>
                 <div id="cyclone-items" class="cyclone-items"></div>
                 <button type="button" id="cyclone-close-btn" class="cyclone-close-btn" title="Masquer le bandeau d'alerte">✕</button>
             </div>
@@ -2116,7 +2343,7 @@
     <script src="js/palettes.js?v=2.7.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
     <script src="js/regions.js?v=2.7.0"></script>
-    <script src="js/arome-map.js?v=20260905-07"></script>
+    <script src="js/arome-map.js?v=20260906-08"></script>
 <script>
 (function() {
     var MM_FALLBACK = "https://lh3.googleusercontent.com/aida-public/AB6AXuBOx1F1TSaVo-90uMYKn9COfMPmjAX0T-pDidLIG3dPGDOY8KZaze-h0L3XqQFBQYd2hOHF3ncMJUSafxVsBVCsa_nG_lc6fpJuY9v9GDCYja_y7Yp7cY-R3DVGTOnpn-SMdrNqECFBDa-E-v0VnHWzB7gvt3J4SIGkNfDhO17usu8WyVxYhbXh6JJyqEE715ISXChoGvFwKoKxk4_INHavYh_JUKzTUvJFsg7VX9fkzGTJOPZFY4SKNUATMB_IUPKDfX3Cwx4Gz5g";
