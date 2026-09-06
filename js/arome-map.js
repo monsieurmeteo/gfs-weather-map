@@ -3449,6 +3449,14 @@
             return '#38bdf8';
         }
 
+        function getCleanStormName(storm) {
+            if (!storm || !storm.name) return 'CYCLONE';
+            var n = String(storm.name).trim();
+            // Supprimer les préfixes techniques sur la carte (HU, TS, TD, TY, STY, STS, TC, PTC)
+            n = n.replace(/^(HU|TS|TD|TY|STY|STS|TC|PTC)\s+/i, '').trim();
+            return n.toUpperCase() || 'CYCLONE';
+        }
+
         var cycloneAnimFrame = null;
         function hasAnyVisibleStorm() {
             if (!activeCyclonesData || !activeCyclonesData.length || !manifest || !manifest.bounds) {
@@ -3822,7 +3830,7 @@
                 if (cycloneLabelMode === 'name_only') {
                     // MODE NOM SEUL (Grand format épuré, idéal téléchargement et diffusion)
                     ctx.save();
-                    var nameOnlyText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + (storm.name || 'CYCLONE').toUpperCase();
+                    var nameOnlyText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + getCleanStormName(storm);
                     var nameFontSize = Math.round(18 * sf);
                     ctx.font = '900 ' + nameFontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif';
                     var nameWidth = ctx.measureText(nameOnlyText).width;
@@ -3882,7 +3890,7 @@
                 } else if (cycloneLabelMode === 'full') {
                     // MODE DÉTAILS COMPLETS (Titre + vents/pression/déplacement)
                     ctx.save();
-                    var titleText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + (storm.name || 'CYCLONE').toUpperCase() + (storm.category ? ' · ' + storm.category : '');
+                    var titleText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + getCleanStormName(storm) + (storm.category ? ' · ' + storm.category : '');
                     var subtitleText = '💨 ' + (storm.wind_kmh || '--') + ' km/h  ·  ⏱️ ' + (storm.pressure_hpa ? storm.pressure_hpa + ' hPa' : '--');
                     if (storm.movement) {
                         subtitleText += '  ·  ' + storm.movement;
