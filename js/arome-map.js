@@ -64,8 +64,11 @@
     }
 
     function initMap(app) {
+        var isInitializing = true;
         var urlInitParams = new URLSearchParams(window.location.search);
         var urlInitModel = urlInitParams.get('model');
+        var urlInitLayer = urlInitParams.get('parametre') || urlInitParams.get('layer');
+        var urlInitRegion = urlInitParams.get('region');
         var initialModelMap = {
             consensus: { path: 'output/consensus', name: 'CONSENSUS Europe', badge: 'Moyenne' },
             consensus_france: { path: 'output/consensus_france', name: 'CONSENSUS France HD', badge: '0,1°' },
@@ -103,6 +106,9 @@
             if (initBadge) initBadge.textContent = initialModelMap[urlInitModel].badge;
             var initModelSel = document.getElementById('select-model');
             if (initModelSel) initModelSel.value = urlInitModel;
+        }
+        if (urlInitLayer) {
+            app.dataset.variable = urlInitLayer;
         }
 
         var baseUrl = (app.dataset.baseUrl || '').replace(/\/+$/, '');
@@ -2674,6 +2680,9 @@
 
         // ── État dans l'URL (style meteo-npdc.fr) ─────────────────────────────
         function updateUrl() {
+            if (isInitializing) {
+                return;
+            }
             if (!window.history || !window.history.replaceState) {
                 return;
             }
@@ -2687,24 +2696,38 @@
         }
 
         function applyUrlParams() {
-            var params = new URLSearchParams(window.location.search);
+            var params = urlInitParams;
             var p = params.get('parametre') || params.get('layer');
             if (p && manifest && manifest.layers[p]) {
-                setLayer(p);
+                currentLayer = p;
+                var dSel = document.getElementById('direct-layer-select');
+                var baseKey = (p.indexOf('_meteociel') !== -1) ? 'geopotentiel_500' : p;
+                if (dSel && dSel.value !== baseKey) {
+                    dSel.value = baseKey;
+                }
+                if (typeof refreshLayerMenu === 'function') refreshLayerMenu();
+                buildLegend();
+                updateZ500StyleToggle();
             }
             var reg = params.get('region');
             var regSel = document.getElementById('select-region');
             if (reg) {
                 if (regSel && regSel.querySelector('option[value="' + reg + '"]')) {
                     regSel.value = reg;
-                    regSel.dispatchEvent(new Event('change'));
+                    var rcfg = REGION_CONFIG[reg];
+                    if (rcfg && typeof focusLocation === 'function') {
+                        if (rcfg.reset) {
+                            resetView();
+                        } else if (rcfg.latitude !== undefined) {
+                            focusLocation({ latitude: rcfg.latitude, longitude: rcfg.longitude, scale: rcfg.scale });
+                        }
+                    }
                 }
             } else if (regSel) {
                 var isFrMod = (currentModel.indexOf('_france') !== -1);
                 var defaultReg = isFrMod ? 'hdf' : (currentModel.indexOf('_antilles') !== -1 ? 'antilles' : 'europe');
                 if (regSel.querySelector('option[value="' + defaultReg + '"]')) {
                     regSel.value = defaultReg;
-                    regSel.dispatchEvent(new Event('change'));
                 }
             }
             var heure = parseInt(params.get('heure'), 10);
@@ -2712,7 +2735,6 @@
                 var steps = availableSteps();
                 if (heure >= 0 && heure < steps.length) {
                     currentStep = heure;
-                    renderStep(heure);
                 }
             }
         }
@@ -4349,9 +4371,10 @@
                     for (var oi = 0; oi < allOpts.length; oi++) {
                         allOpts[oi].hidden = isFr ? (allOpts[oi].classList.contains('opt-eu') || allOpts[oi].classList.contains('opt-world')) : allOpts[oi].classList.contains('opt-fr');
                     }
-                }
-                renderStep(currentStep);
                 applyUrlParams();
+                renderStep(currentStep);
+                isInitializing = false;
+                updateUrl();
             })
             .catch(function (error) {
                 console.error('Erreur chargement manifeste:', error);
