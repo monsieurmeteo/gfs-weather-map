@@ -5439,12 +5439,16 @@
                 if (!data || !Array.isArray(data.alerts)) return;
                 worldAlertsData = data;
 
-                // 1. Mettre à jour le badge de compteur dans la navbar
+                // 1. Mettre à jour le badge de compteur dans la navbar et dans le bandeau
+                var total = data.total_alerts !== undefined ? data.total_alerts : data.alerts.length;
                 var countBadge = document.getElementById('world-alerts-count');
                 if (countBadge) {
-                    var total = data.total_alerts !== undefined ? data.total_alerts : data.alerts.length;
                     countBadge.textContent = total;
                     countBadge.style.display = total > 0 ? 'inline-block' : 'none';
+                }
+                var barTotalCount = document.getElementById('world-alerts-total-count');
+                if (barTotalCount) {
+                    barTotalCount.textContent = total;
                 }
 
                 // 2. Remplir le menu déroulant des pays
@@ -5687,6 +5691,8 @@
         initWorldAlerts();
         var worldAlertsBtn = document.getElementById('amfm-btn-world-alerts');
         if (worldAlertsBtn) worldAlertsBtn.onclick = openWorldAlertsModal;
+        var barAlertsBtn = document.getElementById('btn-open-world-alerts-bar');
+        if (barAlertsBtn) barAlertsBtn.onclick = openWorldAlertsModal;
         var worldModalClose = document.getElementById('world-alerts-modal-close');
         if (worldModalClose) worldModalClose.onclick = closeWorldAlertsModal;
         var worldModal = document.getElementById('amfm-modal-world-alerts');
