@@ -24,7 +24,7 @@ permissions:
 
 concurrency:
   group: "gfs-build"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JOB 1 — Fonds de carte partagés
