@@ -23,7 +23,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: "pages"
+  group: "gfs-build"
   cancel-in-progress: false
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -465,6 +465,9 @@ jobs:
     timeout-minutes: 20
     needs: [build-fond, render-chunks]
     if: always() && (needs.render-chunks.result == 'success' || needs.render-chunks.result == 'failure' || needs.build-fond.outputs.mode == 'front')
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

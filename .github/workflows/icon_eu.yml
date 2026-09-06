@@ -19,7 +19,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: "pages-icon-eu"
+  group: "icon-eu-build"
   cancel-in-progress: false
 
 jobs:
@@ -162,6 +162,9 @@ jobs:
     timeout-minutes: 20
     needs: [build-fond, render-chunks]
     if: always() && (needs.render-chunks.result == 'success' || needs.build-fond.outputs.mode == 'front')
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
