@@ -1381,6 +1381,199 @@
             border-color: #ffffff;
             transform: translateY(-1px);
         }
+
+        /* 🌀 BOUTON TOUS LES PHÉNOMÈNES DANS LE BANDEAU */
+        .cyclone-all-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            color: #ffffff;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            margin-right: 4px;
+        }
+        .cyclone-all-btn:hover {
+            background: #ffffff;
+            color: #991b1b;
+            transform: translateY(-1px);
+        }
+
+        /* 🌀 MODALE TOUS LES PHÉNOMÈNES CYCLONIQUES ACTIFS */
+        .amfm-modal-card-cyclones {
+            max-width: 780px !important;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 24px !important;
+            overflow: hidden;
+        }
+        .amfm-cyclones-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .amfm-stat-pill {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+        .amfm-stat-pill strong {
+            color: #38bdf8;
+            font-weight: 800;
+        }
+        .amfm-stat-pill.stat-cyclone {
+            border-color: rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.12);
+        }
+        .amfm-stat-pill.stat-cyclone strong { color: #f87171; }
+        .amfm-stat-pill.stat-invest {
+            border-color: rgba(234, 179, 8, 0.4);
+            background: rgba(234, 179, 8, 0.12);
+        }
+        .amfm-stat-pill.stat-invest strong { color: #facc15; }
+
+        .amfm-cyclones-list {
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 12px;
+            padding-right: 4px;
+            max-height: 55vh;
+        }
+        .amfm-cyclones-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .amfm-cyclones-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        .amfm-cyclone-card {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+        }
+        .amfm-cyclone-card:hover {
+            border-color: var(--amfm-accent);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+        }
+        .amfm-cyclone-card.is-cyclone {
+            border-left: 4px solid #ef4444;
+        }
+        .amfm-cyclone-card.is-invest {
+            border-left: 4px solid #eab308;
+        }
+        .amfm-cyclone-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .amfm-cyclone-name-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .amfm-cyclone-status-badge {
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .amfm-cyclone-name {
+            font-size: 15px;
+            font-weight: 800;
+            color: #fff;
+            margin: 0;
+        }
+        .amfm-cyclone-cat-badge {
+            font-size: 11px;
+            font-weight: 800;
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 2px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+        .amfm-cyclone-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 10px;
+            font-size: 11.5px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 8px 10px;
+            border-radius: 8px;
+        }
+        .amfm-cyclone-data-item {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .amfm-grid-col2 {
+            grid-column: span 2;
+        }
+        .amfm-data-label {
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: var(--amfm-muted);
+        }
+        .amfm-data-val {
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+        .amfm-cyclone-card-footer {
+            margin-top: auto;
+            padding-top: 4px;
+        }
+        .amfm-btn-cyclone-focus {
+            width: 100%;
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            border: 1px solid rgba(0, 210, 255, 0.4);
+            color: #fff;
+            font-weight: 800;
+            font-size: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .amfm-btn-cyclone-focus:hover {
+            background: linear-gradient(135deg, #00d2ff, #0284c7);
+            color: #070b14;
+            box-shadow: 0 0 12px rgba(0, 210, 255, 0.5);
+            transform: translateY(-1px);
+        }
+        .amfm-modal-empty {
+            text-align: center;
+            padding: 30px;
+            color: var(--amfm-muted);
+            font-size: 13.5px;
+        }
 </style>
 </head>
 <body>
@@ -1591,9 +1784,13 @@
                         </button>
                     </div>
 
-                    <!-- Outils Avancés : Météogramme & Mode TV -->
+                    <!-- Outils Avancés : Météogramme, Cyclones & Mode TV -->
                     <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-diagram aria-pressed="false" aria-label="Météogramme temporel au clic" title="📈 Météogramme temporel (Cliquer sur la carte pour voir l'évolution 16j)">
                         <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+                    </button>
+
+                    <button type="button" id="amfm-btn-cyclones-modal" class="amfm-btn amfm-btn-icon" aria-label="Tous les phénomènes cycloniques actifs" title="🌀 Phénomènes cycloniques actifs (Cyclones, Typhons & INVESTs)">
+                        <i class="fa-solid fa-hurricane"></i>
                     </button>
 
                     <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-tv aria-label="Mode Présentation TV (Touche Z)" title="📺 Mode Présentation TV / Zen (Touche Z ou T)">
@@ -1617,6 +1814,9 @@
             <div id="cyclone-alert-bar" class="cyclone-alert-bar" style="display:none;" aria-live="polite">
                 <span class="cyclone-pulse"></span>
                 <span class="cyclone-title">CYCLONES &amp; TYPHONS ACTIFS :</span>
+                <button type="button" id="btn-open-cyclones-modal" class="cyclone-all-btn" title="Voir la liste complète des phénomènes et INVESTs actifs">
+                    <i class="fa-solid fa-list-check"></i> Tous les phénomènes (<span id="cyclone-total-count">0</span>)
+                </button>
                 <div id="cyclone-items" class="cyclone-items"></div>
                 <button type="button" id="cyclone-close-btn" class="cyclone-close-btn" title="Masquer le bandeau d'alerte">✕</button>
             </div>
@@ -1795,6 +1995,22 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 🌀 MODALE TOUS LES PHÉNOMÈNES CYCLONIQUES IDENTIFIÉS -->
+    <div id="amfm-modal-cyclones" class="amfm-modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cyclones-modal-title">
+        <div class="amfm-modal-box amfm-modal-card-cyclones">
+            <div class="amfm-modal-header">
+                <div class="amfm-modal-title" id="cyclones-modal-title">
+                    <i class="fa-solid fa-hurricane"></i> Phénomènes Cycloniques &amp; Typhons Actifs
+                </div>
+                <button type="button" id="cyclones-modal-close" class="amfm-modal-close" aria-label="Fermer la fenêtre">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="cyclones-modal-stats" class="amfm-cyclones-stats"></div>
+            <div id="cyclones-modal-list" class="amfm-cyclones-list"></div>
         </div>
     </div>
 

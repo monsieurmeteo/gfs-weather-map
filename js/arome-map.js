@@ -895,8 +895,9 @@
                 outW = Math.round(vw * ratio);
                 outH = Math.round(vh * ratio);
                 var mapRect = computeMapRect(vw, vh);
+                var natH_sc = isWorldDomain() ? 1320.0 : 1640.0;
                 hScale = (mapRect.w / 2200.0) * ratio;
-                vScale = (mapRect.h / 1640.0) * ratio;
+                vScale = (mapRect.h / natH_sc) * ratio;
                 offX = mapRect.x * ratio;
                 offY = mapRect.y * ratio;
             } else {
@@ -1355,7 +1356,8 @@
                     }
 
                     for (var gy = stepGrid / 2; gy < output.height - 20; gy += stepGrid) {
-                        var gv = (gy - offY) / (1640 * vScale);
+                        var natH_val = isWorldDomain() ? 1320.0 : 1640.0;
+                        var gv = (gy - offY) / (natH_val * vScale);
                         if (gv < 0 || gv > 1) continue;
                         for (var gx = stepGrid / 2; gx < output.width - 20; gx += stepGrid) {
                             var gu = (gx - offX) / (2200 * hScale);
@@ -2308,8 +2310,8 @@
                 russie:     { isDomain: 'eu', latitude: 56.00, longitude: 40.00, scale: 1.90 },
 
                 // 🌎 Amérique du Nord
-                canada:     { isDomain: 'usa', latitude: 49.00, longitude: -95.00, scale: 1.80 },
-                etats_unis: { isDomain: 'usa', reset: true },
+                canada:     { isDomain: 'etats_unis', latitude: 49.00, longitude: -95.00, scale: 1.80 },
+                etats_unis: { isDomain: 'etats_unis', reset: true },
 
                 // 🌏 Asie & Eurasie
                 japon:      { isDomain: 'pacifique_ouest', latitude: 36.50, longitude: 138.00, scale: 2.60 },
@@ -2490,7 +2492,9 @@
                         franceMaskImage.onload = function () {
                             if (maskSamplerContext) {
                                 try {
-                                    maskSamplerContext.drawImage(franceMaskImage, 0, 0, 2200, 1640);
+                                    var mNatH = isWorldDomain(modelKey) ? 1320 : 1640;
+                                    maskSamplerCanvas.height = mNatH;
+                                    maskSamplerContext.drawImage(franceMaskImage, 0, 0, 2200, mNatH);
                                     maskSamplerReady = true;
                                 } catch (e) {}
                             }
@@ -2565,8 +2569,13 @@
                     var modelSel2 = document.getElementById('select-model');
                     if (modelSel2) modelSel2.value = modelKey;
                     if (regSel) {
-                        if (modelKey.indexOf('_antilles') !== -1) regSel.value = 'antilles';
-                        else if (modelKey.indexOf('_etats_unis') !== -1) regSel.value = 'etats_unis';
+                        var worldKeys = ['antilles', 'etats_unis', 'pacifique_est', 'pacifique_ouest', 'pacifique_sud', 'ocean_indien_nord', 'ocean_indien'];
+                        for (var wi = 0; wi < worldKeys.length; wi++) {
+                            if (modelKey.indexOf('_' + worldKeys[wi]) !== -1) {
+                                regSel.value = worldKeys[wi];
+                                break;
+                            }
+                        }
                     }
                     renderStep(0);
                     updateUrl();
@@ -2591,6 +2600,14 @@
                 .catch(function(err) {
                     if (token !== switchToken) return;
                     console.error('[switchModel] Erreur chargement manifeste', target.path, err);
+                    if (modelKey.indexOf('aifs_') === 0) {
+                        var gfsFallback = 'gfs_' + modelKey.substring(5);
+                        console.warn('[switchModel] Modèle AIFS non disponible, bascule sur', gfsFallback);
+                        showError('Modèle ' + target.name + ' en cours de génération — bascule sur GFS.');
+                        window.setTimeout(function() { clearError(); }, 4000);
+                        switchModel(gfsFallback);
+                        return;
+                    }
                     showError('Modèle ' + target.name + ' non disponible — affichage GFS Europe.');
                     window.setTimeout(function() { clearError(); }, 4000);
                     if (modelKey !== 'gfs') {
@@ -2607,8 +2624,8 @@
         if (modelSelect) {
             modelSelect.addEventListener('change', function(e) {
                 var nextModel = e.target.value;
-                var isNextWorld = (nextModel.indexOf('_antilles') !== -1 || nextModel.indexOf('_etats_unis') !== -1);
-                var isCurrentWorld = (currentModel.indexOf('_antilles') !== -1 || currentModel.indexOf('_etats_unis') !== -1);
+                var isNextWorld = isWorldDomain(nextModel);
+                var isCurrentWorld = isWorldDomain(currentModel);
                 var isNextFrance = (nextModel.indexOf('_france') !== -1);
                 var isCurrentFrance = (currentModel.indexOf('_france') !== -1);
                 var regSel = document.getElementById('select-region');
@@ -2617,7 +2634,13 @@
                     pendingFocus = null;
                     transform = { scale: 1, x: 0, y: 0 };
                     if (regSel) {
-                        regSel.value = (nextModel.indexOf('_antilles') !== -1) ? 'antilles' : 'etats_unis';
+                        var worldKeys = ['antilles', 'etats_unis', 'pacifique_est', 'pacifique_ouest', 'pacifique_sud', 'ocean_indien_nord', 'ocean_indien'];
+                        for (var wi = 0; wi < worldKeys.length; wi++) {
+                            if (nextModel.indexOf('_' + worldKeys[wi]) !== -1) {
+                                regSel.value = worldKeys[wi];
+                                break;
+                            }
+                        }
                     }
                 } else if (isCurrentWorld || (isNextFrance !== isCurrentFrance)) {
                     // Bascule de domaine (Monde / France / Europe) : reset immédiat et complet du cadrage
@@ -2627,11 +2650,11 @@
                         regSel.value = isNextFrance ? 'france' : 'europe';
                     }
                 } else {
-                    // Même domaine : on conserve la région active
+                    // Même domaine : on conserve la région active si elle est zoomée
                     var activeRegion = regSel ? regSel.value : '';
-                    if (activeRegion && activeRegion !== 'france' && activeRegion !== 'europe' && activeRegion !== 'antilles' && activeRegion !== 'etats_unis') {
+                    if (activeRegion && activeRegion !== 'france' && activeRegion !== 'europe') {
                         var cfg = REGION_CONFIG[activeRegion];
-                        if (cfg && cfg.latitude !== undefined) {
+                        if (cfg && !cfg.reset && cfg.latitude !== undefined) {
                             pendingFocus = {
                                 latitude: cfg.latitude,
                                 longitude: cfg.longitude,
@@ -2725,7 +2748,14 @@
                 }
             } else if (regSel) {
                 var isFrMod = (currentModel.indexOf('_france') !== -1);
-                var defaultReg = isFrMod ? 'hdf' : (currentModel.indexOf('_antilles') !== -1 ? 'antilles' : 'europe');
+                var defaultReg = isFrMod ? 'hdf' : 'europe';
+                var worldKeys = ['antilles', 'etats_unis', 'pacifique_est', 'pacifique_ouest', 'pacifique_sud', 'ocean_indien_nord', 'ocean_indien'];
+                for (var wi = 0; wi < worldKeys.length; wi++) {
+                    if (currentModel.indexOf('_' + worldKeys[wi]) !== -1) {
+                        defaultReg = worldKeys[wi];
+                        break;
+                    }
+                }
                 if (regSel.querySelector('option[value="' + defaultReg + '"]')) {
                     regSel.value = defaultReg;
                 }
@@ -3084,8 +3114,9 @@
             // Projection UNIQUE (computeMapRect) : parfaitement alignée avec le
             // raster WebGL/2D — plus aucun décalage possible entre les deux.
             var mapRect = computeMapRect(width, height);
+            var natH = isWorldDomain() ? 1320.0 : 1640.0;
             var horizontalScale = mapRect.w / 2200.0;
-            var verticalScale = mapRect.h / 1640.0;
+            var verticalScale = mapRect.h / natH;
             vectorContext.save();
             vectorContext.beginPath();
             vectorContext.rect(mapRect.x, mapRect.y, mapRect.w, mapRect.h);
@@ -3183,11 +3214,12 @@
             return (currentModel === 'gfs' || currentModel === 'arpege' || currentModel === 'icon_eu' || currentModel === 'aifs');
         }
 
-        function isWorldDomain() {
-            if (!currentModel) return false;
+        function isWorldDomain(model) {
+            var m = model || currentModel;
+            if (!m) return false;
             var worldSuffixes = ['_antilles', '_ocean_indien', '_pacifique_ouest', '_pacifique_sud', '_pacifique_est', '_ocean_indien_nord', '_etats_unis'];
             for (var i = 0; i < worldSuffixes.length; i++) {
-                if (currentModel.indexOf(worldSuffixes[i]) !== -1) return true;
+                if (m.indexOf(worldSuffixes[i]) !== -1) return true;
             }
             return false;
         }
@@ -3636,10 +3668,19 @@
             transform = { scale: 1, x: 0, y: 0 };
             var regSel = document.getElementById('select-region');
             if (regSel) {
-                if (currentModel.indexOf('_antilles') !== -1) regSel.value = 'antilles';
-                else if (currentModel.indexOf('_etats_unis') !== -1) regSel.value = 'etats_unis';
-                else if (currentModel.indexOf('_france') !== -1) regSel.value = 'france';
-                else regSel.value = 'europe';
+                var foundWorld = false;
+                var worldKeys = ['antilles', 'etats_unis', 'pacifique_est', 'pacifique_ouest', 'pacifique_sud', 'ocean_indien_nord', 'ocean_indien'];
+                for (var wi = 0; wi < worldKeys.length; wi++) {
+                    if (currentModel.indexOf('_' + worldKeys[wi]) !== -1) {
+                        regSel.value = worldKeys[wi];
+                        foundWorld = true;
+                        break;
+                    }
+                }
+                if (!foundWorld) {
+                    if (currentModel.indexOf('_france') !== -1) regSel.value = 'france';
+                    else regSel.value = 'europe';
+                }
             }
             applyTransform();
             if (typeof updateUrl === 'function') updateUrl();
@@ -4371,6 +4412,7 @@
                     for (var oi = 0; oi < allOpts.length; oi++) {
                         allOpts[oi].hidden = isFr ? (allOpts[oi].classList.contains('opt-eu') || allOpts[oi].classList.contains('opt-world')) : allOpts[oi].classList.contains('opt-fr');
                     }
+                }
                 applyUrlParams();
                 renderStep(currentStep);
                 isInitializing = false;
@@ -4382,13 +4424,6 @@
                     showError('Chargement des cartes : ' + error.message);
                 }
             });
-    }
-
-    whenReady(function () {
-        document.querySelectorAll('[data-amfm-app]').forEach(initMap);
-    });
-}());
-
 
         // ────────────────────────────────────────────────────────────────────
         // 🌀 TRACKER TEMPS RÉEL DES CYCLONES & TYPHONS MONDIAUX (NHC & JTWC)
@@ -4408,7 +4443,36 @@
                         return;
                     }
                     activeCyclonesData = data.storms;
+                    window.activeCyclonesData = activeCyclonesData;
                     container.innerHTML = '';
+
+                    // 1. Bouton "Tous les phénomènes (N)" dans le bandeau
+                    var allBtn = document.getElementById('btn-open-cyclones-modal');
+                    if (allBtn) {
+                        allBtn.onclick = function(e) {
+                            e.preventDefault();
+                            openCyclonesModal();
+                        };
+                    }
+                    var titleEl = bar.querySelector('.cyclone-title');
+                    if (titleEl) {
+                        titleEl.style.cursor = 'pointer';
+                        titleEl.onclick = function(e) {
+                            e.preventDefault();
+                            openCyclonesModal();
+                        };
+                    }
+                    var navBtn = document.getElementById('amfm-btn-cyclones-modal');
+                    if (navBtn) {
+                        navBtn.onclick = function(e) {
+                            e.preventDefault();
+                            openCyclonesModal();
+                        };
+                    }
+                    var countBadge = document.getElementById('cyclone-total-count');
+                    if (countBadge) countBadge.textContent = String(data.storms.length);
+
+                    // 2. Pastilles horizontales dans le bandeau ticker
                     for (var i = 0; i < data.storms.length; i++) {
                         var s = data.storms[i];
                         var pill = document.createElement('button');
@@ -4443,27 +4507,134 @@
                 });
         }
 
-                function focusOnCyclone(storm) {
+        function getBasinLabel(basin) {
+            var labels = {
+                pacifique_est: '🌊 Pacifique Nord-Est & Hawaï',
+                pacifique_ouest: '🌀 Pacifique Ouest & Asie (Typhons)',
+                pacifique_sud: '🏝️ Pacifique Sud & Océanie',
+                ocean_indien: '🇷🇪 Océan Indien Sud-Ouest (Réunion • Maurice)',
+                ocean_indien_nord: '🇮🇳 Océan Indien Nord (Bengale • Mer d\'Arabie)',
+                antilles: '🏝️ Arc Antillais & Atlantique Tropical',
+                etats_unis: '🇺🇸 États-Unis'
+            };
+            return labels[basin] || basin;
+        }
+
+        function openCyclonesModal() {
+            var modal = document.getElementById('amfm-modal-cyclones');
+            if (!modal) return;
+
+            var statsContainer = document.getElementById('cyclones-modal-stats');
+            var listContainer = document.getElementById('cyclones-modal-list');
+
+            if (!activeCyclonesData || activeCyclonesData.length === 0) {
+                if (listContainer) {
+                    listContainer.innerHTML = '<div class="amfm-modal-empty">Aucun phénomène cyclonique actif identifié pour le moment.</div>';
+                }
+                modal.style.display = 'flex';
+                return;
+            }
+
+            var cyclonesCount = activeCyclonesData.filter(function(s) { return s.type === 'cyclone'; }).length;
+            var investsCount = activeCyclonesData.filter(function(s) { return s.type === 'invest'; }).length;
+
+            if (statsContainer) {
+                statsContainer.innerHTML =
+                    '<div class="amfm-stat-pill"><strong>' + activeCyclonesData.length + '</strong> Phénomènes totaux</div>' +
+                    '<div class="amfm-stat-pill stat-cyclone">🔴 <strong>' + cyclonesCount + '</strong> Cyclone(s) &amp; Ouragan(s)</div>' +
+                    '<div class="amfm-stat-pill stat-invest">🟡 <strong>' + investsCount + '</strong> INVEST(s) sous surveillance</div>';
+            }
+
+            if (listContainer) {
+                listContainer.innerHTML = '';
+                for (var i = 0; i < activeCyclonesData.length; i++) {
+                    var s = activeCyclonesData[i];
+                    var isInvest = (s.type === 'invest');
+                    var card = document.createElement('div');
+                    card.className = 'amfm-cyclone-card ' + (isInvest ? 'is-invest' : 'is-cyclone');
+
+                    var lat = Number(s.lat !== undefined ? s.lat : s.latitude);
+                    var lon = Number(s.lon !== undefined ? s.lon : s.longitude);
+                    var coordsStr = Number.isFinite(lat) && Number.isFinite(lon) ?
+                        (Math.abs(lat).toFixed(1) + '°' + (lat >= 0 ? 'N' : 'S') + ' · ' + Math.abs(lon).toFixed(1) + '°' + (lon >= 0 ? 'E' : 'O')) : 'En mer';
+
+                    var html =
+                        '<div class="amfm-cyclone-card-header">' +
+                            '<div class="amfm-cyclone-name-group">' +
+                                '<span class="amfm-cyclone-status-badge">' + (isInvest ? '🟡 INVEST' : '🔴 CYCLONE') + '</span>' +
+                                '<h3 class="amfm-cyclone-name">' + s.name + '</h3>' +
+                            '</div>' +
+                            '<span class="amfm-cyclone-cat-badge">' + s.category + '</span>' +
+                        '</div>' +
+                        '<div class="amfm-cyclone-grid">' +
+                            '<div class="amfm-cyclone-data-item"><span class="amfm-data-label">Vents soutenus</span><span class="amfm-data-val">💨 ' + (s.wind_kmh || 0) + ' km/h</span></div>' +
+                            '<div class="amfm-cyclone-data-item"><span class="amfm-data-label">Pression min.</span><span class="amfm-data-val">⏱️ ' + (s.pressure_hpa || 1010) + ' hPa</span></div>' +
+                            '<div class="amfm-cyclone-data-item"><span class="amfm-data-label">Coordonnées</span><span class="amfm-data-val">📍 ' + coordsStr + '</span></div>' +
+                            '<div class="amfm-cyclone-data-item"><span class="amfm-data-label">Déplacement</span><span class="amfm-data-val">🧭 ' + (s.movement || 'Suivi actif') + '</span></div>' +
+                            '<div class="amfm-cyclone-data-item amfm-grid-col2"><span class="amfm-data-label">Bassin géographique</span><span class="amfm-data-val">' + getBasinLabel(s.basin) + '</span></div>' +
+                            '<div class="amfm-cyclone-data-item amfm-grid-col2"><span class="amfm-data-label">Source officielle</span><span class="amfm-data-val">📡 ' + (s.source || 'NOAA / NHC') + '</span></div>' +
+                        '</div>' +
+                        '<div class="amfm-cyclone-card-footer">' +
+                            '<button type="button" class="amfm-btn-cyclone-focus" data-storm-idx="' + i + '">' +
+                                '<i class="fa-solid fa-crosshairs"></i> Centrer et zoomer sur la carte' +
+                            '</button>' +
+                        '</div>';
+
+                    card.innerHTML = html;
+                    (function(storm) {
+                        var btn = card.querySelector('.amfm-btn-cyclone-focus');
+                        if (btn) {
+                            btn.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                closeCyclonesModal();
+                                focusOnCyclone(storm);
+                            });
+                        }
+                    })(s);
+
+                    listContainer.appendChild(card);
+                }
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeCyclonesModal() {
+            var modal = document.getElementById('amfm-modal-cyclones');
+            if (modal) modal.style.display = 'none';
+        }
+
+        window.openCyclonesModal = openCyclonesModal;
+        window.closeCyclonesModal = closeCyclonesModal;
+
+        function focusOnCyclone(storm) {
             if (!storm) return;
             var lat = Number(storm.lat !== undefined ? storm.lat : storm.latitude);
             var lon = Number(storm.lon !== undefined ? storm.lon : storm.longitude);
             if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
             var basin = String(storm.basin || '').toLowerCase();
-            var targetModel = 'gfs_' + basin;
             var targetRegion = basin;
 
-            // Détection fine du domaine selon coordonnées géographiques
+            // Détection fine et universelle du bassin cartographique
             if (basin === 'al' || basin === 'caraibes' || basin === 'antilles' || (lon >= -90 && lon <= -25 && lat >= 5 && lat <= 35)) {
-                targetModel = (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_antilles' : 'gfs_antilles';
                 targetRegion = 'antilles';
             } else if (basin === 'ep' || basin === 'pacifique_est' || (lon >= -170 && lon <= -100 && lat >= 2 && lat <= 40)) {
-                targetModel = (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_pacifique_est' : 'gfs_pacifique_est';
                 targetRegion = 'pacifique_est';
+            } else if (basin === 'wp' || basin === 'pacifique_ouest' || (lon >= 100 && lon <= 155 && lat >= 0 && lat <= 48)) {
+                targetRegion = 'pacifique_ouest';
+            } else if (basin === 'io' || basin === 'ocean_indien' || (lon >= 38 && lon <= 74 && lat >= -28.5 && lat <= -8.5)) {
+                targetRegion = 'ocean_indien';
+            } else if (basin === 'nio' || basin === 'ocean_indien_nord' || (lon >= 60 && lon <= 98 && lat >= 2 && lat <= 36)) {
+                targetRegion = 'ocean_indien_nord';
+            } else if (basin === 'sp' || basin === 'pacifique_sud' || (lon >= 130 && lon <= 180 && lat >= -36 && lat <= -8.5)) {
+                targetRegion = 'pacifique_sud';
             } else if (basin === 'etats_unis' || (lon >= -128 && lon <= -65 && lat >= 23 && lat <= 52)) {
-                targetModel = (currentModel && currentModel.indexOf('aifs') !== -1) ? 'aifs_etats_unis' : 'gfs_etats_unis';
                 targetRegion = 'etats_unis';
             }
+
+            var isAifs = (currentModel && currentModel.indexOf('aifs') !== -1);
+            var targetModel = (isAifs ? 'aifs_' : 'gfs_') + targetRegion;
 
             var focus = {
                 latitude: lat,
@@ -4485,7 +4656,7 @@
             }
 
             // 3. Bascule de modèle ou centrage direct
-            if (currentModel !== targetModel && currentModel !== ('aifs_' + basin)) {
+            if (currentModel !== targetModel && currentModel !== ('gfs_' + targetRegion) && currentModel !== ('aifs_' + targetRegion)) {
                 pendingFocus = focus;
                 switchModel(targetModel);
             } else {
@@ -4502,9 +4673,21 @@
             }
         }
 
-        window.addEventListener('DOMContentLoaded', function() {
-            initCycloneTracker();
-        });
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            initCycloneTracker();
+        initCycloneTracker();
+        var modalClose = document.getElementById('cyclones-modal-close');
+        if (modalClose) modalClose.onclick = closeCyclonesModal;
+        var modal = document.getElementById('amfm-modal-cyclones');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) closeCyclonesModal();
+            });
         }
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeCyclonesModal();
+        });
+    }
+
+    whenReady(function () {
+        document.querySelectorAll('[data-amfm-app]').forEach(initMap);
+    });
+}());
