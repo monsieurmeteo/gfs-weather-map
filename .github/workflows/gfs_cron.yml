@@ -86,7 +86,7 @@ jobs:
 # ─────────────────────────────────────────────────────────────────────────────
   render-chunks:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     needs: build-fond
     if: needs.build-fond.outputs.mode != 'front'
     strategy:
@@ -464,7 +464,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [build-fond, render-chunks]
-    if: always() && (needs.render-chunks.result == 'success' || needs.build-fond.outputs.mode == 'front')
+    if: always() && (needs.render-chunks.result == 'success' || needs.render-chunks.result == 'failure' || needs.build-fond.outputs.mode == 'front')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
