@@ -208,6 +208,7 @@
         var placeBuckets = new Map();
         var citiesVisible = true;
         var valuesVisible = false;
+        var activeCyclonesData = [];
         var seaMode = 'none'; // 'none' (partout mer comprise par défaut), 'land' (terres seules), 'coast' (terres + littoral)
         var vectorDefinition = null;
         var currentWeatherImage = null;
@@ -1275,6 +1276,18 @@
                 var zLegTop = output.height - Math.round(104 * output.height / manifest.height);
                 occupied.push({ left: 0, right: output.width, top: zLegTop, bottom: output.height });
             }
+
+            // 🌀 CYCLONES & TYPHONS OVERLAYS dans l'export HD (Cône, trajectoires, badge et creux de pression)
+            if (activeCyclonesData && activeCyclonesData.length && manifest && manifest.bounds) {
+                var exportMapRect = {
+                    x: offX,
+                    y: offY,
+                    w: 2200.0 * hScale,
+                    h: (isWorldDomain() ? 1320.0 : 1640.0) * vScale
+                };
+                drawCycloneOverlays(context, exportMapRect, output.width, output.height, true, occupied);
+            }
+
             // Villes sur la carte (respecte citiesVisible et se masque automatiquement si valuesVisible est actif)
             if (citiesVisible && !valuesVisible && manifest && manifest.bounds && places && places.length) {
                 try {
@@ -2449,6 +2462,7 @@
                 badge.textContent = target.badge;
             }
 
+            if (loading) loading.hidden = false;
             fetchJson(baseUrl + '/maps/index.json')
                 .then(function(payload) {
                     // Un switch plus récent a été lancé entre-temps → ignorer
@@ -2579,6 +2593,7 @@
                     }
                     renderStep(0);
                     updateUrl();
+                    if (loading) loading.hidden = true;
 
                     if (pendingFocus && typeof focusLocation === 'function') {
                         focusLocation(pendingFocus);
@@ -2598,6 +2613,7 @@
                     }
                 })
                 .catch(function(err) {
+                    if (loading) loading.hidden = true;
                     if (token !== switchToken) return;
                     console.error('[switchModel] Erreur chargement manifeste', target.path, err);
                     if (modelKey.indexOf('aifs_') === 0) {
@@ -2888,6 +2904,7 @@
             if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
                 return null;
             }
+            gl.useProgram(program);
 
             var positionBuffer = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -3175,6 +3192,7 @@
                 drawVectors(width, height, pixelRatio);
                 drawValues(width, height, pixelRatio);
                 drawLabels(width, height, pixelRatio);
+                checkCycloneAnimation();
             });
         }
 
@@ -3401,6 +3419,406 @@
             return { u: u, v: v };
         }
 
+        function getStormCategoryColor(cat) {
+            if (!cat) return '#38bdf8';
+            var c = String(cat).toLowerCase();
+            if (c.indexOf('catégorie 5') !== -1 || c.indexOf('cat. 5') !== -1 || c === 'h5') return '#c084fc';
+            if (c.indexOf('catégorie 4') !== -1 || c.indexOf('cat. 4') !== -1 || c === 'h4') return '#ef4444';
+            if (c.indexOf('catégorie 3') !== -1 || c.indexOf('cat. 3') !== -1 || c === 'h3') return '#f87171';
+            if (c.indexOf('catégorie 2') !== -1 || c.indexOf('cat. 2') !== -1 || c === 'h2') return '#fb923c';
+            if (c.indexOf('catégorie 1') !== -1 || c.indexOf('cat. 1') !== -1 || c === 'h1') return '#facc15';
+            if (c.indexOf('tempête') !== -1 || c.indexOf('tropical storm') !== -1 || c === 'ts') return '#34d399';
+            if (c.indexOf('invest') !== -1) return '#f59e0b';
+            return '#38bdf8';
+        }
+
+        var cycloneAnimFrame = null;
+        function hasAnyVisibleStorm() {
+            if (!activeCyclonesData || !activeCyclonesData.length || !manifest || !manifest.bounds) {
+                return false;
+            }
+            var vw = viewport ? viewport.clientWidth : 0;
+            var vh = viewport ? viewport.clientHeight : 0;
+            if (!vw || !vh) return false;
+            var mapRect = computeMapRect(vw, vh);
+            for (var i = 0; i < activeCyclonesData.length; i++) {
+                var s = activeCyclonesData[i];
+                var sLat = Number(s.lat !== undefined ? s.lat : s.latitude);
+                var sLon = Number(s.lon !== undefined ? s.lon : s.longitude);
+                if (!Number.isFinite(sLat) || !Number.isFinite(sLon)) continue;
+                var pt = projectCoords(sLat, sLon);
+                if (pt.u < -0.4 || pt.u > 1.4 || pt.v < -0.4 || pt.v > 1.4) continue;
+                var px = mapRect.x + pt.u * mapRect.w;
+                var py = mapRect.y + pt.v * mapRect.h;
+                if (px >= -250 && px <= vw + 250 && py >= -250 && py <= vh + 250) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function checkCycloneAnimation() {
+            if (cycloneAnimFrame) {
+                if (!hasAnyVisibleStorm() || document.hidden) {
+                    window.cancelAnimationFrame(cycloneAnimFrame);
+                    cycloneAnimFrame = null;
+                }
+                return;
+            }
+            if (document.hidden || !hasAnyVisibleStorm()) {
+                return;
+            }
+
+            var lastTime = 0;
+            function animStep(timestamp) {
+                cycloneAnimFrame = null;
+                if (document.hidden || !hasAnyVisibleStorm()) {
+                    return;
+                }
+                if (timestamp - lastTime >= 40) {
+                    lastTime = timestamp;
+                    var pr = Math.min(window.devicePixelRatio || 1, 2);
+                    drawLabels(viewport.clientWidth, viewport.clientHeight, pr);
+                }
+                cycloneAnimFrame = window.requestAnimationFrame(animStep);
+            }
+            cycloneAnimFrame = window.requestAnimationFrame(animStep);
+        }
+
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) {
+                    if (cycloneAnimFrame) {
+                        window.cancelAnimationFrame(cycloneAnimFrame);
+                        cycloneAnimFrame = null;
+                    }
+                } else {
+                    checkCycloneAnimation();
+                }
+            });
+        }
+
+        function drawCycloneOverlays(ctx, mapRect, width, height, isExport, occupied) {
+            if (!activeCyclonesData || !activeCyclonesData.length || !manifest || !manifest.bounds) {
+                return;
+            }
+            var sf = isExport ? Math.max(1.0, Math.min(mapRect.w / 1400.0, 2.2)) : 1.0;
+            var t = Date.now() / 1000;
+            var pulse = isExport ? 0.5 : ((Math.sin(t * 3.5) + 1) / 2);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(mapRect.x, mapRect.y, mapRect.w, mapRect.h);
+            ctx.clip();
+
+            for (var si = 0; si < activeCyclonesData.length; si++) {
+                var storm = activeCyclonesData[si];
+                var sLat = Number(storm.lat !== undefined ? storm.lat : storm.latitude);
+                var sLon = Number(storm.lon !== undefined ? storm.lon : storm.longitude);
+                if (!Number.isFinite(sLat) || !Number.isFinite(sLon)) continue;
+
+                var cProj = projectCoords(sLat, sLon);
+                if (cProj.u < -0.4 || cProj.u > 1.4 || cProj.v < -0.4 || cProj.v > 1.4) {
+                    continue;
+                }
+
+                var cx = mapRect.x + cProj.u * mapRect.w;
+                var cy = mapRect.y + cProj.v * mapRect.h;
+                var catColor = getStormCategoryColor(storm.category);
+
+                // 1. CÔNE D'INCERTITUDE OFFICIEL (NHC / JTWC)
+                if (storm.cone_polygon && storm.cone_polygon.length > 2) {
+                    ctx.save();
+                    ctx.beginPath();
+                    var started = false;
+                    var prevLon = null;
+                    for (var ci = 0; ci < storm.cone_polygon.length; ci++) {
+                        var cLon = storm.cone_polygon[ci][0];
+                        var cLat = storm.cone_polygon[ci][1];
+                        if (prevLon !== null && Math.abs(cLon - prevLon) > 180) {
+                            continue;
+                        }
+                        prevLon = cLon;
+                        var cPt = projectCoords(cLat, cLon);
+                        var cpx = mapRect.x + cPt.u * mapRect.w;
+                        var cpy = mapRect.y + cPt.v * mapRect.h;
+                        if (!started) {
+                            ctx.moveTo(cpx, cpy);
+                            started = true;
+                        } else {
+                            ctx.lineTo(cpx, cpy);
+                        }
+                    }
+                    if (started) {
+                        ctx.closePath();
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
+                        ctx.lineWidth = 1.6 * sf;
+                        ctx.setLineDash([6 * sf, 4 * sf]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                    ctx.restore();
+                }
+
+                // 2. TRAJECTOIRE PASSÉE (BEST TRACK HISTORIQUE)
+                if (storm.past_track && storm.past_track.length > 1) {
+                    ctx.save();
+                    ctx.beginPath();
+                    var pStarted = false;
+                    var pPrevLon = null;
+                    for (var pi = 0; pi < storm.past_track.length; pi++) {
+                        var pLon = storm.past_track[pi][0];
+                        var pLat = storm.past_track[pi][1];
+                        if (pPrevLon !== null && Math.abs(pLon - pPrevLon) > 180) continue;
+                        pPrevLon = pLon;
+                        var pPt = projectCoords(pLat, pLon);
+                        var ppx = mapRect.x + pPt.u * mapRect.w;
+                        var ppy = mapRect.y + pPt.v * mapRect.h;
+                        if (!pStarted) {
+                            ctx.moveTo(ppx, ppy);
+                            pStarted = true;
+                        } else {
+                            ctx.lineTo(ppx, ppy);
+                        }
+                    }
+                    if (pStarted) {
+                        ctx.lineTo(cx, cy);
+                        ctx.strokeStyle = 'rgba(244, 63, 94, 0.82)';
+                        ctx.lineWidth = 2.2 * sf;
+                        ctx.setLineDash([]);
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#f43f5e';
+                        for (var pj = 0; pj < storm.past_track.length; pj += 4) {
+                            var pjPt = projectCoords(storm.past_track[pj][1], storm.past_track[pj][0]);
+                            var pjX = mapRect.x + pjPt.u * mapRect.w;
+                            var pjY = mapRect.y + pjPt.v * mapRect.h;
+                            ctx.beginPath();
+                            ctx.arc(pjX, pjY, 2.5 * sf, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                    ctx.restore();
+                }
+
+                // 3. TRAJECTOIRE PRÉVISIONNELLE & JALONS D'INTENSITÉ (12h-120h)
+                if (storm.forecast_track && storm.forecast_track.length > 0) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    var fPrevLon = sLon;
+                    var validFcstPoints = [];
+
+                    for (var fi = 0; fi < storm.forecast_track.length; fi++) {
+                        var f = storm.forecast_track[fi];
+                        if (!Number.isFinite(f.lat) || !Number.isFinite(f.lon)) continue;
+                        if (f.lead_hours === 0 && Math.abs(f.lat - sLat) < 0.2 && Math.abs(f.lon - sLon) < 0.2) {
+                            continue;
+                        }
+                        if (Math.abs(f.lon - fPrevLon) > 180) continue;
+                        fPrevLon = f.lon;
+                        var fPt = projectCoords(f.lat, f.lon);
+                        var fpx = mapRect.x + fPt.u * mapRect.w;
+                        var fpy = mapRect.y + fPt.v * mapRect.h;
+                        ctx.lineTo(fpx, fpy);
+                        validFcstPoints.push({ f: f, x: fpx, y: fpy });
+                    }
+                    ctx.strokeStyle = '#00e5ff';
+                    ctx.lineWidth = 2.5 * sf;
+                    ctx.setLineDash([5 * sf, 4 * sf]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    for (var vi = 0; vi < validFcstPoints.length; vi++) {
+                        var vp = validFcstPoints[vi];
+                        var vf = vp.f;
+                        var vCol = getStormCategoryColor(vf.cat_short);
+
+                        ctx.beginPath();
+                        ctx.arc(vp.x, vp.y, 4.5 * sf, 0, Math.PI * 2);
+                        ctx.fillStyle = vCol;
+                        ctx.fill();
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 1.5 * sf;
+                        ctx.stroke();
+
+                        var isKey = (vf.lead_hours % 24 === 0) || (validFcstPoints.length <= 4) || (vi === validFcstPoints.length - 1);
+                        if (isKey && vf.lead_hours > 0) {
+                            var lbl = '+' + vf.lead_hours + 'h (' + (vf.cat_short || 'TS') + ')';
+                            ctx.font = 'bold ' + Math.round(10 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                            var tw = ctx.measureText(lbl).width;
+                            var bx = vp.x + 8 * sf;
+                            var by = vp.y - 8 * sf;
+                            var bw = tw + 8 * sf;
+                            var bh = 15 * sf;
+
+                            ctx.fillStyle = 'rgba(11, 18, 32, 0.88)';
+                            ctx.beginPath();
+                            if (typeof ctx.roundRect === 'function') {
+                                ctx.roundRect(bx, by - bh / 2, bw, bh, 4 * sf);
+                            } else {
+                                ctx.rect(bx, by - bh / 2, bw, bh);
+                            }
+                            ctx.fill();
+                            ctx.strokeStyle = vCol;
+                            ctx.lineWidth = 1 * sf;
+                            ctx.stroke();
+
+                            ctx.fillStyle = '#ffffff';
+                            ctx.textAlign = 'left';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(lbl, bx + 4 * sf, by);
+                        }
+                    }
+                    ctx.restore();
+                }
+
+                // 4. MARQUEUR VISUEL PULSANT & SYMBOLE TOURNANT 🌀
+                ctx.save();
+                ctx.beginPath();
+                var rOuter = (18 + pulse * 14) * sf;
+                ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
+                ctx.fillStyle = catColor;
+                ctx.globalAlpha = 0.18 * (1 - pulse);
+                ctx.fill();
+                ctx.strokeStyle = catColor;
+                ctx.lineWidth = 1.6 * sf;
+                ctx.globalAlpha = 0.45 * (1 - pulse);
+                ctx.stroke();
+
+                ctx.beginPath();
+                var rMid = (10 + pulse * 7) * sf;
+                ctx.arc(cx, cy, rMid, 0, Math.PI * 2);
+                ctx.fillStyle = catColor;
+                ctx.globalAlpha = 0.28 * (1 - pulse * 0.4);
+                ctx.fill();
+                ctx.strokeStyle = catColor;
+                ctx.lineWidth = 1.6 * sf;
+                ctx.globalAlpha = 0.75;
+                ctx.stroke();
+
+                ctx.globalAlpha = 1.0;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 6 * sf, 0, Math.PI * 2);
+                ctx.fillStyle = catColor;
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2 * sf;
+                ctx.stroke();
+
+                if (storm.type === 'cyclone') {
+                    ctx.save();
+                    ctx.translate(cx, cy);
+                    var rotAngle = isExport ? 0 : -(t * 2.6);
+                    ctx.rotate(rotAngle);
+                    ctx.font = Math.round(20 * sf) + 'px Arial, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🌀', 0, 0);
+                    ctx.restore();
+                }
+                ctx.restore();
+
+                // 5. VALEUR MINIMALE ABSOLUE DE PRESSION (AU-DESSUS DE L'ŒIL)
+                if (storm.pressure_hpa && storm.pressure_hpa < 1015) {
+                    ctx.save();
+                    var pTxt = 'L · ' + storm.pressure_hpa + ' hPa';
+                    ctx.font = 'bold ' + Math.round(11 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                    var ptw = ctx.measureText(pTxt).width;
+                    var pbx = cx - (ptw + 14 * sf) / 2;
+                    var pby = cy - 25 * sf;
+                    var pbw = ptw + 14 * sf;
+                    var pbh = 17 * sf;
+
+                    var pColor = storm.pressure_hpa < 925 ? '#a855f7' : (storm.pressure_hpa < 950 ? '#dc2626' : (storm.pressure_hpa < 980 ? '#ea580c' : '#0284c7'));
+                    ctx.fillStyle = pColor;
+                    ctx.beginPath();
+                    if (typeof ctx.roundRect === 'function') {
+                        ctx.roundRect(pbx, pby - pbh / 2, pbw, pbh, 8 * sf);
+                    } else {
+                        ctx.rect(pbx, pby - pbh / 2, pbw, pbh);
+                    }
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1.2 * sf;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(pTxt, cx, pby);
+                    ctx.restore();
+                }
+
+                // 6. CARTOUCHE NOM & STATS DIRECTEMENT SOUS LE CYCLONE
+                ctx.save();
+                var titleText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + (storm.name || 'CYCLONE').toUpperCase() + (storm.category ? ' · ' + storm.category : '');
+                var subtitleText = '💨 ' + (storm.wind_kmh || '--') + ' km/h  ·  ⏱️ ' + (storm.pressure_hpa ? storm.pressure_hpa + ' hPa' : '--');
+                if (storm.movement) {
+                    subtitleText += '  ·  ' + storm.movement;
+                }
+
+                ctx.font = 'bold ' + Math.round(12 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                var titleWidth = ctx.measureText(titleText).width;
+
+                ctx.font = '600 ' + Math.round(10.5 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                var subWidth = ctx.measureText(subtitleText).width;
+
+                var cardW = Math.max(titleWidth, subWidth) + 24 * sf;
+                var cardH = 38 * sf;
+                var cardX = cx - cardW / 2;
+                var cardY = cy + 24 * sf;
+
+                ctx.beginPath();
+                ctx.moveTo(cx, cy + 14 * sf);
+                ctx.lineTo(cx - 7 * sf, cardY);
+                ctx.lineTo(cx + 7 * sf, cardY);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(11, 18, 32, 0.94)';
+                ctx.fill();
+                ctx.strokeStyle = catColor;
+                ctx.lineWidth = 1.2 * sf;
+                ctx.stroke();
+
+                ctx.beginPath();
+                if (typeof ctx.roundRect === 'function') {
+                    ctx.roundRect(cardX, cardY, cardW, cardH, 7 * sf);
+                } else {
+                    ctx.rect(cardX, cardY, cardW, cardH);
+                }
+                ctx.fillStyle = 'rgba(11, 18, 32, 0.94)';
+                ctx.fill();
+                ctx.strokeStyle = catColor;
+                ctx.lineWidth = 1.5 * sf;
+                ctx.stroke();
+
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = 'bold ' + Math.round(12 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(titleText, cx, cardY + 12 * sf);
+
+                ctx.font = '600 ' + Math.round(10.5 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillText(subtitleText, cx, cardY + 26 * sf);
+
+                ctx.restore();
+
+                if (occupied && Array.isArray(occupied)) {
+                    occupied.push({
+                        left: cardX - 4,
+                        right: cardX + cardW + 4,
+                        top: cy - 35 * sf,
+                        bottom: cardY + cardH + 4
+                    });
+                }
+            }
+
+            ctx.restore();
+        }
+
         function drawLabels(width, height, pixelRatio) {
             if (!labelsContext || !manifest) {
                 return;
@@ -3408,6 +3826,15 @@
             resizeCanvas(labelsCanvas, width, height, pixelRatio);
             labelsContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
             labelsContext.clearRect(0, 0, width, height);
+
+            var labelRect = computeMapRect(width, height);
+            var occupied = [];
+
+            // 🌀 CYCLONES & TYPHONS OVERLAYS (Cône NHC/JTWC, trajectoires, marqueur pulsant, badge et creux de pression)
+            if (activeCyclonesData && activeCyclonesData.length && manifest.bounds) {
+                drawCycloneOverlays(labelsContext, labelRect, width, height, false, occupied);
+            }
+
             if (!citiesVisible || valuesVisible || !places.length || !manifest.bounds) {
                 return;
             }
@@ -3434,11 +3861,7 @@
                 mercatorSpan,
                 density
             );
-            var occupied = [];
             var drawn = 0;
-            // Projection UNIQUE (computeMapRect) : les villes sont
-            // exactement au même endroit que le raster et les vecteurs.
-            var labelRect = computeMapRect(width, height);
             labelsContext.save();
             labelsContext.beginPath();
             labelsContext.rect(labelRect.x, labelRect.y, labelRect.w, labelRect.h);
@@ -4428,82 +4851,111 @@
         // ────────────────────────────────────────────────────────────────────
         // 🌀 TRACKER TEMPS RÉEL DES CYCLONES & TYPHONS MONDIAUX (NHC & JTWC)
         // ────────────────────────────────────────────────────────────────────
-        var activeCyclonesData = [];
 
         function initCycloneTracker() {
             var bar = document.getElementById('cyclone-alert-bar');
             var container = document.getElementById('cyclone-items');
             if (!bar || !container) return;
 
+            function processCycloneData(data) {
+                if (!data || !data.storms || data.storms.length === 0) {
+                    bar.style.display = 'none';
+                    return;
+                }
+                activeCyclonesData = data.storms;
+                window.activeCyclonesData = activeCyclonesData;
+                container.innerHTML = '';
+
+                // 1. Bouton "Tous les phénomènes (N)" dans le bandeau
+                var allBtn = document.getElementById('btn-open-cyclones-modal');
+                if (allBtn) {
+                    allBtn.onclick = function(e) {
+                        e.preventDefault();
+                        openCyclonesModal();
+                    };
+                }
+                var titleEl = bar.querySelector('.cyclone-title');
+                if (titleEl) {
+                    titleEl.style.cursor = 'pointer';
+                    titleEl.onclick = function(e) {
+                        e.preventDefault();
+                        openCyclonesModal();
+                    };
+                }
+                var navBtn = document.getElementById('amfm-btn-cyclones-modal');
+                if (navBtn) {
+                    navBtn.onclick = function(e) {
+                        e.preventDefault();
+                        openCyclonesModal();
+                    };
+                }
+                var countBadge = document.getElementById('cyclone-total-count');
+                if (countBadge) countBadge.textContent = String(data.storms.length);
+
+                // 2. Pastilles horizontales dans le bandeau ticker
+                for (var i = 0; i < data.storms.length; i++) {
+                    var s = data.storms[i];
+                    var pill = document.createElement('button');
+                    pill.type = 'button';
+                    var isInvest = (s.type === 'invest');
+                    pill.className = isInvest ? 'cyclone-pill cyclone-pill-invest' : 'cyclone-pill';
+                    if (isInvest) {
+                        pill.innerHTML = '🟡 <strong>' + s.name + '</strong> (' + (s.probability || 'En surveillance') + ')';
+                        pill.title = 'Surveillance INVEST : ' + s.name + ' — ' + (s.probability || '') + ' (Bassin ' + s.basin + ')';
+                    } else {
+                        pill.innerHTML = '🔴 <strong>' + s.name + '</strong> (' + s.category + ' • ' + s.wind_kmh + ' km/h)';
+                        pill.title = 'Cyclone Actif : ' + s.name + ' — ' + s.category + ' (Bassin ' + s.basin + ')';
+                    }
+                    (function(storm) {
+                        pill.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            focusOnCyclone(storm);
+                        });
+                    })(s);
+                    container.appendChild(pill);
+                }
+                var closeBtn = document.getElementById('cyclone-close-btn');
+                if (closeBtn) {
+                    closeBtn.onclick = function() {
+                        bar.style.display = 'none';
+                    };
+                }
+                bar.style.display = 'flex';
+                scheduleRender();
+                checkCycloneAnimation();
+
+                // 3. Paramètre direct dans l'URL (?cyclone=lowell ou ?cyclone=ep122026)
+                if (urlInitParams && typeof urlInitParams.get === 'function') {
+                    var initC = urlInitParams.get('cyclone');
+                    if (initC && activeCyclonesData && activeCyclonesData.length > 0) {
+                        var q = initC.toLowerCase();
+                        var match = activeCyclonesData.find(function(st) {
+                            return (st.id && st.id.toLowerCase() === q) || (st.name && st.name.toLowerCase().indexOf(q) !== -1);
+                        });
+                        if (match) {
+                            window.setTimeout(function() { focusOnCyclone(match); }, 250);
+                        }
+                    }
+                }
+            }
+
             fetch('cyclones_actifs.json?t=' + Date.now())
                 .then(function(r) { return r.ok ? r.json() : null; })
                 .then(function(data) {
-                    if (!data || !data.storms || data.storms.length === 0) {
-                        bar.style.display = 'none';
-                        return;
+                    if (data) {
+                        processCycloneData(data);
+                    } else {
+                        fetch('output/cyclones_actifs.json?t=' + Date.now())
+                            .then(function(r2) { return r2.ok ? r2.json() : null; })
+                            .then(function(data2) { processCycloneData(data2); })
+                            .catch(function(err) { console.warn('Cyclone Tracker Fallback :', err); });
                     }
-                    activeCyclonesData = data.storms;
-                    window.activeCyclonesData = activeCyclonesData;
-                    container.innerHTML = '';
-
-                    // 1. Bouton "Tous les phénomènes (N)" dans le bandeau
-                    var allBtn = document.getElementById('btn-open-cyclones-modal');
-                    if (allBtn) {
-                        allBtn.onclick = function(e) {
-                            e.preventDefault();
-                            openCyclonesModal();
-                        };
-                    }
-                    var titleEl = bar.querySelector('.cyclone-title');
-                    if (titleEl) {
-                        titleEl.style.cursor = 'pointer';
-                        titleEl.onclick = function(e) {
-                            e.preventDefault();
-                            openCyclonesModal();
-                        };
-                    }
-                    var navBtn = document.getElementById('amfm-btn-cyclones-modal');
-                    if (navBtn) {
-                        navBtn.onclick = function(e) {
-                            e.preventDefault();
-                            openCyclonesModal();
-                        };
-                    }
-                    var countBadge = document.getElementById('cyclone-total-count');
-                    if (countBadge) countBadge.textContent = String(data.storms.length);
-
-                    // 2. Pastilles horizontales dans le bandeau ticker
-                    for (var i = 0; i < data.storms.length; i++) {
-                        var s = data.storms[i];
-                        var pill = document.createElement('button');
-                        pill.type = 'button';
-                        var isInvest = (s.type === 'invest');
-                        pill.className = isInvest ? 'cyclone-pill cyclone-pill-invest' : 'cyclone-pill';
-                        if (isInvest) {
-                            pill.innerHTML = '🟡 <strong>' + s.name + '</strong> (' + (s.probability || 'En surveillance') + ')';
-                            pill.title = 'Surveillance INVEST : ' + s.name + ' — ' + (s.probability || '') + ' (Bassin ' + s.basin + ')';
-                        } else {
-                            pill.innerHTML = '🔴 <strong>' + s.name + '</strong> (' + s.category + ' • ' + s.wind_kmh + ' km/h)';
-                            pill.title = 'Cyclone Actif : ' + s.name + ' — ' + s.category + ' (Bassin ' + s.basin + ')';
-                        }
-                        (function(storm) {
-                            pill.addEventListener('click', function(e) {
-                                e.preventDefault();
-                                focusOnCyclone(storm);
-                            });
-                        })(s);
-                        container.appendChild(pill);
-                    }
-                    var closeBtn = document.getElementById('cyclone-close-btn');
-                    if (closeBtn) {
-                        closeBtn.onclick = function() {
-                            bar.style.display = 'none';
-                        };
-                    }
-                    bar.style.display = 'flex';
                 })
                 .catch(function(err) {
-                    console.warn('Cyclone Tracker :', err);
+                    fetch('output/cyclones_actifs.json?t=' + Date.now())
+                        .then(function(r2) { return r2.ok ? r2.json() : null; })
+                        .then(function(data2) { processCycloneData(data2); })
+                        .catch(function(err2) { console.warn('Cyclone Tracker :', err, err2); });
                 });
         }
 
@@ -4515,7 +4967,7 @@
                 ocean_indien: '🇷🇪 Océan Indien Sud-Ouest (Réunion • Maurice)',
                 ocean_indien_nord: '🇮🇳 Océan Indien Nord (Bengale • Mer d\'Arabie)',
                 antilles: '🏝️ Arc Antillais & Atlantique Tropical',
-                etats_unis: '🇺🇸 États-Unis'
+                etats_unis: '🇺🇸 États-Unis & Golfe du Mexique'
             };
             return labels[basin] || basin;
         }
@@ -4582,14 +5034,12 @@
 
                     card.innerHTML = html;
                     (function(storm) {
-                        var btn = card.querySelector('.amfm-btn-cyclone-focus');
-                        if (btn) {
-                            btn.addEventListener('click', function(e) {
-                                e.preventDefault();
-                                closeCyclonesModal();
-                                focusOnCyclone(storm);
-                            });
-                        }
+                        card.style.cursor = 'pointer';
+                        card.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            closeCyclonesModal();
+                            focusOnCyclone(storm);
+                        });
                     })(s);
 
                     listContainer.appendChild(card);
@@ -4607,33 +5057,77 @@
         window.openCyclonesModal = openCyclonesModal;
         window.closeCyclonesModal = closeCyclonesModal;
 
+        function getStormTargetRegion(storm) {
+            var lat = Number(storm.lat !== undefined ? storm.lat : storm.latitude);
+            var lon = Number(storm.lon !== undefined ? storm.lon : storm.longitude);
+            var basin = String(storm.basin || '').toLowerCase();
+
+            // 1. Détection prioritaire par coordonnées géographiques exactes
+            if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                // Bassin Pacifique Est & Hawaï (-180° à -100°O, 0°N à 45°N)
+                if (lon >= -180 && lon <= -100 && lat >= 0 && lat <= 45) {
+                    return 'pacifique_est';
+                }
+                // Bassin États-Unis & Golfe du Mexique (-128° à -66°O, 23°N à 52°N)
+                if (lat >= 23 && ((lon >= -128 && lon < -75) || (lon >= -75 && lon <= -66 && lat > 32))) {
+                    return 'etats_unis';
+                }
+                // Bassin Arc Antillais & Atlantique Tropical (-75° à -20°O, 5°N à 33°N)
+                if (lon >= -75 && lon <= -20 && lat >= 5 && lat <= 33) {
+                    return 'antilles';
+                }
+                // Caraïbes occidentales (< -75°O et lat < 23°N)
+                if (lon >= -95 && lon < -75 && lat >= 8 && lat < 23) {
+                    return 'antilles';
+                }
+                // Océan Indien Sud-Ouest (Madagascar • Réunion • Maurice : lat < 0, 35° à 85°E)
+                if (lat < 0 && lon >= 35 && lon <= 85) {
+                    return 'ocean_indien';
+                }
+                // Océan Indien Nord (Golfe du Bengale • Mer d'Arabie • Inde : lat >= 0, 50° à 100°E)
+                if (lat >= 0 && lon >= 50 && lon <= 100) {
+                    return 'ocean_indien_nord';
+                }
+                // Pacifique Sud & Océanie (lat < 0, lon >= 125 ou lon <= -170)
+                if (lat < 0 && (lon >= 125 || lon <= -170)) {
+                    return 'pacifique_sud';
+                }
+                // Pacifique Ouest & Asie (Typhons Chine • Japon • Philippines : lat >= 0, 100° à 180°E)
+                if (lat >= 0 && lon >= 100 && lon <= 180) {
+                    return 'pacifique_ouest';
+                }
+            }
+
+            // 2. Fallback par code ou nom de bassin
+            if (basin === 'etats_unis' || basin === 'usa' || basin === 'conus') return 'etats_unis';
+            if (basin === 'ep' || basin === 'cp' || basin === 'pacifique_est') return 'pacifique_est';
+            if (basin === 'wp' || basin === 'pacifique_ouest') return 'pacifique_ouest';
+            if (basin === 'sp' || basin === 'sh' || basin === 'pacifique_sud') return 'pacifique_sud';
+            if (basin === 'io' || basin === 'swio' || basin === 'ocean_indien') return 'ocean_indien';
+            if (basin === 'nio' || basin === 'ocean_indien_nord') return 'ocean_indien_nord';
+            if (basin === 'al' || basin === 'caraibes' || basin === 'antilles') return 'antilles';
+
+            return 'antilles';
+        }
+
         function focusOnCyclone(storm) {
             if (!storm) return;
+            closeCyclonesModal();
+
             var lat = Number(storm.lat !== undefined ? storm.lat : storm.latitude);
             var lon = Number(storm.lon !== undefined ? storm.lon : storm.longitude);
             if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
-            var basin = String(storm.basin || '').toLowerCase();
-            var targetRegion = basin;
+            var targetRegion = getStormTargetRegion(storm);
 
-            // Détection fine et universelle du bassin cartographique
-            if (basin === 'al' || basin === 'caraibes' || basin === 'antilles' || (lon >= -90 && lon <= -25 && lat >= 5 && lat <= 35)) {
-                targetRegion = 'antilles';
-            } else if (basin === 'ep' || basin === 'pacifique_est' || (lon >= -170 && lon <= -100 && lat >= 2 && lat <= 40)) {
-                targetRegion = 'pacifique_est';
-            } else if (basin === 'wp' || basin === 'pacifique_ouest' || (lon >= 100 && lon <= 155 && lat >= 0 && lat <= 48)) {
-                targetRegion = 'pacifique_ouest';
-            } else if (basin === 'io' || basin === 'ocean_indien' || (lon >= 38 && lon <= 74 && lat >= -28.5 && lat <= -8.5)) {
-                targetRegion = 'ocean_indien';
-            } else if (basin === 'nio' || basin === 'ocean_indien_nord' || (lon >= 60 && lon <= 98 && lat >= 2 && lat <= 36)) {
-                targetRegion = 'ocean_indien_nord';
-            } else if (basin === 'sp' || basin === 'pacifique_sud' || (lon >= 130 && lon <= 180 && lat >= -36 && lat <= -8.5)) {
-                targetRegion = 'pacifique_sud';
-            } else if (basin === 'etats_unis' || (lon >= -128 && lon <= -65 && lat >= 23 && lat <= 52)) {
-                targetRegion = 'etats_unis';
+            // Basculer sur vent si le paramètre actuel est spécifique à la France
+            if (currentLayer === 'temperature_max_24h' || currentLayer === 'temperature_min_24h') {
+                currentLayer = 'vent';
+                var dSel = document.getElementById('direct-layer-select');
+                if (dSel) dSel.value = 'vent';
             }
 
-            var isAifs = (currentModel && currentModel.indexOf('aifs') !== -1);
+            var isAifs = (currentModel && currentModel.indexOf('aifs') !== -1 && currentModel !== 'aifs_france');
             var targetModel = (isAifs ? 'aifs_' : 'gfs_') + targetRegion;
 
             var focus = {
@@ -4656,7 +5150,8 @@
             }
 
             // 3. Bascule de modèle ou centrage direct
-            if (currentModel !== targetModel && currentModel !== ('gfs_' + targetRegion) && currentModel !== ('aifs_' + targetRegion)) {
+            var currentMatchesDomain = (currentModel === ('gfs_' + targetRegion)) || (currentModel === ('aifs_' + targetRegion));
+            if (!currentMatchesDomain) {
                 pendingFocus = focus;
                 switchModel(targetModel);
             } else {

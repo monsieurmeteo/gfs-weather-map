@@ -14,16 +14,171 @@ Collecte en Token 0 (zéro clé API, 100 % flux publics officiels) :
 Génère 'cyclones_actifs.json' pour la carte interactive.
 """
 
+import io
 import json
 import os
 import re
 import urllib.request
 import xml.etree.ElementTree as ET
+import zipfile
 from datetime import datetime, timezone
 
 HEADERS = {
     "User-Agent": "MonsieurMeteo-CycloneTracker/2.0 (+https://monsieurmeteo.github.io/gfs-weather-map/)"
 }
+
+
+def parse_kmz_cone(kmz_url):
+    """Télécharge et extrait le polygone officiel du cône d'incertitude depuis le KMZ du NHC."""
+    if not kmz_url:
+        return []
+    try:
+        req = urllib.request.Request(kmz_url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = resp.read()
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            name = next((n for n in z.namelist() if n.endswith(".kml")), None)
+            if not name:
+                return []
+            kml = z.read(name).decode("utf-8", errors="ignore")
+        m = re.search(r"<coordinates>(.*?)</coordinates>", kml, re.DOTALL)
+        if not m:
+            return []
+        pts = []
+        raw_items = m.group(1).strip().split()
+        step = max(1, len(raw_items) // 180)
+        for item in raw_items[::step]:
+            p = item.split(",")
+            if len(p) >= 2:
+                pts.append([round(float(p[0]), 3), round(float(p[1]), 3)])
+        return pts
+    except Exception as e:
+        print(f"[KMZ Cone] Erreur {kmz_url} : {e}")
+        return []
+
+
+def parse_kmz_track(kmz_url):
+    """Télécharge et extrait les points de trajectoire prévisionnelle (3 à 5 jours) depuis le KMZ du NHC."""
+    if not kmz_url:
+        return []
+    try:
+        req = urllib.request.Request(kmz_url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = resp.read()
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            name = next((n for n in z.namelist() if n.endswith(".kml")), None)
+            if not name:
+                return []
+            kml = z.read(name).decode("utf-8", errors="ignore")
+        root = ET.fromstring(kml)
+        ns = {"kml": "http://www.opengis.net/kml/2.2"}
+        fcst_pts = []
+        seen = set()
+        for p in root.findall(".//kml:Placemark", ns):
+            desc = p.findtext("kml:description", "", ns)
+            coords = p.findtext(".//kml:coordinates", "", ns)
+            if not coords:
+                continue
+            coords = coords.strip()
+            if coords in seen:
+                continue
+            if "Forecast" in desc or "Advisory Information" in desc:
+                seen.add(coords)
+                m_time = re.search(r"Valid at:\s*(.*?)(?:<|\n)", desc)
+                m_wind = re.search(r"Maximum Wind:\s*([0-9]+)\s*knots", desc)
+                m_lead = re.search(r"([0-9]+)\s*hr Forecast", desc)
+                lead = int(m_lead.group(1)) if m_lead else 0
+                parts = coords.split(",")
+                if len(parts) >= 2:
+                    w_kts = int(m_wind.group(1)) if m_wind else 0
+                    w_kmh = round(w_kts * 1.852)
+                    cat_short = "TD"
+                    if w_kmh >= 252:
+                        cat_short = "H5"
+                    elif w_kmh >= 209:
+                        cat_short = "H4"
+                    elif w_kmh >= 178:
+                        cat_short = "H3"
+                    elif w_kmh >= 154:
+                        cat_short = "H2"
+                    elif w_kmh >= 119:
+                        cat_short = "H1"
+                    elif w_kmh >= 63:
+                        cat_short = "TS"
+                    fcst_pts.append({
+                        "lead_hours": lead,
+                        "time": m_time.group(1).strip() if m_time else "",
+                        "wind_kts": w_kts,
+                        "wind_kmh": w_kmh,
+                        "cat_short": cat_short,
+                        "lon": round(float(parts[0]), 3),
+                        "lat": round(float(parts[1]), 3),
+                    })
+        fcst_pts.sort(key=lambda x: x["lead_hours"])
+        return fcst_pts
+    except Exception as e:
+        print(f"[KMZ Track] Erreur {kmz_url} : {e}")
+        return []
+
+
+def parse_kmz_best_track(kmz_url):
+    """Télécharge et extrait la trajectoire historique passée (Best Track) depuis le KMZ du NHC."""
+    if not kmz_url:
+        return []
+    try:
+        req = urllib.request.Request(kmz_url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = resp.read()
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            name = next((n for n in z.namelist() if n.endswith(".kml")), None)
+            if not name:
+                return []
+            kml = z.read(name).decode("utf-8", errors="ignore")
+        matches = re.findall(r"<coordinates>(.*?)</coordinates>", kml, re.DOTALL)
+        pts = []
+        for m in matches:
+            for item in m.strip().split():
+                parts = item.split(",")
+                if len(parts) >= 2:
+                    pt = [round(float(parts[0]), 3), round(float(parts[1]), 3)]
+                    if not pts or pt != pts[-1]:
+                        pts.append(pt)
+        return pts
+    except Exception as e:
+        print(f"[KMZ Best Track] Erreur {kmz_url} : {e}")
+        return []
+
+
+def determine_cyclone_basin(lat, lon, default_basin=None):
+    """Détermine le domaine cartographique mondial exact contenant le système selon ses coordonnées."""
+    if lat is None or lon is None:
+        return default_basin or "antilles"
+    lat, lon = float(lat), float(lon)
+    # 1. Pacifique Est & Hawaï (-180° à -100°O, 0°N à 45°N)
+    if -180.0 <= lon <= -100.0 and 0.0 <= lat <= 45.0:
+        return "pacifique_est"
+    # 2. États-Unis & Golfe du Mexique (-128° à -66°O, 23°N à 52°N)
+    if lat >= 23.0 and ((-128.0 <= lon < -75.0) or (-75.0 <= lon <= -66.0 and lat > 32.0)):
+        return "etats_unis"
+    # 3. Arc Antillais & Atlantique Tropical (-75° à -20°O, 5°N à 33°N)
+    if -75.0 <= lon <= -20.0 and 5.0 <= lat <= 33.0:
+        return "antilles"
+    # Caraïbes occidentales
+    if -95.0 <= lon < -75.0 and 8.0 <= lat < 23.0:
+        return "antilles"
+    # 4. Océan Indien Sud-Ouest (Madagascar • Réunion • Maurice : lat < 0, 35° à 85°E)
+    if lat < 0.0 and 35.0 <= lon <= 85.0:
+        return "ocean_indien"
+    # 5. Océan Indien Nord (Golfe du Bengale • Mer d'Arabie • Inde : lat >= 0, 50° à 100°E)
+    if lat >= 0.0 and 50.0 <= lon <= 100.0:
+        return "ocean_indien_nord"
+    # 6. Pacifique Sud & Océanie (lat < 0, lon >= 125 ou lon <= -170)
+    if lat < 0.0 and (lon >= 125.0 or lon <= -170.0):
+        return "pacifique_sud"
+    # 7. Pacifique Ouest & Asie (Typhons Chine • Japon • Philippines : lat >= 0, 100° à 180°E)
+    if lat >= 0.0 and 100.0 <= lon <= 180.0:
+        return "pacifique_ouest"
+    return default_basin or "antilles"
 
 
 def fetch_nhc_storms():
@@ -58,9 +213,11 @@ def fetch_nhc_storms():
                 elif intensity_kmh >= 63:
                     cat = "Tempête Tropicale"
 
-                basin = "antilles"
-                if lon < -100:
-                    basin = "pacifique_est"
+                basin = determine_cyclone_basin(lat, lon, "pacifique_est" if lon < -100 else "antilles")
+
+                cone = parse_kmz_cone(item.get("trackCone", {}).get("kmzFile") if item.get("trackCone") else None)
+                fcst_track = parse_kmz_track(item.get("forecastTrack", {}).get("kmzFile") if item.get("forecastTrack") else None)
+                past_track = parse_kmz_best_track(item.get("bestTrackGIS", {}).get("kmzFile") if item.get("bestTrackGIS") else None)
 
                 storms.append({
                     "id": item.get("id", f"NHC_{name}"),
@@ -76,6 +233,9 @@ def fetch_nhc_storms():
                     "movement": f"{item.get('movementDir', 0)}° à {round(float(item.get('movementSpeed', 0))*1.609)} km/h",
                     "source": "NOAA / NHC",
                     "updated_at": item.get("lastUpdate", datetime.now(timezone.utc).isoformat()),
+                    "cone_polygon": cone,
+                    "forecast_track": fcst_track,
+                    "past_track": past_track,
                 })
     except Exception as e:
         print(f"[NHC Storms] Erreur : {e}")
@@ -143,7 +303,7 @@ def fetch_nhc_disturbances():
                         "pressure_hpa": 1008,
                         "lat": round(lat, 2) if lat is not None else (15.0 if basin_default == "antilles" else 15.0),
                         "lon": round(lon, 2) if lon is not None else (-55.0 if basin_default == "antilles" else -110.0),
-                        "basin": basin_default,
+                        "basin": determine_cyclone_basin(lat, lon, basin_default),
                         "source": "NOAA / NHC (Outlook)",
                         "updated_at": datetime.now(timezone.utc).isoformat(),
                     })
@@ -173,13 +333,7 @@ def fetch_jtwc_data():
                         lat = float(m_coords.group(1)) * (-1 if m_coords.group(2) == "S" else 1)
                         lon = float(m_coords.group(3)) * (-1 if m_coords.group(4) == "W" else 1)
 
-                    basin = "pacifique_ouest"
-                    if lat < 0 and lon > 130:
-                        basin = "pacifique_sud"
-                    elif lat < 0 and lon < 100:
-                        basin = "ocean_indien"
-                    elif lat >= 0 and lon < 100:
-                        basin = "ocean_indien_nord"
+                    basin = determine_cyclone_basin(lat, lon, "pacifique_ouest")
 
                     m_wind = re.search(r"SUSTAINED\s+WINDS\s+([0-9]+)\s*KTS", desc.upper())
                     wind_kmh = round(int(m_wind.group(1)) * 1.852) if m_wind else 100
@@ -230,13 +384,7 @@ def fetch_jtwc_data():
                 m_pot = re.search(r"POTENTIAL FOR THE DEVELOPMENT OF A SIGNIFICANT TROPICAL CYCLONE\s+IS\s+(LOW|MEDIUM|HIGH)", snippet, re.I)
                 pot = m_pot.group(1).upper() if m_pot else "SURVEILLANCE"
 
-                basin = def_basin
-                if lat < 0 and lon > 130:
-                    basin = "pacifique_sud"
-                elif lat < 0 and lon < 100:
-                    basin = "ocean_indien"
-                elif lat >= 0 and lon < 100:
-                    basin = "ocean_indien_nord"
+                basin = determine_cyclone_basin(lat, lon, def_basin)
 
                 items.append({
                     "id": f"JTWC_INVEST_{inv_code}",
