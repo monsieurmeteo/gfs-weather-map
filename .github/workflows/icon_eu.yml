@@ -159,7 +159,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     needs: [build-fond, render-chunks]
     if: always() && (needs.render-chunks.result == 'success' || needs.build-fond.outputs.mode == 'front')
     concurrency:
