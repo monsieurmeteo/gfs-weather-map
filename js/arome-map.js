@@ -170,6 +170,8 @@
         var btnToggleCycloneCone = document.getElementById('btn-toggle-cyclone-cone');
         var btnToggleCycloneTracks = document.getElementById('btn-toggle-cyclone-tracks');
         var btnToggleCycloneLabels = document.getElementById('btn-toggle-cyclone-labels');
+        var btnToggleCycloneNameOnly = document.getElementById('btn-toggle-cyclone-name-only');
+        var btnToggleCycloneDetails = document.getElementById('btn-toggle-cyclone-details');
         var toggleSeaButton = app.querySelector('[data-amfm-toggle-sea]');
         var seaSelect = app.querySelector('[data-amfm-select-sea]');
         var pinButton = app.querySelector('[data-amfm-pin]');
@@ -215,7 +217,14 @@
         var cyclonesVisible = true;
         var cycloneConeVisible = true;
         var cycloneTracksVisible = true;
-        var cycloneLabelsVisible = true;
+        // cycloneLabelMode: 'name_only' (par défaut : épuré, idéal téléchargement), 'full' (cartouche complet), 'none' (masqué)
+        var cycloneLabelMode = (function () {
+            var p = (urlInitParams.get('cyclone_label') || '').toLowerCase();
+            if (p === 'full' || p === 'details' || p === 'all') return 'full';
+            if (p === 'none' || p === 'off' || p === 'false' || p === '0') return 'none';
+            return 'name_only';
+        })();
+        var cycloneLabelsVisible = (cycloneLabelMode !== 'none');
         var activeCyclonesData = [];
         var seaMode = 'none'; // 'none' (partout mer comprise par défaut), 'land' (terres seules), 'coast' (terres + littoral)
         var vectorDefinition = null;
@@ -3773,8 +3782,8 @@
                 }
                 ctx.restore();
 
-                // 5. VALEUR MINIMALE ABSOLUE DE PRESSION (AU-DESSUS DE L'ŒIL)
-                if (cycloneLabelsVisible && storm.pressure_hpa && storm.pressure_hpa < 1015) {
+                // 5. VALEUR MINIMALE ABSOLUE DE PRESSION (AU-DESSUS DE L'ŒIL - UNIQUEMENT EN MODE DÉTAILS)
+                if (cycloneLabelMode === 'full' && storm.pressure_hpa && storm.pressure_hpa < 1015) {
                     ctx.save();
                     var pTxt = 'L · ' + storm.pressure_hpa + ' hPa';
                     ctx.font = 'bold ' + Math.round(11 * sf) + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -3809,8 +3818,69 @@
                     ctx.restore();
                 }
 
-                // 6. CARTOUCHE NOM & STATS DIRECTEMENT SOUS LE CYCLONE
-                if (cycloneLabelsVisible) {
+                // 6. CARTOUCHE NOM DIRECTEMENT SOUS LE CYCLONE (MODE NOM SEUL OU DÉTAILS)
+                if (cycloneLabelMode === 'name_only') {
+                    // MODE NOM SEUL (Grand format épuré, idéal téléchargement et diffusion)
+                    ctx.save();
+                    var nameOnlyText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + (storm.name || 'CYCLONE').toUpperCase();
+                    var nameFontSize = Math.round(18 * sf);
+                    ctx.font = '900 ' + nameFontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif';
+                    var nameWidth = ctx.measureText(nameOnlyText).width;
+
+                    var padX = 14 * sf;
+                    var padY = 7 * sf;
+                    var cardW = nameWidth + padX * 2;
+                    var cardH = nameFontSize + padY * 2;
+                    var cardX = cx - cardW / 2;
+                    var cardY = cy + 22 * sf;
+
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+                    ctx.shadowBlur = 10 * sf;
+
+                    // Pointeur reliant le centre du cyclone au cartouche
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy + 13 * sf);
+                    ctx.lineTo(cx - 7 * sf, cardY);
+                    ctx.lineTo(cx + 7 * sf, cardY);
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(6, 11, 24, 0.96)';
+                    ctx.fill();
+                    ctx.strokeStyle = catColor;
+                    ctx.lineWidth = 1.6 * sf;
+                    ctx.stroke();
+
+                    // Fond rectangulaire arrondi
+                    ctx.beginPath();
+                    if (typeof ctx.roundRect === 'function') {
+                        ctx.roundRect(cardX, cardY, cardW, cardH, 8 * sf);
+                    } else {
+                        ctx.rect(cardX, cardY, cardW, cardH);
+                    }
+                    ctx.fillStyle = 'rgba(6, 11, 24, 0.96)';
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = catColor;
+                    ctx.lineWidth = 2.0 * sf;
+                    ctx.stroke();
+
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = '900 ' + nameFontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(nameOnlyText, cx, cardY + cardH / 2);
+
+                    ctx.restore();
+
+                    if (occupied && Array.isArray(occupied)) {
+                        occupied.push({
+                            left: cardX - 4,
+                            right: cardX + cardW + 4,
+                            top: cy - 20 * sf,
+                            bottom: cardY + cardH + 4
+                        });
+                    }
+                } else if (cycloneLabelMode === 'full') {
+                    // MODE DÉTAILS COMPLETS (Titre + vents/pression/déplacement)
                     ctx.save();
                     var titleText = (storm.type === 'cyclone' ? '🌀 ' : '⚠️ ') + (storm.name || 'CYCLONE').toUpperCase() + (storm.category ? ' · ' + storm.category : '');
                     var subtitleText = '💨 ' + (storm.wind_kmh || '--') + ' km/h  ·  ⏱️ ' + (storm.pressure_hpa ? storm.pressure_hpa + ' hPa' : '--');
@@ -4377,14 +4447,57 @@
                 scheduleRender();
             });
         }
-        if (btnToggleCycloneLabels) {
-            btnToggleCycloneLabels.addEventListener('click', function () {
-                cycloneLabelsVisible = !cycloneLabelsVisible;
-                btnToggleCycloneLabels.classList.toggle('is-active', cycloneLabelsVisible);
-                btnToggleCycloneLabels.classList.toggle('is-off', !cycloneLabelsVisible);
+        function updateCycloneLabelUI() {
+            cycloneLabelsVisible = (cycloneLabelMode !== 'none');
+            if (btnToggleCycloneNameOnly) {
+                btnToggleCycloneNameOnly.classList.toggle('is-active', cycloneLabelMode === 'name_only');
+                btnToggleCycloneNameOnly.classList.toggle('is-off', cycloneLabelMode === 'none');
+            }
+            if (btnToggleCycloneDetails) {
+                btnToggleCycloneDetails.classList.toggle('is-active', cycloneLabelMode === 'full');
+                btnToggleCycloneDetails.classList.toggle('is-off', cycloneLabelMode === 'none');
+            }
+            if (btnToggleCycloneLabels) {
+                btnToggleCycloneLabels.classList.toggle('is-active', cycloneLabelMode !== 'none');
+                btnToggleCycloneLabels.classList.toggle('is-off', cycloneLabelMode === 'none');
+            }
+        }
+
+        if (btnToggleCycloneNameOnly) {
+            btnToggleCycloneNameOnly.addEventListener('click', function () {
+                if (cycloneLabelMode === 'name_only') {
+                    cycloneLabelMode = 'none';
+                } else {
+                    cycloneLabelMode = 'name_only';
+                }
+                updateCycloneLabelUI();
                 scheduleRender();
             });
         }
+
+        if (btnToggleCycloneDetails) {
+            btnToggleCycloneDetails.addEventListener('click', function () {
+                if (cycloneLabelMode === 'full') {
+                    cycloneLabelMode = 'none';
+                } else {
+                    cycloneLabelMode = 'full';
+                }
+                updateCycloneLabelUI();
+                scheduleRender();
+            });
+        }
+
+        if (btnToggleCycloneLabels) {
+            btnToggleCycloneLabels.addEventListener('click', function () {
+                if (cycloneLabelMode === 'name_only') cycloneLabelMode = 'full';
+                else if (cycloneLabelMode === 'full') cycloneLabelMode = 'none';
+                else cycloneLabelMode = 'name_only';
+                updateCycloneLabelUI();
+                scheduleRender();
+            });
+        }
+
+        updateCycloneLabelUI();
         if (seaSelect) {
             seaSelect.addEventListener('change', function (e) {
                 seaMode = e.target.value || 'land';
