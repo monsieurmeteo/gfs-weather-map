@@ -227,6 +227,10 @@ jobs:
           mkdir -p _site
           cp index.html _site/
           cp logo.png _site/ 2>/dev/null || true
+          cp cyclones_actifs.json _site/ 2>/dev/null || true
+          cp output/cyclones_actifs.json _site/ 2>/dev/null || true
+          cp alertes_extremes_monde.json _site/ 2>/dev/null || true
+          cp output/alertes_extremes_monde.json _site/ 2>/dev/null || true
           cp -r js _site/
           cp -r output _site/
       - uses: actions/configure-pages@v5

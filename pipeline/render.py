@@ -145,11 +145,17 @@ def write_places(domain, out_dir):
     src_eu = os.path.join(base_dir, "config", "cities_europe.json")
     
     out = []
-    w, e = domain.west, domain.east
-    s, n = domain.south, domain.north
+    if isinstance(domain, dict):
+        w, e = domain["west"], domain["east"]
+        s, n = domain["south"], domain["north"]
+        proj = domain.get("projection", "mercator")
+    else:
+        w, e = domain.west, domain.east
+        s, n = domain.south, domain.north
+        proj = getattr(domain, "projection", "mercator")
 
     # Villes européennes majeures pour le domaine Europe
-    if os.path.exists(src_eu) and domain.projection == "lambert":
+    if os.path.exists(src_eu) and proj == "lambert":
         with open(src_eu, encoding="utf-8") as f:
             cities_eu = json.load(f)
             for c in cities_eu:
@@ -180,7 +186,7 @@ def write_places(domain, out_dir):
             if w <= lon <= e and s <= lat <= n:
                 out.append([r[1], pop, lat, lon])
 
-    # Dédoublonnage et tri décroissant par population
+    # Dédoublonnage et tri décroissant par population (max 5 000 villes par domaine pour performance optimale)
     seen = set()
     unique_out = []
     out.sort(key=lambda p: -p[1])
@@ -189,10 +195,12 @@ def write_places(domain, out_dir):
         if key not in seen:
             seen.add(key)
             unique_out.append(p)
+            if len(unique_out) >= 5000:
+                break
 
     ensure_dir(out_dir)
     with open(os.path.join(out_dir, "communes.json"), "w", encoding="utf-8") as f:
-        json.dump({"places": unique_out}, f, ensure_ascii=False)
+        json.dump({"places": unique_out}, f, ensure_ascii=False, separators=(",", ":"))
     return True
 
 

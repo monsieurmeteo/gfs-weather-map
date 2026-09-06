@@ -218,6 +218,13 @@ def main():
         "resolution": "0.25° (~25 km)",
     })
 
+    # Détection précoce mondiale des phénomènes extrêmes J+1 à J+16
+    try:
+        import detect_extremes_world
+        detect_extremes_world.run_world_extreme_detector()
+    except Exception as e:
+        print("[assemble] Note : detect_extremes_world non exécuté : %s" % e, flush=True)
+
     # Nettoyage automatique des dalles orphelines pour maintenir l'archive ultra-légère (< 200 Mo)
     prune_stale_files()
 
