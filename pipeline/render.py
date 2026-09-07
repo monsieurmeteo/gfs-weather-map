@@ -42,13 +42,14 @@ LAYER_META = {
     "pluie_1h":              ("Précipitations sur 3 h",        "mm",   1, "Précipitations"),
     "pluie_cumul":           ("Précipitations cumulées",       "mm",   1, "Précipitations"),
     "neige_au_sol":          ("Épaisseur de neige au sol",     "cm",   1, "Autres"),
+    "vagues":                ("Hauteur des vagues & Vents",    "m",    1, "Mer & Vagues"),
 }
 
 # Ordre d'affichage des couches dans le sélecteur
 LAYER_ORDER = [
     "geopotentiel_500", "temperature_850", "pression", "pression_surface",
     "temperature", "temperature_min_24h", "temperature_max_24h", "temperature_ressentie", "point_rosee", "humidex",
-    "vent", "rafales", "rafales_cumul",
+    "vent", "rafales", "rafales_cumul", "vagues",
     "nebulosite", "nuages_bas", "nuages_moyens", "nuages_eleves",
     "humidite", "mucape",
     "pluie_1h", "pluie_cumul", "neige_au_sol",
@@ -581,6 +582,89 @@ def render_pression_with_isobars(prmsl_grid, output_path):
         plt.close(fig)
 
 
+
+
+
+# ── Vagues & Vents ─────────────────────────────────────────────────────────
+def render_vagues_with_wind_arrows(swh_grid, u_grid, v_grid, output_path, domain=None):
+    """Rendu cartographique de la hauteur des vagues avec flèches de vent.
+    - swh_grid : hauteur significative des vagues (m).
+    - u_grid, v_grid : composantes u, v du vent de surface (m/s).
+    - Palette officielle Météociel discrète 0..17m sur la mer, transparence totale sur terre.
+    - Flèches de direction du vent avec correction d'angle pour projection conique (Lambert).
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    pal = PALETTES.get("vagues")
+    base_img = apply_palette(np.nan_to_num(swh_grid, nan=np.nan), pal, discrete=False)
+    if np.isnan(swh_grid).any():
+        base_img[np.isnan(swh_grid), 3] = 0
+
+    h, w = swh_grid.shape
+    fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
+    try:
+        fig.patch.set_alpha(0)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis("off")
+        ax.set_facecolor((0, 0, 0, 0))
+        ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
+
+        if u_grid is not None and v_grid is not None:
+            # Densité de maillage adaptée selon le domaine
+            step = 55 if (domain and getattr(domain, "projection", "") == "lambert") else 45
+            y_idx = np.arange(step // 2, h, step)
+            x_idx = np.arange(step // 2, w, step)
+
+            sub_swh = swh_grid[y_idx[:, None], x_idx]
+            sub_u = u_grid[y_idx[:, None], x_idx]
+            sub_v = v_grid[y_idx[:, None], x_idx]
+
+            valid = ~np.isnan(sub_swh) & ~np.isnan(sub_u) & ~np.isnan(sub_v)
+            spd = np.hypot(sub_u, sub_v)
+            valid = valid & (spd > 0.5)
+
+            if np.any(valid):
+                X, Y = np.meshgrid(x_idx, y_idx)
+
+                # Correction d'angle pour la projection conique Lambert (Europe)
+                if domain and getattr(domain, "projection", "") == "lambert":
+                    sub_lons = domain.lons[y_idx[:, None], x_idx]
+                    n_lambert = getattr(domain, "n", 0.71556)
+                    lon0 = getattr(domain, "lon0", -5.0)
+                    theta = n_lambert * np.radians(sub_lons - lon0)
+                    u_rot = sub_u * np.cos(theta) + sub_v * np.sin(theta)
+                    v_rot = -sub_u * np.sin(theta) + sub_v * np.cos(theta)
+                else:
+                    u_rot = sub_u
+                    v_rot = sub_v
+
+                u_norm = np.zeros_like(sub_u)
+                v_norm = np.zeros_like(sub_v)
+                u_norm[valid] = u_rot[valid] / spd[valid]
+                v_norm[valid] = -v_rot[valid] / spd[valid]
+
+                # Halo sombre sous les flèches pour contraste universel
+                ax.quiver(X[valid], Y[valid], u_norm[valid], v_norm[valid],
+                          color="#0a1526", scale=36, scale_units="width", width=0.0036,
+                          headwidth=3.6, headlength=4.2, headaxislength=3.8, pivot="middle",
+                          alpha=0.7)
+                # Flèches blanches principales
+                ax.quiver(X[valid], Y[valid], u_norm[valid], v_norm[valid],
+                          color="#ffffff", scale=38, scale_units="width", width=0.0022,
+                          headwidth=3.2, headlength=3.8, headaxislength=3.5, pivot="middle",
+                          alpha=0.95)
+
+        ensure_dir(os.path.dirname(output_path))
+        fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 85})
+    finally:
+        plt.close(fig)
+
+    # Garantie dimension exacte w, h
+    with Image.open(output_path) as im:
+        if im.size != (w, h):
+            im.resize((w, h)).save(output_path, format="WEBP", quality=85)
 
 
 # ── Formules physiques ──────────────────────────────────────────────────────

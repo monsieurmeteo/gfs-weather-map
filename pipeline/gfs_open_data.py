@@ -36,6 +36,7 @@ from render import (  # noqa: E402
     LAYER_ORDER, save_webp, write_hkv, write_places, write_manifest,
     render_z500_with_isobars, render_pression_with_isobars,
     render_temperature850_with_isotherms,
+    render_vagues_with_wind_arrows,
     wind_chill_c, heat_index_c, humidex_c,
 )
 
@@ -215,6 +216,84 @@ def layer_field(key, cached):
     return cached.get(key)
 
 
+_WAVE_CACHE = {}
+
+
+def download_wave_lead(run_dt, lead):
+    """Télécharge le GRIB GFS Wave (HTSGW, UGRD, VGRD surface) pour une échéance."""
+    day = run_dt.strftime("%Y%m%d")
+    hh = "%02d" % run_dt.hour
+    url = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl"
+    params = {
+        "dir": "/gfs.%s/%s/wave/gridded" % (day, hh),
+        "file": "gfswave.t%sz.global.0p25.f%03d.grib2" % (hh, lead),
+        "var_HTSGW": "on",
+        "var_UGRD": "on",
+        "var_VGRD": "on",
+        "lev_surface": "on",
+    }
+    for attempt in range(1, 4):
+        try:
+            r = requests.get(url, params=params, headers=HEADERS, timeout=60, verify=True)
+            if r.status_code == 200 and len(r.content) > 1000:
+                return r.content
+        except Exception:
+            pass
+        time.sleep(3 * attempt)
+    return None
+
+
+def decode_wave_grib(grib_bytes):
+    """Décode les champs GFS Wave (swh, u, v) avec eccodes."""
+    if not grib_bytes:
+        return None
+    from eccodes import (codes_grib_new_from_file, codes_get,
+                         codes_get_array, codes_release)
+    cached = {}
+    with tempfile.NamedTemporaryFile(suffix=".grib2", delete=False) as tf:
+        tf.write(grib_bytes)
+        tmp = tf.name
+    try:
+        with open(tmp, "rb") as f:
+            while True:
+                gid = codes_grib_new_from_file(f)
+                if gid is None:
+                    break
+                try:
+                    short = codes_get(gid, "shortName").lower()
+                    if short not in ("swh", "u", "v"):
+                        continue
+                    ni = int(codes_get(gid, "Ni"))
+                    nj = int(codes_get(gid, "Nj"))
+                    vals = np.asarray(codes_get_array(gid, "values"), dtype=np.float32)
+                    vals = np.where(vals > 9000, np.nan, vals)
+                    lat2 = np.asarray(codes_get_array(gid, "latitudes"), dtype=np.float64).reshape(nj, ni)
+                    lon2 = np.asarray(codes_get_array(gid, "longitudes"), dtype=np.float64).reshape(nj, ni)
+                    cached[short] = (vals.reshape(nj, ni), lat2[:, 0], lon2[0, :])
+                except Exception:
+                    pass
+                finally:
+                    codes_release(gid)
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+    return cached if ("swh" in cached) else None
+
+
+def get_wave_data(run_dt, lead):
+    """Récupère les données de vagues (téléchargement + décodage avec cache mémoire)."""
+    if lead not in _WAVE_CACHE:
+        try:
+            grib_bytes = download_wave_lead(run_dt, lead)
+            _WAVE_CACHE[lead] = decode_wave_grib(grib_bytes)
+        except Exception as e:
+            log("  H+%03d GFS Wave non disponible (%s)" % (lead, e))
+            _WAVE_CACHE[lead] = None
+    return _WAVE_CACHE.get(lead)
+
+
 def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
     """Rend toutes les couches d'une échéance pour un domaine."""
     step = {"lead_hour": lead,
@@ -366,6 +445,26 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
 
     if snod is not None:
         save("neige_au_sol", regrid(snod, lambda v: v * 100.0))
+
+    # Vagues & Vents marins
+    wave_data = get_wave_data(run_dt, lead)
+    if wave_data is not None and "swh" in wave_data:
+        try:
+            swh_f = wave_data["swh"]
+            u_f = wave_data.get("u")
+            v_f = wave_data.get("v")
+            swh_g = domain.regrid(swh_f[0], swh_f[1], swh_f[2])
+            u_g = domain.regrid(u_f[0], u_f[1], u_f[2]) if u_f else None
+            v_g = domain.regrid(v_f[0], v_f[1], v_f[2]) if v_f else None
+            if swh_g is not None and not np.all(np.isnan(swh_g)):
+                dst_w = os.path.join(out_dir, "vagues", "%03d.webp" % lead)
+                render_vagues_with_wind_arrows(swh_g, u_g, v_g, dst_w, domain=domain)
+                step["files"]["vagues"] = "maps/vagues/%03d.webp" % lead
+                write_hkv(swh_g, os.path.join(out_dir, "values", "vagues", "%03d.hkv.gz" % lead))
+                step["probes"]["vagues"] = "maps/values/vagues/%03d.hkv.gz" % lead
+                state["counts"]["vagues"] = state["counts"].get("vagues", 0) + 1
+        except Exception as e:
+            log("  H+%03d rendu vagues échoué : %s" % (lead, e))
 
     return step
 

@@ -549,6 +549,72 @@
                 { value: 1040, color: '#c85000' },
             ]
         },
+        vagues: {
+            label: 'Hauteur des vagues / Houle', unit: 'm', decimals: 1, transparent_below: null,
+            stops: [
+                { value: 0, color: '#ffffff' },
+                { value: 0.5, color: '#97e6ff' },
+                { value: 1.0, color: '#33ccff' },
+                { value: 1.5, color: '#0099ff' },
+                { value: 2.0, color: '#00ff99' },
+                { value: 2.5, color: '#33cc66' },
+                { value: 3.0, color: '#66cc33' },
+                { value: 3.5, color: '#66ff00' },
+                { value: 4.0, color: '#a4f22f' },
+                { value: 4.5, color: '#b7cf0e' },
+                { value: 5.0, color: '#d6f017' },
+                { value: 5.5, color: '#cc9900' },
+                { value: 6.0, color: '#ff9900' },
+                { value: 6.5, color: '#ff9966' },
+                { value: 7.0, color: '#cc9999' },
+                { value: 7.5, color: '#cc6633' },
+                { value: 8.0, color: '#cc3333' },
+                { value: 8.5, color: '#ff0d0d' },
+                { value: 9.0, color: '#c60000' },
+                { value: 9.5, color: '#800000' },
+                { value: 10.0, color: '#800050' },
+                { value: 11.0, color: '#a00077' },
+                { value: 12.0, color: '#cc00cc' },
+                { value: 13.0, color: '#ff00ff' },
+                { value: 14.0, color: '#ff40ff' },
+                { value: 15.0, color: '#ff80ff' },
+                { value: 16.0, color: '#ffa0ff' },
+                { value: 17.0, color: '#ffffff' },
+            ]
+        },
+        houle: {
+            label: 'Hauteur significative de la houle', unit: 'm', decimals: 1, transparent_below: null,
+            stops: [
+                { value: 0, color: '#ffffff' },
+                { value: 0.5, color: '#97e6ff' },
+                { value: 1.0, color: '#33ccff' },
+                { value: 1.5, color: '#0099ff' },
+                { value: 2.0, color: '#00ff99' },
+                { value: 2.5, color: '#33cc66' },
+                { value: 3.0, color: '#66cc33' },
+                { value: 3.5, color: '#66ff00' },
+                { value: 4.0, color: '#a4f22f' },
+                { value: 4.5, color: '#b7cf0e' },
+                { value: 5.0, color: '#d6f017' },
+                { value: 5.5, color: '#cc9900' },
+                { value: 6.0, color: '#ff9900' },
+                { value: 6.5, color: '#ff9966' },
+                { value: 7.0, color: '#cc9999' },
+                { value: 7.5, color: '#cc6633' },
+                { value: 8.0, color: '#cc3333' },
+                { value: 8.5, color: '#ff0d0d' },
+                { value: 9.0, color: '#c60000' },
+                { value: 9.5, color: '#800000' },
+                { value: 10.0, color: '#800050' },
+                { value: 11.0, color: '#a00077' },
+                { value: 12.0, color: '#cc00cc' },
+                { value: 13.0, color: '#ff00ff' },
+                { value: 14.0, color: '#ff40ff' },
+                { value: 15.0, color: '#ff80ff' },
+                { value: 16.0, color: '#ffa0ff' },
+                { value: 17.0, color: '#ffffff' },
+            ]
+        },
         pression_surface: {
             label: 'Pression au sol', unit: 'hPa', decimals: 0, transparent_below: null,
             stops: [
@@ -673,6 +739,9 @@
             var zticks = [];
             for (var zi = 0; zi < stops.length; zi += 1) zticks.push(stops[zi].value);
             return zticks;
+        }
+        if (key === 'vagues' || key === 'houle') {
+            return [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16];
         }
         var ticks = [];
         for (var i = 0; i < 5; i += 1) ticks.push(formatTickValue(low + (max - low) * i / 4));

@@ -4266,6 +4266,12 @@
                 if (val >= 800)  return '#ffea00'; // Risque orageux
                 return '#ffffff';
             }
+            if (layerKey === 'vagues' || layerKey === 'houle') {
+                if (val >= 8) return '#ff2a6d'; // Mer très grosse / tempête
+                if (val >= 5) return '#ff7b00'; // Grosse mer
+                if (val >= 3) return '#ffea00'; // Forte mer
+                return '#70d6ff';
+            }
             return '#ffffff';
         }
 
