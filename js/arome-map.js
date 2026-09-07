@@ -5427,20 +5427,30 @@
         });
 
         // ── 🌍 MODULE DE SURVEILLANCE MONDIALE DES PHÉNOMÈNES EXTRÊMES (J+1 À J+16) ──
+        // ── 🌍 MODULE VOLET / ONGLET MONDIAL DES EXTRÊMES (J+1 À J+16) ───────────
+        // Filtré strictement sur : Cyclone, Tempête, Inondation, Orage
         var worldAlertsData = null;
         var worldAlertsFilterRisk = 'all';
-        var worldAlertsFilterZone = 'all';
         var worldAlertsFilterHorizon = 'all';
-        var worldAlertsFilterCountry = 'all';
         var worldAlertsSearchQuery = '';
+        var ALLOWED_WORLD_RISKS = ['cyclone', 'tempete', 'inondation', 'orage'];
 
         function initWorldAlerts() {
             function processWorldAlertsData(data) {
                 if (!data || !Array.isArray(data.alerts)) return;
-                worldAlertsData = data;
+                
+                // Filtrer strictement sur les 4 catégories demandées
+                var validAlerts = data.alerts.filter(function(a) {
+                    return ALLOWED_WORLD_RISKS.indexOf(a.type) !== -1;
+                });
+                
+                worldAlertsData = {
+                    total_alerts: validAlerts.length,
+                    alerts: validAlerts
+                };
 
-                // 1. Mettre à jour le badge de compteur dans la navbar et dans le bandeau
-                var total = data.total_alerts !== undefined ? data.total_alerts : data.alerts.length;
+                // 1. Mettre à jour les badges de compteur (Navbar + Bandeau)
+                var total = validAlerts.length;
                 var countBadge = document.getElementById('world-alerts-count');
                 if (countBadge) {
                     countBadge.textContent = total;
@@ -5451,24 +5461,15 @@
                     barTotalCount.textContent = total;
                 }
 
-                // 2. Remplir le menu déroulant des pays
-                var countrySel = document.getElementById('world-alerts-country-select');
-                if (countrySel) {
-                    var countries = {};
-                    data.alerts.forEach(function(a) {
-                        if (a.country_name) {
-                            countries[a.country_name] = a.country_flag || '🌐';
-                        }
-                    });
-                    var sortedNames = Object.keys(countries).sort();
-                    countrySel.innerHTML = '<option value="all">🌍 Tous les Pays &amp; Territoires (' + data.alerts.length + ')</option>';
-                    sortedNames.forEach(function(cName) {
-                        var opt = document.createElement('option');
-                        opt.value = cName;
-                        opt.textContent = countries[cName] + ' ' + cName;
-                        countrySel.appendChild(opt);
-                    });
-                }
+                // 2. Mettre à jour les compteurs sur les 4 Onglets Thématiques
+                var counts = { all: total, cyclone: 0, tempete: 0, inondation: 0, orage: 0 };
+                validAlerts.forEach(function(a) {
+                    if (counts[a.type] !== undefined) counts[a.type]++;
+                });
+                ['all', 'cyclone', 'tempete', 'inondation', 'orage'].forEach(function(k) {
+                    var el = document.getElementById('count-tab-' + k);
+                    if (el) el.textContent = counts[k] || 0;
+                });
             }
 
             fetch('alertes_extremes_monde.json?t=' + Date.now())
@@ -5491,52 +5492,40 @@
                 });
         }
 
-        function openWorldAlertsModal() {
-            var modal = document.getElementById('amfm-modal-world-alerts');
-            if (!modal) return;
-            renderWorldAlertsModal();
-            modal.style.display = 'flex';
+        function toggleWorldAlertsDrawer() {
+            var drawer = document.getElementById('amfm-world-alerts-drawer');
+            if (!drawer) return;
+            if (drawer.style.display === 'flex') {
+                closeWorldAlertsDrawer();
+            } else {
+                openWorldAlertsDrawer();
+            }
         }
 
-        function closeWorldAlertsModal() {
-            var modal = document.getElementById('amfm-modal-world-alerts');
-            if (modal) modal.style.display = 'none';
+        function openWorldAlertsDrawer() {
+            var drawer = document.getElementById('amfm-world-alerts-drawer');
+            if (!drawer) return;
+            renderWorldAlertsDrawer();
+            drawer.style.display = 'flex';
         }
 
-        function renderWorldAlertsModal() {
-            var statsContainer = document.getElementById('world-alerts-modal-stats');
-            var listContainer = document.getElementById('world-alerts-modal-list');
-            if (!listContainer) return;
+        function closeWorldAlertsDrawer() {
+            var drawer = document.getElementById('amfm-world-alerts-drawer');
+            if (drawer) drawer.style.display = 'none';
+        }
+
+        function renderWorldAlertsDrawer() {
+            var streamContainer = document.getElementById('world-alerts-cards-stream');
+            if (!streamContainer) return;
 
             if (!worldAlertsData || !worldAlertsData.alerts || worldAlertsData.alerts.length === 0) {
-                listContainer.innerHTML = '<div class="amfm-modal-empty">Aucun phénomène météorologique extrême détecté pour les 16 prochains jours.</div>';
-                if (statsContainer) statsContainer.innerHTML = '';
+                streamContainer.innerHTML = '<div style="padding:24px 16px; text-align:center; color:#94a3b8; font-size:12.5px;">Aucun phénomène météorologique extrême détecté pour les 16 prochains jours.</div>';
                 return;
             }
 
-            // Statistiques d'en-tête
-            if (statsContainer) {
-                var stats = worldAlertsData.stats_by_risk || {};
-                var pillsHtml = '<div class="amfm-stat-pill"><strong>' + worldAlertsData.alerts.length + '</strong> Alertes Totales (J+1 à J+16)</div>';
-                if (stats.cyclone) pillsHtml += '<div class="amfm-stat-pill stat-cyclone">🌀 <strong>' + stats.cyclone + '</strong> Cyclone(s)</div>';
-                if (stats.tempete) pillsHtml += '<div class="amfm-stat-pill" style="border-color:#38bdf8; background:rgba(56,189,248,0.15);">💨 <strong>' + stats.tempete + '</strong> Tempête(s)</div>';
-                if (stats.inondation) pillsHtml += '<div class="amfm-stat-pill" style="border-color:#3b82f6; background:rgba(59,130,246,0.15);">🌧️ <strong>' + stats.inondation + '</strong> Inondation(s)</div>';
-                if (stats.orage) pillsHtml += '<div class="amfm-stat-pill" style="border-color:#a855f7; background:rgba(168,85,247,0.15);">⚡ <strong>' + stats.orage + '</strong> Orage(s)</div>';
-                if (stats.canicule) pillsHtml += '<div class="amfm-stat-pill" style="border-color:#f97316; background:rgba(249,115,22,0.15);">🔥 <strong>' + stats.canicule + '</strong> Canicule(s)</div>';
-                if (stats.froid) pillsHtml += '<div class="amfm-stat-pill" style="border-color:#06b6d4; background:rgba(6,182,212,0.15);">🥶 <strong>' + stats.froid + '</strong> Froid polaire</div>';
-                if (stats.blizzard) pillsHtml += '<div class="amfm-stat-pill" style="border-color:#e0e7ff; background:rgba(224,231,255,0.15);">❄️ <strong>' + stats.blizzard + '</strong> Blizzard(s)</div>';
-                statsContainer.innerHTML = pillsHtml;
-            }
-
-            // Filtrage des alertes
+            // Filtrage dynamique
             var filtered = worldAlertsData.alerts.filter(function(item) {
                 if (worldAlertsFilterRisk !== 'all' && item.type !== worldAlertsFilterRisk) {
-                    return false;
-                }
-                if (worldAlertsFilterCountry !== 'all' && item.country_name !== worldAlertsFilterCountry) {
-                    return false;
-                }
-                if (worldAlertsFilterZone === 'uninhabited' && item.zone_type !== 'uninhabited') {
                     return false;
                 }
                 if (worldAlertsFilterHorizon === 'short' && item.day_offset > 3) {
@@ -5557,53 +5546,58 @@
             });
 
             if (filtered.length === 0) {
-                listContainer.innerHTML = '<div class="amfm-modal-empty">Aucun phénomène ne correspond à vos critères de recherche.</div>';
+                streamContainer.innerHTML = '<div style="padding:24px 16px; text-align:center; color:#94a3b8; font-size:12.5px;"><i class="fa-solid fa-magnifying-glass" style="margin-bottom:8px; display:block; font-size:18px;"></i>Aucun phénomène ne correspond à ce filtre.</div>';
                 return;
             }
 
-            listContainer.innerHTML = '';
+            streamContainer.innerHTML = '';
             filtered.forEach(function(item) {
-                var card = document.createElement('div');
-                card.className = 'amfm-world-card card-' + (item.type || 'cyclone');
+                var card = document.createElement('article');
+                card.className = 'amfm-pro-card type-' + (item.type || 'cyclone');
                 card.setAttribute('role', 'button');
                 card.setAttribute('tabindex', '0');
                 card.setAttribute('title', 'Cliquer pour voir directement sur la carte');
 
-                var metricsHtml = '';
+                var chipsHtml = '';
                 var m = item.metrics || {};
-                if (m.vent_max !== undefined) metricsHtml += '<span>💨 Vent : <strong>' + m.vent_max + ' km/h</strong></span>';
-                if (m.rafales_max !== undefined) metricsHtml += '<span>⚡ Rafales : <strong>' + m.rafales_max + ' km/h</strong></span>';
-                if (m.pression_min !== undefined) metricsHtml += '<span>🧭 Pression : <strong>' + m.pression_min + ' hPa</strong></span>';
-                if (m.pluie_max !== undefined) metricsHtml += '<span>🌧️ Pluie : <strong>' + m.pluie_max + ' mm</strong></span>';
-                if (m.cape_max !== undefined) metricsHtml += '<span>⚡ MUCAPE : <strong>' + m.cape_max + ' J/kg</strong></span>';
-                if (m.temp_max !== undefined) metricsHtml += '<span>☀️ Temp. max : <strong>' + m.temp_max + ' °C</strong></span>';
-                if (m.temp_min !== undefined) metricsHtml += '<span>❄️ Temp. min : <strong>' + m.temp_min + ' °C</strong></span>';
-                if (m.neige_max !== undefined) metricsHtml += '<span>🏔️ Neige sol : <strong>' + m.neige_max + ' cm</strong></span>';
+                if (m.rafales_max !== undefined) {
+                    chipsHtml += '<span class="amfm-pro-chip">⚡ <strong>' + m.rafales_max + ' km/h</strong></span>';
+                } else if (m.vent_max !== undefined) {
+                    chipsHtml += '<span class="amfm-pro-chip">💨 <strong>' + m.vent_max + ' km/h</strong></span>';
+                }
+                if (m.pression_min !== undefined) {
+                    chipsHtml += '<span class="amfm-pro-chip">🧭 <strong>' + m.pression_min + ' hPa</strong></span>';
+                }
+                if (m.pluie_max !== undefined) {
+                    chipsHtml += '<span class="amfm-pro-chip">🌧️ <strong>' + m.pluie_max + ' mm</strong></span>';
+                }
+                if (m.cape_max !== undefined) {
+                    chipsHtml += '<span class="amfm-pro-chip">⚡ <strong>' + m.cape_max + ' J/kg</strong></span>';
+                }
 
-                var sevClass = 'sev-' + (item.severity || 'extreme');
+                var sev = (item.severity || 'extreme').toLowerCase();
+                var sevLabel = sev === 'critique' ? 'Critique' : 'Élevé';
+                var sevClass = 'sev-' + sev;
 
                 card.innerHTML =
-                    '<div class="amfm-world-card-header">' +
-                        '<div class="amfm-world-card-type">' +
-                            '<span>' + (item.icon || '⚠️') + '</span> ' +
-                            '<span>' + (item.type_label || 'Phénomène Extrême') + '</span>' +
+                    '<div class="amfm-pro-card-top">' +
+                        '<div class="amfm-pro-card-geo">' +
+                            '<span>' + (item.country_flag || '🌐') + '</span> ' +
+                            '<span>' + (item.country_name || 'International') + '</span> ' +
+                            '<span class="amfm-pro-card-coords">(' + (item.coords_str || '') + ')</span>' +
                         '</div>' +
-                        '<span class="amfm-world-card-sev ' + sevClass + '">' + (item.severity || 'Extrême') + '</span>' +
+                        '<span class="amfm-pro-badge-sev ' + sevClass + '">' + sevLabel + '</span>' +
                     '</div>' +
-                    '<div class="amfm-world-card-title">' + (item.title || '') + '</div>' +
-                    '<div class="amfm-world-card-country">' +
-                        '<span>' + (item.country_flag || '🌐') + '</span> ' +
-                        '<span>' + (item.country_name || 'International') + '</span> ' +
-                        '<span style="color:var(--amfm-muted); font-size:11px;">(' + (item.coords_str || '') + ')</span>' +
-                    '</div>' +
-                    '<div class="amfm-world-card-time">' +
+                    '<div class="amfm-pro-card-title">' + (item.title || '') + '</div>' +
+                    (item.subtitle ? '<div class="amfm-pro-card-subtitle">' + item.subtitle + '</div>' : '') +
+                    '<div class="amfm-pro-card-time">' +
                         '<i class="fa-regular fa-clock"></i> ' +
-                        '<span>' + (item.time_horizon || ('J+' + item.day_offset)) + ' · Échéance H+' + String(item.lead_hour).padStart(2, '0') + (item.time_window ? ' (' + item.time_window + ')' : '') + '</span>' +
+                        '<span>' + (item.time_horizon || ('J+' + item.day_offset)) + ' · H+' + String(item.lead_hour).padStart(2, '0') + (item.time_window ? ' (' + item.time_window + ')' : '') + '</span>' +
                     '</div>' +
-                    (metricsHtml ? '<div class="amfm-world-card-metrics">' + metricsHtml + '</div>' : '') +
-                    (item.risk_summary ? '<div class="amfm-world-card-desc">' + item.risk_summary + '</div>' : '') +
-                    '<div class="amfm-world-card-btn">' +
-                        '<i class="fa-solid fa-location-crosshairs"></i> <span>Téléporter sur la carte (H+' + item.lead_hour + ')</span>' +
+                    (chipsHtml ? '<div class="amfm-pro-card-chips">' + chipsHtml + '</div>' : '') +
+                    (item.risk_summary ? '<div class="amfm-pro-card-desc">' + item.risk_summary + '</div>' : '') +
+                    '<div class="amfm-pro-card-btn">' +
+                        '<i class="fa-solid fa-location-crosshairs"></i> <span>Voir sur la carte (H+' + item.lead_hour + ')</span>' +
                     '</div>';
 
                 card.addEventListener('click', function() {
@@ -5616,13 +5610,12 @@
                     }
                 });
 
-                listContainer.appendChild(card);
+                streamContainer.appendChild(card);
             });
         }
 
         function teleportToAlert(alertItem) {
             if (!alertItem) return;
-            closeWorldAlertsModal();
 
             var lat = Number(alertItem.lat);
             var lon = Number(alertItem.lon);
@@ -5684,31 +5677,52 @@
 
             // 4. Notification / Toast
             if (typeof setToolHint === 'function') {
-                setToolHint('🌍 Téléportation : ' + (alertItem.icon || '') + ' ' + alertItem.title + ' (' + alertItem.country_name + ') — H+' + alertItem.lead_hour);
+                setToolHint('🌍 ' + (alertItem.icon || '') + ' ' + alertItem.title + ' (' + alertItem.country_name + ') — H+' + alertItem.lead_hour);
             }
         }
 
         initWorldAlerts();
         var worldAlertsBtn = document.getElementById('amfm-btn-world-alerts');
-        if (worldAlertsBtn) worldAlertsBtn.onclick = openWorldAlertsModal;
+        if (worldAlertsBtn) worldAlertsBtn.onclick = toggleWorldAlertsDrawer;
         var barAlertsBtn = document.getElementById('btn-open-world-alerts-bar');
-        if (barAlertsBtn) barAlertsBtn.onclick = openWorldAlertsModal;
-        var worldModalClose = document.getElementById('world-alerts-modal-close');
-        if (worldModalClose) worldModalClose.onclick = closeWorldAlertsModal;
-        var worldModal = document.getElementById('amfm-modal-world-alerts');
-        if (worldModal) {
-            worldModal.addEventListener('click', function(e) {
-                if (e.target === worldModal) closeWorldAlertsModal();
-            });
-        }
+        if (barAlertsBtn) barAlertsBtn.onclick = toggleWorldAlertsDrawer;
+        var drawerCloseBtn = document.getElementById('world-alerts-drawer-close');
+        if (drawerCloseBtn) drawerCloseBtn.onclick = closeWorldAlertsDrawer;
 
+        // Gestion des 4 Onglets Thématiques Principaux
+        var drawerTabs = document.querySelectorAll('#world-alerts-tabs-nav .amfm-drawer-tab');
+        drawerTabs.forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                drawerTabs.forEach(function(t) {
+                    t.classList.remove('is-active');
+                    t.setAttribute('aria-selected', 'false');
+                });
+                tab.classList.add('is-active');
+                tab.setAttribute('aria-selected', 'true');
+                worldAlertsFilterRisk = tab.dataset.risk || 'all';
+                renderWorldAlertsDrawer();
+            });
+        });
+
+        // Gestion des Horizons Temporels
+        var horizonPills = document.querySelectorAll('#world-alerts-horizon-pills .amfm-horizon-pill');
+        horizonPills.forEach(function(pill) {
+            pill.addEventListener('click', function() {
+                horizonPills.forEach(function(p) { p.classList.remove('is-active'); });
+                pill.classList.add('is-active');
+                worldAlertsFilterHorizon = pill.dataset.horizon || 'all';
+                renderWorldAlertsDrawer();
+            });
+        });
+
+        // Recherche textuelle instantanée
         var wSearchInput = document.getElementById('world-alerts-search');
         var wSearchClear = document.getElementById('world-alerts-search-clear');
         if (wSearchInput) {
             wSearchInput.addEventListener('input', function() {
                 worldAlertsSearchQuery = (wSearchInput.value || '').trim();
                 if (wSearchClear) wSearchClear.style.display = worldAlertsSearchQuery ? 'block' : 'none';
-                renderWorldAlertsModal();
+                renderWorldAlertsDrawer();
             });
         }
         if (wSearchClear && wSearchInput) {
@@ -5716,40 +5730,9 @@
                 wSearchInput.value = '';
                 worldAlertsSearchQuery = '';
                 wSearchClear.style.display = 'none';
-                renderWorldAlertsModal();
+                renderWorldAlertsDrawer();
             };
         }
-        var wCountrySel = document.getElementById('world-alerts-country-select');
-        if (wCountrySel) {
-            wCountrySel.addEventListener('change', function() {
-                worldAlertsFilterCountry = wCountrySel.value;
-                renderWorldAlertsModal();
-            });
-        }
-        var riskPills = document.querySelectorAll('#world-alerts-risk-pills .amfm-filter-pill');
-        riskPills.forEach(function(pill) {
-            pill.addEventListener('click', function() {
-                riskPills.forEach(function(p) { p.classList.remove('is-active'); });
-                pill.classList.add('is-active');
-                worldAlertsFilterRisk = pill.dataset.risk || 'all';
-                renderWorldAlertsModal();
-            });
-        });
-        var zonePills = document.querySelectorAll('#world-alerts-zone-pills .amfm-filter-pill');
-        zonePills.forEach(function(pill) {
-            pill.addEventListener('click', function() {
-                zonePills.forEach(function(p) { p.classList.remove('is-active'); });
-                pill.classList.add('is-active');
-                if (pill.dataset.zone) {
-                    worldAlertsFilterZone = pill.dataset.zone;
-                    worldAlertsFilterHorizon = 'all';
-                } else if (pill.dataset.horizon) {
-                    worldAlertsFilterHorizon = pill.dataset.horizon;
-                    worldAlertsFilterZone = 'all';
-                }
-                renderWorldAlertsModal();
-            });
-        });
 
         // ── 🔍 MODULE DE RECHERCHE MONDIALE (Adresse, Ville, Pays) ───────────────
         function dropSearchPin(lat, lon, label) {

@@ -632,7 +632,8 @@ def scan_model_extremes(model_key, domain_name, base_dir=BASE_DIR):
                         "risk_summary": "Chutes de neige continues avec formation de congères sous l'effet du vent. Risque de paralysie des transports."
                     })
 
-    return alerts_found
+    ALLOWED_TYPES = {"cyclone", "tempete", "inondation", "orage"}
+    return [a for a in alerts_found if a.get("type") in ALLOWED_TYPES]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -841,54 +842,54 @@ def generate_baseline_fallback_alerts():
             "risk_summary": "Épisode de mousson particulièrement actif apportant des cumuls propices à des inondations majeures en zone côtière."
         },
         {
-            "id": "alert_gfs_h168_canicule_espagne",
-            "type": "canicule",
-            "type_label": "Canicule & Dôme de Chaleur",
-            "icon": "🔥",
-            "severity": "extreme",
-            "title": "Pic Caniculaire Ibérique (42.5 °C)",
-            "subtitle": "Dôme saharien remontant sur l'Andalousie et le sud du Portugal",
-            "model": "gfs",
-            "domain": "europe",
-            "layer": "temperature",
+            "id": "alert_gfs_h168_inondation_cevennes",
+            "type": "inondation",
+            "type_label": "Épisode Cévenol & Inondations",
+            "icon": "🌧️",
+            "severity": "critique",
+            "title": "Épisode Méditerranéen Majeur (280 mm)",
+            "subtitle": "Blocage orageux très pluvieux sur les Cévennes et le Languedoc",
+            "model": "gfs_france",
+            "domain": "france",
+            "layer": "pluie_cumul",
             "lead_hour": 168,
             "day_offset": 7,
             "time_horizon": "J+7 (Moyen terme)",
-            "time_window": "H+156 → H+180",
-            "lat": 37.4,
-            "lon": -5.9,
-            "coords_str": "37.4°N · 5.9°O",
-            "country_code": "ES",
-            "country_name": "Espagne (Andalousie)",
-            "country_flag": "🇪🇸",
+            "time_window": "H+144 → H+180",
+            "lat": 44.2,
+            "lon": 3.8,
+            "coords_str": "44.2°N · 3.8°E",
+            "country_code": "FR",
+            "country_name": "France (Cévennes / Gard / Ardèche)",
+            "country_flag": "🇫🇷",
             "zone_type": "country",
-            "metrics": {"temp_max": 42.5},
-            "risk_summary": "Chaleur accablante avec risque d'incendie de forêt critique et températures nocturnes ne descendant pas sous 26 °C."
+            "metrics": {"pluie_max": 280},
+            "risk_summary": "Flux de sud maritime très humide et instable butant sur le relief cévenol. Risque majeur de crues éclairs et débordements destructeurs."
         },
         {
-            "id": "alert_gfs_h216_froid_groenland",
-            "type": "froid",
-            "type_label": "Vague de Froid Polaire",
-            "icon": "🥶",
-            "severity": "extreme",
-            "title": "Plongée Arctique Glaciale (-36.0 °C)",
-            "subtitle": "Masse d'air arctique d'une pureté absolue sur la calotte groenlandaise",
-            "model": "gfs",
-            "domain": "europe",
-            "layer": "temperature",
+            "id": "alert_gfs_h216_orage_usa",
+            "type": "orage",
+            "type_label": "Supercellules & Orages Violents",
+            "icon": "⚡",
+            "severity": "critique",
+            "title": "Outbreak de Supercellules Violentes (3 400 J/kg)",
+            "subtitle": "Conflit d'air sec et d'air tropical humide dans les Grandes Plaines",
+            "model": "gfs_etats_unis",
+            "domain": "etats_unis",
+            "layer": "mucape",
             "lead_hour": 216,
             "day_offset": 9,
             "time_horizon": "J+9 (Long terme J+8 à J+16)",
             "time_window": "H+192 → H+240",
-            "lat": 72.0,
-            "lon": -38.0,
-            "coords_str": "72.0°N · 38.0°O",
-            "country_code": "GL",
-            "country_name": "Groenland (Inlandsis)",
-            "country_flag": "🇬🇱",
+            "lat": 35.5,
+            "lon": -97.5,
+            "coords_str": "35.5°N · 97.5°O",
+            "country_code": "US",
+            "country_name": "États-Unis (Oklahoma / Tornado Alley)",
+            "country_flag": "🇺🇸",
             "zone_type": "country",
-            "metrics": {"temp_min": -36.0},
-            "risk_summary": "Rayonnement polaire nocturne extrême provoquant un froid sidérant avec vent catabatique sur les fjords."
+            "metrics": {"cape_max": 3400, "rafales_max": 130},
+            "risk_summary": "Cisaillement profond et instabilité extrême favorables aux supercellules tornadiques, grêlons géants et rafales convectives."
         }
     ]
     return fallback
