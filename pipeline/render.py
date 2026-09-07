@@ -587,23 +587,26 @@ def render_pression_with_isobars(prmsl_grid, output_path):
 
 
 # ── Vagues & Vents ─────────────────────────────────────────────────────────
-def render_vagues_with_wind_arrows(swh_grid, u_grid, v_grid, output_path, domain=None):
-    """Rendu cartographique de la hauteur des vagues avec flèches de vent.
-    - swh_grid : hauteur significative des vagues (m).
-    - u_grid, v_grid : composantes u, v du vent de surface (m/s).
-    - Palette officielle Météociel discrète 0..17m sur la mer, transparence totale sur terre.
-    - Flèches de direction du vent avec correction d'angle pour projection conique (Lambert).
+def render_vagues_with_wind_arrows(swh_grid, dirpw_grid, u_grid, v_grid, output_path, domain=None, is_land=None):
+    """Rendu cartographique Météociel de la hauteur des vagues avec flèches fines de direction.
+    - swh_grid : hauteur significative (m).
+    - dirpw_grid : direction des vagues (degrés météo, d'où elles viennent).
+    - u_grid, v_grid : vents marins (fallback si dirpw absent).
+    - is_land : masque booléen (True sur terre, False sur mer).
     """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     pal = PALETTES.get("vagues")
-    base_img = apply_palette(np.nan_to_num(swh_grid, nan=np.nan), pal, discrete=False)
-    if np.isnan(swh_grid).any():
+    base_img = apply_palette(np.nan_to_num(swh_grid, nan=0.0), pal, discrete=False)
+    h, w = swh_grid.shape
+
+    if is_land is not None:
+        base_img[is_land, 3] = 0
+    elif np.isnan(swh_grid).any():
         base_img[np.isnan(swh_grid), 3] = 0
 
-    h, w = swh_grid.shape
     fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
     try:
         fig.patch.set_alpha(0)
@@ -612,139 +615,83 @@ def render_vagues_with_wind_arrows(swh_grid, u_grid, v_grid, output_path, domain
         ax.set_facecolor((0, 0, 0, 0))
         ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
 
-        if u_grid is not None and v_grid is not None:
-            # Densité de maillage adaptée selon le domaine
-            step = 55 if (domain and getattr(domain, "projection", "") == "lambert") else 45
+        # Direction vectorielle des vagues (Météociel style)
+        has_dir = (dirpw_grid is not None) or (u_grid is not None and v_grid is not None)
+        if has_dir:
+            step = 55 if (domain and getattr(domain, "projection", "") == "lambert") else 42
             y_idx = np.arange(step // 2, h, step)
             x_idx = np.arange(step // 2, w, step)
+            X, Y = np.meshgrid(x_idx, y_idx)
 
             sub_swh = swh_grid[y_idx[:, None], x_idx]
-            sub_u = u_grid[y_idx[:, None], x_idx]
-            sub_v = v_grid[y_idx[:, None], x_idx]
+            sub_land = is_land[y_idx[:, None], x_idx] if is_land is not None else np.isnan(sub_swh)
 
-            valid = ~np.isnan(sub_swh) & ~np.isnan(sub_u) & ~np.isnan(sub_v)
-            spd = np.hypot(sub_u, sub_v)
-            valid = valid & (spd > 0.5)
+            if dirpw_grid is not None:
+                sub_dir = dirpw_grid[y_idx[:, None], x_idx]
+                rad = np.radians(sub_dir)
+                # Vecteur de déplacement vers où se propage la houle :
+                # -sin(rad) vers l'Est (+X), -cos(rad) vers le Nord (+Y en physique)
+                sub_u = -np.sin(rad)
+                sub_v = -np.cos(rad)
+            else:
+                sub_u = u_grid[y_idx[:, None], x_idx]
+                sub_v = v_grid[y_idx[:, None], x_idx]
+
+            # Rotation conique conforme de Lambert pour le domaine Europe
+            if domain and getattr(domain, "projection", "") == "lambert":
+                sub_lons = domain.lons[y_idx[:, None], x_idx]
+                n_lambert = getattr(domain, "n", 0.71556)
+                lon0 = getattr(domain, "lon0", -5.0)
+                theta = n_lambert * np.radians(sub_lons - lon0)
+                u_rot = sub_u * np.cos(theta) + sub_v * np.sin(theta)
+                v_rot = -sub_u * np.sin(theta) + sub_v * np.cos(theta)
+            else:
+                u_rot = sub_u
+                v_rot = sub_v
+
+            spd = np.hypot(u_rot, v_rot)
+            valid = (~sub_land) & (spd > 0.01) & (sub_swh > 0.1) & np.isfinite(spd)
 
             if np.any(valid):
-                X, Y = np.meshgrid(x_idx, y_idx)
-
-                # Correction d'angle pour la projection conique Lambert (Europe)
-                if domain and getattr(domain, "projection", "") == "lambert":
-                    sub_lons = domain.lons[y_idx[:, None], x_idx]
-                    n_lambert = getattr(domain, "n", 0.71556)
-                    lon0 = getattr(domain, "lon0", -5.0)
-                    theta = n_lambert * np.radians(sub_lons - lon0)
-                    u_rot = sub_u * np.cos(theta) + sub_v * np.sin(theta)
-                    v_rot = -sub_u * np.sin(theta) + sub_v * np.cos(theta)
-                else:
-                    u_rot = sub_u
-                    v_rot = sub_v
-
                 u_norm = np.zeros_like(sub_u)
                 v_norm = np.zeros_like(sub_v)
                 u_norm[valid] = u_rot[valid] / spd[valid]
-                v_norm[valid] = -v_rot[valid] / spd[valid]
+                v_norm[valid] = v_rot[valid] / spd[valid]
 
-                # Halo sombre sous les flèches pour contraste universel
+                # Flèches fines Météociel (1.6px, pas d'inversion d'axe Y car ax.quiver gère origin=upper)
                 ax.quiver(X[valid], Y[valid], u_norm[valid], v_norm[valid],
-                          color="#0a1526", scale=36, scale_units="width", width=0.0036,
-                          headwidth=3.6, headlength=4.2, headaxislength=3.8, pivot="middle",
-                          alpha=0.7)
-                # Flèches blanches principales
-                ax.quiver(X[valid], Y[valid], u_norm[valid], v_norm[valid],
-                          color="#ffffff", scale=38, scale_units="width", width=0.0022,
-                          headwidth=3.2, headlength=3.8, headaxislength=3.5, pivot="middle",
-                          alpha=0.95)
+                          color="#1e293b", scale=48, scale_units="width", width=0.0016,
+                          headwidth=2.8, headlength=3.2, headaxislength=3.0, pivot="middle",
+                          alpha=0.85)
 
         ensure_dir(os.path.dirname(output_path))
-        fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 85})
+        fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 88})
     finally:
         plt.close(fig)
 
-    # Garantie dimension exacte w, h
     with Image.open(output_path) as im:
         if im.size != (w, h):
-            im.resize((w, h)).save(output_path, format="WEBP", quality=85)
+            im.resize((w, h), Image.Resampling.LANCZOS).save(output_path, format="WEBP", quality=88)
 
 
-def render_periode_vagues_with_swell_arrows(perpw_grid, dirpw_grid, output_path, domain=None):
-    """Rendu cartographique de la période des vagues (s) avec flèches de propagation de la houle.
-    - perpw_grid : période moyenne en secondes (0..25s).
-    - dirpw_grid : direction d'où viennent les vagues (0..360° en convention météo).
+def render_periode_vagues_with_swell_arrows(perpw_grid, dirpw_grid, output_path, domain=None, is_land=None):
+    """Rendu cartographique Météociel de la période des vagues (s) en champ pur lissé.
+    Identique à la carte officielle Météociel : aucun artefact ni flèche statique, netteté totale au zoom.
     """
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
     pal = PALETTES.get("periode_vagues")
-    base_img = apply_palette(np.nan_to_num(perpw_grid, nan=np.nan), pal, discrete=False)
-    if np.isnan(perpw_grid).any():
+    base_img = apply_palette(np.nan_to_num(perpw_grid, nan=0.0), pal, discrete=False)
+    h, w = perpw_grid.shape
+
+    if is_land is not None:
+        base_img[is_land, 3] = 0
+    elif np.isnan(perpw_grid).any():
         base_img[np.isnan(perpw_grid), 3] = 0
 
-    h, w = perpw_grid.shape
-    fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
-    try:
-        fig.patch.set_alpha(0)
-        ax = fig.add_axes([0, 0, 1, 1])
-        ax.axis("off")
-        ax.set_facecolor((0, 0, 0, 0))
-        ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
-
-        if dirpw_grid is not None:
-            step = 55 if (domain and getattr(domain, "projection", "") == "lambert") else 45
-            y_idx = np.arange(step // 2, h, step)
-            x_idx = np.arange(step // 2, w, step)
-
-            sub_perpw = perpw_grid[y_idx[:, None], x_idx]
-            sub_dirpw = dirpw_grid[y_idx[:, None], x_idx]
-
-            valid = ~np.isnan(sub_perpw) & ~np.isnan(sub_dirpw) & (sub_perpw > 1.5)
-
-            if np.any(valid):
-                X, Y = np.meshgrid(x_idx, y_idx)
-
-                # Conversion dirpw (direction d'origine) en vecteur de déplacement (vers où va la vague)
-                rad = np.radians(sub_dirpw)
-                u_swell = -np.sin(rad)
-                v_swell = -np.cos(rad)
-
-                # Correction d'angle pour la projection conique Lambert (Europe)
-                if domain and getattr(domain, "projection", "") == "lambert":
-                    sub_lons = domain.lons[y_idx[:, None], x_idx]
-                    n_lambert = getattr(domain, "n", 0.71556)
-                    lon0 = getattr(domain, "lon0", -5.0)
-                    theta = n_lambert * np.radians(sub_lons - lon0)
-                    u_rot = u_swell * np.cos(theta) + v_swell * np.sin(theta)
-                    v_rot = -u_swell * np.sin(theta) + v_swell * np.cos(theta)
-                else:
-                    u_rot = u_swell
-                    v_rot = v_swell
-
-                u_norm = np.zeros_like(sub_perpw)
-                v_norm = np.zeros_like(sub_perpw)
-                u_norm[valid] = u_rot[valid]
-                v_norm[valid] = -v_rot[valid]
-
-                # Halo sombre sous les flèches de houle
-                ax.quiver(X[valid], Y[valid], u_norm[valid], v_norm[valid],
-                          color="#0a1526", scale=36, scale_units="width", width=0.0036,
-                          headwidth=3.6, headlength=4.2, headaxislength=3.8, pivot="middle",
-                          alpha=0.7)
-                # Flèches blanches profilées
-                ax.quiver(X[valid], Y[valid], u_norm[valid], v_norm[valid],
-                          color="#ffffff", scale=38, scale_units="width", width=0.0022,
-                          headwidth=3.2, headlength=3.8, headaxislength=3.5, pivot="middle",
-                          alpha=0.95)
-
-        ensure_dir(os.path.dirname(output_path))
-        fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 85})
-    finally:
-        plt.close(fig)
-
-    with Image.open(output_path) as im:
-        if im.size != (w, h):
-            im.resize((w, h)).save(output_path, format="WEBP", quality=85)
+    ensure_dir(os.path.dirname(output_path))
+    im = Image.fromarray(base_img, "RGBA")
+    if im.size != (w, h):
+        im = im.resize((w, h), Image.Resampling.LANCZOS)
+    im.save(output_path, format="WEBP", quality=88)
 
 
 # ── Formules physiques ──────────────────────────────────────────────────────

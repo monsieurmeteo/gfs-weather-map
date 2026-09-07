@@ -246,6 +246,21 @@ def download_wave_lead(run_dt, lead):
     return None
 
 
+def infill_coastal_nans(grid_2d):
+    """Extrapolation côtière morphologique : propage les valeurs marines sur les NaN littoraux.
+    Permet à la houle et aux vagues d'épouser le trait de côte réel sans trous ni escaliers.
+    """
+    if grid_2d is None:
+        return None
+    grid_2d = np.asarray(grid_2d, dtype=np.float32)
+    mask = np.isnan(grid_2d)
+    if not np.any(mask) or np.all(mask):
+        return grid_2d
+    from scipy.ndimage import distance_transform_edt
+    indices = distance_transform_edt(mask, return_distances=False, return_indices=True)
+    return grid_2d[tuple(indices)]
+
+
 def decode_wave_grib(grib_bytes):
     """Décode les champs GFS Wave (swh, perpw, dirpw, u, v) avec eccodes."""
     if not grib_bytes:
@@ -282,7 +297,14 @@ def decode_wave_grib(grib_bytes):
             os.remove(tmp)
         except OSError:
             pass
-    return cached if ("swh" in cached) else None
+
+    if "swh" in cached:
+        # Infill littoral continu sur la grille globale pour tous les domaines du monde
+        for k in list(cached.keys()):
+            val, lat, lon = cached[k]
+            cached[k] = (infill_coastal_nans(val), lat, lon)
+        return cached
+    return None
 
 
 def get_wave_data(run_dt, lead):
@@ -449,21 +471,42 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
     if snod is not None:
         save("neige_au_sol", regrid(snod, lambda v: v * 100.0))
 
-    # Vagues & Vents marins
+    # Vagues & Vents marins (Style Météociel HD avec infill littoral et flèches fines)
     wave_data = get_wave_data(run_dt, lead)
     if wave_data is not None and "swh" in wave_data:
+        mask_path = os.path.join(out_dir, "mask_france.png")
+        if not os.path.exists(mask_path):
+            mask_path = os.path.join(os.path.dirname(out_dir), "maps", "mask_france.png")
+        is_land = None
+        if os.path.exists(mask_path):
+            try:
+                from PIL import Image
+                mask_im = np.asarray(Image.open(mask_path).convert("L"))
+                is_land = (mask_im > 128)
+            except Exception:
+                pass
+
         try:
             swh_f = wave_data["swh"]
+            dirpw_f = wave_data.get("dirpw")
             u_f = wave_data.get("u")
             v_f = wave_data.get("v")
+
             swh_g = domain.regrid(swh_f[0], swh_f[1], swh_f[2])
+            dirpw_g = domain.regrid(dirpw_f[0], dirpw_f[1], dirpw_f[2]) if dirpw_f else None
             u_g = domain.regrid(u_f[0], u_f[1], u_f[2]) if u_f else None
             v_g = domain.regrid(v_f[0], v_f[1], v_f[2]) if v_f else None
+
             if swh_g is not None and not np.all(np.isnan(swh_g)):
                 dst_w = os.path.join(out_dir, "vagues", "%03d.webp" % lead)
-                render_vagues_with_wind_arrows(swh_g, u_g, v_g, dst_w, domain=domain)
+                render_vagues_with_wind_arrows(swh_g, dirpw_g, u_g, v_g, dst_w, domain=domain, is_land=is_land)
                 step["files"]["vagues"] = "maps/vagues/%03d.webp" % lead
-                write_hkv(swh_g, os.path.join(out_dir, "values", "vagues", "%03d.hkv.gz" % lead))
+
+                # Sonde au survol : masquage des terres pour que la sonde disparaisse à l'intérieur
+                swh_hkv = swh_g.copy()
+                if is_land is not None:
+                    swh_hkv[is_land] = np.nan
+                write_hkv(swh_hkv, os.path.join(out_dir, "values", "vagues", "%03d.hkv.gz" % lead))
                 step["probes"]["vagues"] = "maps/values/vagues/%03d.hkv.gz" % lead
                 state["counts"]["vagues"] = state["counts"].get("vagues", 0) + 1
         except Exception as e:
@@ -472,14 +515,17 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
         try:
             if "perpw" in wave_data:
                 perpw_f = wave_data["perpw"]
-                dirpw_f = wave_data.get("dirpw")
                 perpw_g = domain.regrid(perpw_f[0], perpw_f[1], perpw_f[2])
-                dirpw_g = domain.regrid(dirpw_f[0], dirpw_f[1], dirpw_f[2]) if dirpw_f else None
                 if perpw_g is not None and not np.all(np.isnan(perpw_g)):
                     dst_p = os.path.join(out_dir, "periode_vagues", "%03d.webp" % lead)
-                    render_periode_vagues_with_swell_arrows(perpw_g, dirpw_g, dst_p, domain=domain)
+                    # Champ de couleur pur (style Météociel officiel, sans flèches statiques)
+                    render_periode_vagues_with_swell_arrows(perpw_g, None, dst_p, domain=domain, is_land=is_land)
                     step["files"]["periode_vagues"] = "maps/periode_vagues/%03d.webp" % lead
-                    write_hkv(perpw_g, os.path.join(out_dir, "values", "periode_vagues", "%03d.hkv.gz" % lead))
+
+                    perpw_hkv = perpw_g.copy()
+                    if is_land is not None:
+                        perpw_hkv[is_land] = np.nan
+                    write_hkv(perpw_hkv, os.path.join(out_dir, "values", "periode_vagues", "%03d.hkv.gz" % lead))
                     step["probes"]["periode_vagues"] = "maps/values/periode_vagues/%03d.hkv.gz" % lead
                     state["counts"]["periode_vagues"] = state["counts"].get("periode_vagues", 0) + 1
         except Exception as e:
