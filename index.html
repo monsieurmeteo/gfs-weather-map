@@ -2472,6 +2472,9 @@
                         <button type="button" class="amfm-btn amfm-btn-toggle is-active" data-amfm-toggle-cyclones aria-pressed="true" aria-label="Afficher ou masquer les cyclones" title="Afficher/Masquer les cyclones, cônes et trajectoires sur la carte">
                             <i class="fa-solid fa-hurricane" aria-hidden="true"></i> <span>Cyclones</span>
                         </button>
+                        <button type="button" class="amfm-btn amfm-btn-toggle" data-amfm-toggle-sea aria-pressed="false" aria-label="Masquer la mer" title="Masquer la mer (afficher les températures uniquement sur terre)">
+                            <i class="fa-solid fa-water" aria-hidden="true"></i> <span>Masquer la mer</span>
+                        </button>
                     </div>
 
                     <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-reset aria-label="Recentrer la carte météo" title="Recentrer la carte">
@@ -2513,8 +2516,8 @@
                         <i class="fa-solid fa-tv" aria-hidden="true"></i>
                     </button>
 
-                    <!-- Sélecteur Mode Terre / Mer -->
-                    <select class="amfm-select-sea" data-amfm-select-sea aria-label="Filtrer l'affichage des valeurs en mer et littoral" title="Zone d'affichage des valeurs météo">
+                    <!-- Sélecteur Mode Terre / Mer (Synchronisé avec le bouton Masquer la mer) -->
+                    <select class="amfm-select-sea" data-amfm-select-sea aria-label="Filtrer l'affichage des valeurs en mer et littoral" title="Zone d'affichage des valeurs météo" style="display:none;">
                         <option value="none" selected>🌊 Partout (Mer comprise)</option>
                         <option value="land">🌲 Terres seules</option>
                         <option value="coast">🏖️ Terres + Bord de mer</option>

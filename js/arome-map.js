@@ -245,8 +245,49 @@
         var maskSamplerContext = maskSamplerCanvas.getContext ? maskSamplerCanvas.getContext('2d', { willReadFrequently: true }) : null;
         var maskSamplerReady = false;
 
+        var alphaMaskCanvas = null;
+        var alphaMaskVersion = null;
+        function isTemperatureLayer(key) {
+            if (!key) return false;
+            return key === 'temperature' ||
+                   key === 'temperature_ressentie' ||
+                   key === 'point_rosee' ||
+                   key === 'humidex' ||
+                   key === 'temperature_min_24h' ||
+                   key === 'temperature_max_24h' ||
+                   key === 'temperature_850' ||
+                   key.indexOf('temp') !== -1;
+        }
+
+        function getAlphaMaskCanvas() {
+            if (!maskSamplerReady || !maskSamplerCanvas || !maskSamplerContext) return null;
+            if (alphaMaskCanvas && alphaMaskVersion === currentModel &&
+                alphaMaskCanvas.width === maskSamplerCanvas.width &&
+                alphaMaskCanvas.height === maskSamplerCanvas.height) {
+                return alphaMaskCanvas;
+            }
+            try {
+                var c = document.createElement('canvas');
+                c.width = maskSamplerCanvas.width;
+                c.height = maskSamplerCanvas.height;
+                var ctx = c.getContext('2d');
+                var imgData = maskSamplerContext.getImageData(0, 0, c.width, c.height);
+                var d = imgData.data;
+                for (var i = 0; i < d.length; i += 4) {
+                    d[3] = d[0]; // luminance -> alpha (255 terre, 0 mer)
+                }
+                ctx.putImageData(imgData, 0, 0);
+                alphaMaskCanvas = c;
+                alphaMaskVersion = currentModel;
+                return alphaMaskCanvas;
+            } catch (e) {
+                return null;
+            }
+        }
+
         franceMaskImage.onload = function () {
             visibleBBoxCache = null;
+            alphaMaskCanvas = null;
             if (maskSamplerContext) {
                 try {
                     maskSamplerContext.drawImage(franceMaskImage, 0, 0, 2200, 1640);
@@ -257,7 +298,7 @@
         };
 
         function isLand(u, v) {
-            if (seaMode === 'none') return true; // Mode 'none' : afficher partout y compris en pleine mer
+            if (seaMode === 'none' || !isTemperatureLayer(currentLayer)) return true; // N'applique le masquage marin qu'aux températures
             if (!maskSamplerReady || !maskSamplerContext) return true;
             var px = Math.min(Math.max(0, Math.round(u * 2199)), 2199);
             var py = Math.min(Math.max(0, Math.round(v * 1639)), 1639);
@@ -626,6 +667,10 @@
             var layer = manifest.layers[currentLayer];
             if (!position || !layer) {
                 probe.hidden = true;
+                return;
+            }
+            if (!isLand(position.u, position.v)) {
+                hideProbe();
                 return;
             }
             var value = sampleProbe(currentProbe, position.u, position.v);
@@ -1024,6 +1069,13 @@
                 weatherCtx.save();
                 weatherCtx.transform(hScale, 0, 0, vScale, offX, offY);
                 weatherCtx.drawImage(activeImg, 0, 0);
+                if (seaMode === 'land' && isTemperatureLayer(currentLayer)) {
+                    var aMask = getAlphaMaskCanvas();
+                    if (aMask) {
+                        weatherCtx.globalCompositeOperation = 'destination-in';
+                        weatherCtx.drawImage(aMask, 0, 0);
+                    }
+                }
                 weatherCtx.restore();
                 context.drawImage(weatherMasked, 0, 0);
             } else {
@@ -2526,6 +2578,7 @@
                         franceMaskImage.crossOrigin = 'anonymous';
                         franceMaskImage.src = versioned(payload.mask);
                         franceMaskImage.onload = function () {
+                            alphaMaskCanvas = null;
                             if (maskSamplerContext) {
                                 try {
                                     var mNatH = isWorldDomain(modelKey) ? 1320 : 1640;
@@ -2928,6 +2981,7 @@
                 'uniform float uHasWeather;\n' +
                 'uniform float uHasMask;\n' +
                 'uniform float uHasFond;\n' +
+                'uniform float uMaskSea;\n' +
                 'void main(){\n' +
                 ' vec3 frame=vec3(0.02745,0.04314,0.07843);\n' +
                 ' if(uRect.z<=0.0||uRect.w<=0.0){gl_FragColor=vec4(frame,1.0);return;}\n' +
@@ -2946,6 +3000,9 @@
                 ' }\n' +
                 ' vec4 weather=texture2D(uWeather,uv);\n' +
                 ' float alpha=weather.a;\n' +
+                ' if(uMaskSea>0.5){\n' +
+                '  alpha=alpha*texture2D(uMask,uv).r;\n' +
+                ' }\n' +
                 ' gl_FragColor=vec4(mix(base,weather.rgb,alpha),1.0);\n' +
                 '}'
             );
@@ -3049,6 +3106,7 @@
                 useMask: gl.getUniformLocation(program, 'uHasMask'),
                 fondSampler: gl.getUniformLocation(program, 'uFond'),
                 useFond: gl.getUniformLocation(program, 'uHasFond'),
+                maskSea: gl.getUniformLocation(program, 'uMaskSea'),
                 ready: false,
                 maskReady: false,
                 fondReady: false
@@ -3094,6 +3152,8 @@
                 gl.uniform1f(webgl.useMask, webgl.maskReady ? 1 : 0);
                 gl.uniform1i(webgl.fondSampler, 2);
                 gl.uniform1f(webgl.useFond, webgl.fondReady ? 1 : 0);
+                var shouldMaskSea = (seaMode === 'land' && isTemperatureLayer(currentLayer) && webgl.maskReady);
+                gl.uniform1f(webgl.maskSea, shouldMaskSea ? 1 : 0);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
                 return;
             }
@@ -3131,6 +3191,16 @@
             weatherLayer.height = height;
             var weatherLayerCtx = weatherLayer.getContext('2d');
             weatherLayerCtx.drawImage(currentWeatherImage, mrx, mry, mrw, mrh);
+            var shouldMaskSea = (seaMode === 'land' && isTemperatureLayer(currentLayer));
+            if (shouldMaskSea) {
+                var aMask = getAlphaMaskCanvas();
+                if (aMask) {
+                    weatherLayerCtx.save();
+                    weatherLayerCtx.globalCompositeOperation = 'destination-in';
+                    weatherLayerCtx.drawImage(aMask, mrx, mry, mrw, mrh);
+                    weatherLayerCtx.restore();
+                }
+            }
             fallbackContext.drawImage(weatherLayer, 0, 0);
         }
 
@@ -4546,28 +4616,29 @@
         }
 
         updateCycloneLabelUI();
+        function updateSeaToggleUI() {
+            if (!toggleSeaButton) return;
+            var isLandOnly = (seaMode === 'land');
+            toggleSeaButton.classList.toggle('is-active', isLandOnly);
+            toggleSeaButton.setAttribute('aria-pressed', isLandOnly ? 'true' : 'false');
+            toggleSeaButton.title = isLandOnly
+                ? 'Afficher la mer (afficher les températures sur terre et mer)'
+                : 'Masquer la mer (afficher les températures uniquement sur terre)';
+            if (seaSelect) seaSelect.value = seaMode;
+        }
+        updateSeaToggleUI();
+
         if (seaSelect) {
             seaSelect.addEventListener('change', function (e) {
-                seaMode = e.target.value || 'land';
+                seaMode = e.target.value || 'none';
+                updateSeaToggleUI();
                 scheduleRender();
             });
         }
         if (toggleSeaButton) {
             toggleSeaButton.addEventListener('click', function () {
-                if (seaMode === 'coast') {
-                    seaMode = 'none'; // Affiche tout (y compris pleine mer)
-                    toggleSeaButton.classList.add('is-active');
-                    toggleSeaButton.title = 'Mode Mer : Tout afficher (cliquer pour Terres seules)';
-                } else if (seaMode === 'none') {
-                    seaMode = 'land'; // Terre seule
-                    toggleSeaButton.classList.remove('is-active');
-                    toggleSeaButton.title = 'Mode Mer : Terres seules (cliquer pour Terres + Bord de mer)';
-                } else {
-                    seaMode = 'coast'; // Terre + Bord de mer
-                    toggleSeaButton.classList.add('is-active');
-                    toggleSeaButton.title = 'Mode Mer : Terres + Bord de mer (cliquer pour Tout afficher)';
-                }
-                if (seaSelect) seaSelect.value = seaMode;
+                seaMode = (seaMode === 'land') ? 'none' : 'land';
+                updateSeaToggleUI();
                 scheduleRender();
             });
         }
