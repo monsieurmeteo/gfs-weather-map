@@ -467,6 +467,69 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
 
+        /* ── MODEL FILTER PILLS & BADGES ───────────────────────────────────── */
+        .obs-model-pills {
+            display: flex;
+            background: rgba(7, 11, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 9px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .obs-model-pill {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            padding: 6px 12px;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .obs-model-pill:hover {
+            color: #ffffff;
+        }
+
+        .obs-model-pill.is-active {
+            background: var(--bg-card);
+            color: var(--accent-cyan);
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .obs-badge-model {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 9px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .obs-badge-model.model-aifs {
+            background: rgba(168, 85, 247, 0.15);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+        }
+
+        .obs-badge-model.model-gfs {
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+        }
+
+        .obs-badge-model.model-consensus {
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+
         /* ── COUNTRY QUICK CHIPS BAR ──────────────────────────────────────── */
         .obs-country-chips-bar {
             display: flex;
@@ -820,7 +883,7 @@
                 <div class="obs-hero-intro">
                     <h1>Surveillance Planétaire des Événements Majeurs</h1>
                     <p>
-                        Cet observatoire analyse en continu les grilles numériques mondiales (GFS 0.25° et IA ECMWF AIFS) pour détecter de manière anticipée jusqu'à 16 jours les phénomènes de forte intensité : <strong>cyclones tropicaux, tempêtes synoptiques, inondations majeures et orages destructeurs</strong>.
+                        Cet observatoire analyse en continu les grilles numériques mondiales haute précision (<strong>ECMWF AIFS Intelligence Artificielle</strong> 0.25° et <strong>NOAA GFS</strong> 0.25°) pour détecter de manière anticipée de <strong>J+1 à J+16</strong> les phénomènes de forte intensité : <strong>cyclones tropicaux, tempêtes synoptiques, inondations majeures et orages destructeurs</strong>.
                     </p>
                 </div>
                 <div class="obs-hero-updated" id="obs-update-time">
@@ -921,11 +984,19 @@
                     </button>
                 </nav>
 
-                <div class="obs-horizon-pills" id="obs-horizon-pills">
-                    <button type="button" class="obs-horizon-pill is-active" data-horizon="all">Toutes échéances</button>
-                    <button type="button" class="obs-horizon-pill" data-horizon="short" title="J+1 à J+3">Court terme (J+1-3)</button>
-                    <button type="button" class="obs-horizon-pill" data-horizon="medium" title="J+4 à J+7">Moyen terme (J+4-7)</button>
-                    <button type="button" class="obs-horizon-pill" data-horizon="long" title="J+8 à J+16">Long terme (J+8-16)</button>
+                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                    <div class="obs-model-pills" id="obs-model-pills" role="tablist" aria-label="Filtrer par modèle">
+                        <button type="button" class="obs-model-pill is-active" data-model="all" title="Tous les modèles météo">🌐 Tous modèles</button>
+                        <button type="button" class="obs-model-pill" data-model="aifs" title="Modèle IA ECMWF AIFS (0.25°)">🤖 ECMWF AIFS (IA)</button>
+                        <button type="button" class="obs-model-pill" data-model="gfs" title="Modèle NOAA GFS (16 jours)">🇺🇸 NOAA GFS</button>
+                    </div>
+
+                    <div class="obs-horizon-pills" id="obs-horizon-pills">
+                        <button type="button" class="obs-horizon-pill is-active" data-horizon="all">Toutes échéances</button>
+                        <button type="button" class="obs-horizon-pill" data-horizon="short" title="J+1 à J+3">Court terme (J+1-3)</button>
+                        <button type="button" class="obs-horizon-pill" data-horizon="medium" title="J+4 à J+7">Moyen terme (J+4-7)</button>
+                        <button type="button" class="obs-horizon-pill" data-horizon="long" title="J+8 à J+16">Long terme (J+8-16)</button>
+                    </div>
                 </div>
             </div>
 
@@ -964,6 +1035,7 @@
             var currentRisk = 'all';
             var currentCountry = 'all';
             var currentHorizon = 'all';
+            var currentModelFilter = 'all';
             var searchQuery = '';
 
             function loadAlerts() {
@@ -1107,6 +1179,11 @@
                     if (currentHorizon === 'long' && item.day_offset < 8) {
                         return false;
                     }
+                    if (currentModelFilter !== 'all') {
+                        var mSrc = (item.model_source || (item.model && item.model.indexOf('aifs') !== -1 ? 'aifs' : 'gfs')).toLowerCase();
+                        if (currentModelFilter === 'aifs' && mSrc !== 'aifs') return false;
+                        if (currentModelFilter === 'gfs' && mSrc !== 'gfs') return false;
+                    }
                     if (searchQuery) {
                         var q = searchQuery.toLowerCase();
                         var haystack = (
@@ -1115,6 +1192,7 @@
                             (item.country_name || '') + ' ' +
                             (item.coords_str || '') + ' ' +
                             (item.type_label || '') + ' ' +
+                            (item.model_label || '') + ' ' +
                             (item.risk_summary || '')
                         ).toLowerCase();
                         if (haystack.indexOf(q) === -1) return false;
@@ -1129,7 +1207,7 @@
                         '<div class="obs-empty-state">' +
                             '<i class="fa-solid fa-magnifying-glass"></i>' +
                             '<h3>Aucun phénomène correspondant à vos critères</h3>' +
-                            '<p>Essayez d\'élargir vos filtres de pays, de catégorie ou d\'échéance.</p>' +
+                            '<p>Essayez d\'élargir vos filtres de modèle, de pays, de catégorie ou d\'échéance.</p>' +
                         '</div>';
                     return;
                 }
@@ -1142,6 +1220,10 @@
                     var sev = (item.severity || 'extreme').toLowerCase();
                     var sevLabel = sev === 'critique' ? 'Critique' : (sev === 'extreme' ? 'Très Élevé' : 'Élevé');
                     var sevClass = 'sev-' + sev;
+
+                    var isAifs = (item.model_source === 'aifs') || (item.model && item.model.indexOf('aifs') !== -1);
+                    var modelBadgeClass = isAifs ? 'model-aifs' : 'model-gfs';
+                    var modelBadgeText = item.model_badge || (isAifs ? '🤖 ECMWF AIFS' : '🇺🇸 NOAA GFS');
 
                     var m = item.metrics || {};
                     var metricsBoxes = '';
@@ -1181,9 +1263,12 @@
                                 '<span>' + (item.country_name || 'International') + '</span>' +
                                 '<span class="obs-card-geo-coords">(' + (item.coords_str || '') + ')</span>' +
                             '</div>' +
-                            '<span class="obs-badge-severity ' + sevClass + '">' +
-                                '<i class="fa-solid fa-triangle-exclamation"></i> ' + sevLabel +
-                            '</span>' +
+                            '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;">' +
+                                '<span class="obs-badge-model ' + modelBadgeClass + '">' + modelBadgeText + '</span>' +
+                                '<span class="obs-badge-severity ' + sevClass + '">' +
+                                    '<i class="fa-solid fa-triangle-exclamation"></i> ' + sevLabel +
+                                '</span>' +
+                            '</div>' +
                         '</div>' +
 
                         '<div class="obs-card-title-block">' +
@@ -1239,6 +1324,16 @@
                     pills.forEach(function(p) { p.classList.remove('is-active'); });
                     pill.classList.add('is-active');
                     currentHorizon = pill.dataset.horizon || 'all';
+                    renderStream();
+                });
+            });
+
+            var modelPills = document.querySelectorAll('#obs-model-pills .obs-model-pill');
+            modelPills.forEach(function(pill) {
+                pill.addEventListener('click', function() {
+                    modelPills.forEach(function(p) { p.classList.remove('is-active'); });
+                    pill.classList.add('is-active');
+                    currentModelFilter = pill.dataset.model || 'all';
                     renderStream();
                 });
             });

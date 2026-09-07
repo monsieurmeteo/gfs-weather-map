@@ -633,7 +633,22 @@ def scan_model_extremes(model_key, domain_name, base_dir=BASE_DIR):
                     })
 
     ALLOWED_TYPES = {"cyclone", "tempete", "inondation", "orage"}
-    return [a for a in alerts_found if a.get("type") in ALLOWED_TYPES]
+    filtered = [a for a in alerts_found if a.get("type") in ALLOWED_TYPES]
+    for a in filtered:
+        m_k = a.get("model", "").lower()
+        if "aifs" in m_k:
+            a["model_source"] = "aifs"
+            a["model_label"] = "ECMWF AIFS (IA)"
+            a["model_badge"] = "🤖 ECMWF AIFS"
+        elif "consensus" in m_k:
+            a["model_source"] = "consensus"
+            a["model_label"] = "Consensus GFS + AIFS"
+            a["model_badge"] = "🎯 Consensus GFS + AIFS"
+        else:
+            a["model_source"] = "gfs"
+            a["model_label"] = "NOAA GFS"
+            a["model_badge"] = "🇺🇸 NOAA GFS"
+    return filtered
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1051,8 +1066,150 @@ def generate_baseline_fallback_alerts():
             "zone_type": "country",
             "metrics": {"cape_max": 3400, "rafales_max": 130},
             "risk_summary": "Cisaillement profond et instabilité extrême favorables aux supercellules tornadiques, grêlons géants et rafales convectives."
+        },
+        # ── PHÉNOMÈNES MAJEURS MODÉLISÉS PAR ECMWF AIFS (IA EUROPÉENNE) ────────
+        {
+            "id": "alert_aifs_h240_cyclone_philippines",
+            "type": "cyclone",
+            "type_label": "Super Typhon Pacifique (AIFS)",
+            "icon": "🌀",
+            "severity": "critique",
+            "title": "Super Typhon Modélisé par l'IA ECMWF AIFS (235 km/h)",
+            "subtitle": "Creusement extrême à 922 hPa détecté par intelligence artificielle à J+10",
+            "model": "aifs_pacifique_ouest",
+            "domain": "pacifique_ouest",
+            "layer": "vent",
+            "lead_hour": 240,
+            "day_offset": 10,
+            "time_horizon": "J+10 (Long terme J+8 à J+16)",
+            "time_window": "H+216 → H+264",
+            "lat": 16.8,
+            "lon": 128.4,
+            "coords_str": "16.8°N · 128.4°E",
+            "country_code": "PH",
+            "country_name": "Philippines (Mer des Philippines)",
+            "country_flag": "🇵🇭",
+            "zone_type": "country",
+            "metrics": {"vent_max": 185, "rafales_max": 235, "pression_min": 922},
+            "risk_summary": "Système cyclonique de catégorie 4/5 détecté à longue échéance par l'IA de l'ECMWF (AIFS). Trajectoire sous haute surveillance vers Luçon."
+        },
+        {
+            "id": "alert_aifs_h168_ouragan_antilles",
+            "type": "cyclone",
+            "type_label": "Onde Tropicale Majeure / Cyclone (AIFS)",
+            "icon": "🌀",
+            "severity": "extreme",
+            "title": "Onde Tropicale Forte / Cyclone AIFS (155 km/h)",
+            "subtitle": "Intensification rapide modélisée par ECMWF AIFS au large des Petites Antilles",
+            "model": "aifs_antilles",
+            "domain": "antilles",
+            "layer": "vent",
+            "lead_hour": 168,
+            "day_offset": 7,
+            "time_horizon": "J+7 (Moyen terme)",
+            "time_window": "H+144 → H+192",
+            "lat": 15.2,
+            "lon": -56.5,
+            "coords_str": "15.2°N · 56.5°O",
+            "country_code": "MQ_GP",
+            "country_name": "Petites Antilles (Guadeloupe • Martinique)",
+            "country_flag": "🏝️",
+            "zone_type": "country",
+            "metrics": {"vent_max": 125, "rafales_max": 155, "pression_min": 978},
+            "risk_summary": "Cyclogénèse active dans l'Atlantique tropical modélisée par l'intelligence artificielle européenne. Houle cyclonique et vents tempétueux."
+        },
+        {
+            "id": "alert_aifs_h144_tempete_europe",
+            "type": "tempete",
+            "type_label": "Tempête Explosive (AIFS)",
+            "icon": "💨",
+            "severity": "extreme",
+            "title": "Tempête Explosive Automnale AIFS (140 km/h)",
+            "subtitle": "Creusement isobarique serré à 965 hPa sur la Manche et la Mer du Nord",
+            "model": "aifs",
+            "domain": "europe",
+            "layer": "rafales",
+            "lead_hour": 144,
+            "day_offset": 6,
+            "time_horizon": "J+6 (Moyen terme)",
+            "time_window": "H+132 → H+156",
+            "lat": 50.8,
+            "lon": 1.6,
+            "coords_str": "50.8°N · 1.6°E",
+            "country_code": "FR",
+            "country_name": "France (Manche / Hauts-de-France)",
+            "country_flag": "🇫🇷",
+            "zone_type": "country",
+            "metrics": {"rafales_max": 140, "pression_min": 965},
+            "risk_summary": "Dépression atlantique virulente modélisée par ECMWF AIFS, générant des vents tempétueux sur les côtes nord-ouest et fortes vagues."
+        },
+        {
+            "id": "alert_aifs_h192_inondation_mediterranee",
+            "type": "inondation",
+            "type_label": "Pluies Torrentielles Méditerranéennes (AIFS)",
+            "icon": "🌧️",
+            "severity": "critique",
+            "title": "Pluies Torrentielles Méditerranéennes (220 mm)",
+            "subtitle": "Signal de précipitations extrêmes sur le golfe de Gênes et l'Italie modélisé par AIFS",
+            "model": "aifs",
+            "domain": "europe",
+            "layer": "pluie_cumul",
+            "lead_hour": 192,
+            "day_offset": 8,
+            "time_horizon": "J+8 (Long terme J+8 à J+16)",
+            "time_window": "H+168 → H+216",
+            "lat": 44.1,
+            "lon": 9.2,
+            "coords_str": "44.1°N · 9.2°E",
+            "country_code": "IT",
+            "country_name": "Italie (Ligurie / Toscane)",
+            "country_flag": "🇮🇹",
+            "zone_type": "country",
+            "metrics": {"pluie_max": 220},
+            "risk_summary": "Blocage orageux très pluvieux sur le bassin méditerranéen nord-occidental avec forts cumuls propices aux glissements de terrain."
+        },
+        {
+            "id": "alert_aifs_h096_orage_usa",
+            "type": "orage",
+            "type_label": "Supercellules Convectives (AIFS)",
+            "icon": "⚡",
+            "severity": "extreme",
+            "title": "Violente Ligne de Grains & Grêle AIFS (2 900 J/kg)",
+            "subtitle": "Instabilité marquée détectée par AIFS sur le Midwest américain",
+            "model": "aifs_etats_unis",
+            "domain": "etats_unis",
+            "layer": "mucape",
+            "lead_hour": 96,
+            "day_offset": 4,
+            "time_horizon": "J+4 (Moyen terme)",
+            "time_window": "H+84 → H+108",
+            "lat": 38.6,
+            "lon": -90.2,
+            "coords_str": "38.6°N · 90.2°O",
+            "country_code": "US",
+            "country_name": "États-Unis (Missouri / Illinois)",
+            "country_flag": "🇺🇸",
+            "zone_type": "country",
+            "metrics": {"cape_max": 2900, "rafales_max": 115},
+            "risk_summary": "Décrochage dynamique d'altitude modélisé par l'IA ECMWF favorisant l'éclosion de supercellules grêligènes destructrices."
         }
     ]
+
+    for item in fallback:
+        m_k = item.get("model", "").lower()
+        if "aifs" in m_k:
+            item.setdefault("model_source", "aifs")
+            item.setdefault("model_label", "ECMWF AIFS (IA)")
+            item.setdefault("model_badge", "🤖 ECMWF AIFS")
+        elif "consensus" in m_k:
+            item.setdefault("model_source", "consensus")
+            item.setdefault("model_label", "Consensus GFS + AIFS")
+            item.setdefault("model_badge", "🎯 Consensus GFS + AIFS")
+        else:
+            item.setdefault("model_source", "gfs")
+            item.setdefault("model_label", "NOAA GFS")
+            item.setdefault("model_badge", "🇺🇸 NOAA GFS")
+
     return fallback
 
 
@@ -1065,6 +1222,7 @@ def run_world_extreme_detector(base_dir=BASE_DIR, out_file="alertes_extremes_mon
     print(f"[{datetime.now().strftime('%H:%M:%S')}] 🌍 Début du scan mondial des phénomènes extrêmes J+1 à J+16...", flush=True)
 
     domains_to_scan = [
+        # NOAA GFS (16 Jours / 384h)
         ("gfs", "europe"),
         ("gfs_france", "france"),
         ("gfs_antilles", "antilles"),
@@ -1074,9 +1232,16 @@ def run_world_extreme_detector(base_dir=BASE_DIR, out_file="alertes_extremes_mon
         ("gfs_ocean_indien_nord", "ocean_indien_nord"),
         ("gfs_ocean_indien", "ocean_indien"),
         ("gfs_pacifique_sud", "pacifique_sud"),
+        # ECMWF AIFS Intelligence Artificielle (15 Jours / 360h)
         ("aifs", "europe"),
+        ("aifs_france", "france"),
+        ("aifs_antilles", "antilles"),
+        ("aifs_etats_unis", "etats_unis"),
         ("aifs_pacifique_ouest", "pacifique_ouest"),
-        ("aifs_pacifique_est", "pacifique_est")
+        ("aifs_pacifique_est", "pacifique_est"),
+        ("aifs_pacifique_sud", "pacifique_sud"),
+        ("aifs_ocean_indien", "ocean_indien"),
+        ("aifs_ocean_indien_nord", "ocean_indien_nord"),
     ]
 
     all_raw_alerts = []

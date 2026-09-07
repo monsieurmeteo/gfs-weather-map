@@ -1937,6 +1937,10 @@
             }
             return manifest.steps.filter(function (step) {
                 if (!step || Number(step.lead_hour) < 0) return false;
+                // ponytail: lead 0 pour la pluie est physiquement à 0 mm (carte 100% transparente) ; débuter dès la 1ère échéance active
+                if ((currentLayer === 'pluie_1h' || currentLayer === 'pluie_cumul') && Number(step.lead_hour) === 0) {
+                    return false;
+                }
                 if (currentLayer && step.files) {
                     return !!step.files[currentLayer];
                 }
@@ -2610,10 +2614,11 @@
                         }
                     }
                     var stepIdx = 0;
-                    if (pendingStepLead !== null && pendingStepLead !== undefined && manifest && Array.isArray(manifest.steps) && manifest.steps.length > 0) {
+                    var steps = availableSteps();
+                    if (pendingStepLead !== null && pendingStepLead !== undefined && steps && steps.length > 0) {
                         var bestDiff = 999999;
-                        for (var si = 0; si < manifest.steps.length; si++) {
-                            var sDiff = Math.abs((manifest.steps[si].lead_hour || 0) - pendingStepLead);
+                        for (var si = 0; si < steps.length; si++) {
+                            var sDiff = Math.abs((steps[si].lead_hour || 0) - pendingStepLead);
                             if (sDiff < bestDiff) {
                                 bestDiff = sDiff;
                                 stepIdx = si;
@@ -2755,12 +2760,16 @@
             if (!window.history || !window.history.replaceState) {
                 return;
             }
-            var params = new URLSearchParams();
+            var params = new URLSearchParams(window.location.search);
             params.set('model', currentModel);
             params.set('parametre', currentLayer);
             var regSel = document.getElementById('select-region');
             if (regSel) params.set('region', regSel.value);
             params.set('heure', String(currentStep));
+            var steps = availableSteps();
+            if (steps && steps[currentStep] && steps[currentStep].lead_hour !== undefined) {
+                params.set('lead', String(steps[currentStep].lead_hour));
+            }
             window.history.replaceState(null, '', window.location.pathname + '?' + params.toString());
         }
 
@@ -2806,10 +2815,26 @@
                     regSel.value = defaultReg;
                 }
             }
-            var heure = parseInt(params.get('heure'), 10);
-            if (!isNaN(heure)) {
-                var steps = availableSteps();
-                if (heure >= 0 && heure < steps.length) {
+            var targetLead = params.get('lead') || params.get('lead_hour');
+            var targetHeure = params.get('heure');
+            var steps = availableSteps();
+            if (targetLead !== null && steps && steps.length > 0) {
+                var leadVal = parseInt(targetLead, 10);
+                if (!isNaN(leadVal)) {
+                    var bestIdx = 0;
+                    var bestDiff = 999999;
+                    for (var si = 0; si < steps.length; si++) {
+                        var diff = Math.abs((steps[si].lead_hour || 0) - leadVal);
+                        if (diff < bestDiff) {
+                            bestDiff = diff;
+                            bestIdx = si;
+                        }
+                    }
+                    currentStep = bestIdx;
+                }
+            } else if (targetHeure !== null && steps && steps.length > 0) {
+                var heure = parseInt(targetHeure, 10);
+                if (!isNaN(heure) && heure >= 0 && heure < steps.length) {
                     currentStep = heure;
                 }
             }
@@ -5484,7 +5509,8 @@
 
         // ── 🎯 ATTERRISSAGE SUR LA CARTE DEPUIS L'OBSERVATOIRE DES EXTRÊMES ───
         function checkUrlDeepLink() {
-            var params = new URLSearchParams(window.location.search);
+            var params = urlInitParams || new URLSearchParams(window.location.search);
+            if (!params) return;
             var latStr = params.get('lat');
             var lonStr = params.get('lon');
             if (!latStr || !lonStr) return;
@@ -5495,14 +5521,14 @@
 
             var targetModel = params.get('model') || 'gfs';
             var targetDomain = params.get('domain') || 'europe';
-            var targetLayer = params.get('layer');
-            var leadHour = parseInt(params.get('lead'), 10);
+            var targetLayer = params.get('layer') || params.get('parametre');
+            var leadHour = parseInt(params.get('lead') || params.get('lead_hour'), 10);
             var title = params.get('title') || 'Phénomène Extrême';
             var country = params.get('country') || '';
             var icon = params.get('icon') || '⚠️';
 
             // 1. Calque météorologique adéquat
-            if (targetLayer) {
+            if (targetLayer && targetLayer !== currentLayer) {
                 currentLayer = targetLayer;
                 var dSel = document.getElementById('direct-layer-select');
                 if (dSel && dSel.querySelector('option[value="' + targetLayer + '"]')) {
@@ -5559,7 +5585,7 @@
         }
 
         initWorldAlerts();
-        setTimeout(checkUrlDeepLink, 300);
+        setTimeout(checkUrlDeepLink, 150);
 
         // ── 🔍 MODULE DE RECHERCHE MONDIALE (Adresse, Ville, Pays) ───────────────
         function dropSearchPin(lat, lon, label) {
