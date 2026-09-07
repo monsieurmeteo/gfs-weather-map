@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Observatoire Mondial des Phénomènes Extrêmes (J+1 à J+16) — Monsieur Météo</title>
+    <meta name="description" content="Surveillance planétaire anticipée des phénomènes météorologiques extrêmes à 16 jours : cyclones tropicaux, typhons, tempêtes majeures, inondations et orages violents.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #070b14;
+            --bg-secondary: #0d1527;
+            --bg-card: #111c35;
+            --bg-card-hover: #162444;
+            --border-color: rgba(56, 189, 248, 0.15);
+            --border-focus: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --accent-cyan: #38bdf8;
+            --accent-blue: #2563eb;
+            --accent-cyclone: #ef4444;
+            --accent-tempete: #06b6d4;
+            --accent-inondation: #3b82f6;
+            --accent-orage: #a855f7;
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --radius-sm: 6px;
+            --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(14, 165, 233, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(168, 85, 247, 0.06) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        /* ── HEADER NAVIGATION ────────────────────────────────────────────── */
+        .obs-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(7, 11, 20, 0.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 24px;
+        }
+
+        .obs-header-container {
+            max-width: 1360px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .obs-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .obs-brand-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0284c7, #4f46e5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+        }
+
+        .obs-brand-title {
+            font-size: 19px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .obs-brand-title span {
+            background: linear-gradient(90deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .obs-brand-tagline {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .obs-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .obs-live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #34d399;
+            background: rgba(52, 211, 153, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.25);
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .obs-live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #34d399;
+            box-shadow: 0 0 10px #34d399;
+            animation: pulse-dot 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        .btn-open-interactive-map {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 9px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
+            transition: all 0.2s ease;
+        }
+
+        .btn-open-interactive-map:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(2, 132, 199, 0.55);
+            border-color: #38bdf8;
+        }
+
+        /* ── HERO BANNER ──────────────────────────────────────────────────── */
+        .obs-hero {
+            max-width: 1360px;
+            margin: 28px auto 0 auto;
+            padding: 0 24px;
+        }
+
+        .obs-hero-card {
+            background: linear-gradient(135deg, rgba(17, 28, 53, 0.9), rgba(13, 21, 39, 0.95));
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .obs-hero-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .obs-hero-intro h1 {
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: -0.8px;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+
+        .obs-hero-intro p {
+            font-size: 14.5px;
+            color: var(--text-muted);
+            max-width: 780px;
+            line-height: 1.6;
+        }
+
+        .obs-hero-updated {
+            font-size: 12px;
+            color: var(--text-dim);
+            background: rgba(0, 0, 0, 0.35);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        /* ── STATS METRICS GRID ───────────────────────────────────────────── */
+        .obs-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+
+        .obs-stat-item {
+            background: rgba(7, 11, 20, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: var(--radius-md);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .obs-stat-item:hover {
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+
+        .obs-stat-icon {
+            font-size: 26px;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .obs-stat-val {
+            font-size: 22px;
+            font-weight: 900;
+            color: #ffffff;
+            line-height: 1.1;
+        }
+
+        .obs-stat-lbl {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── MAIN FILTER BAR ──────────────────────────────────────────────── */
+        .obs-controls {
+            max-width: 1360px;
+            margin: 24px auto 0 auto;
+            padding: 0 24px;
+        }
+
+        .obs-filter-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px 24px;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        /* Ligne 1 : Sélecteur de Pays + Barre de Recherche */
+        .obs-filter-row-top {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .obs-country-select-wrapper {
+            flex: 1;
+            min-width: 260px;
+            position: relative;
+        }
+
+        .obs-country-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--accent-cyan);
+            margin-bottom: 6px;
+        }
+
+        .obs-country-select {
+            width: 100%;
+            background: var(--bg-primary);
+            color: #ffffff;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .obs-country-select:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        .obs-search-wrapper {
+            flex: 2;
+            min-width: 280px;
+        }
+
+        .obs-search-input-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .obs-search-input-box i {
+            position: absolute;
+            left: 14px;
+            color: var(--text-dim);
+            font-size: 14px;
+        }
+
+        .obs-search-input {
+            width: 100%;
+            background: var(--bg-primary);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px 38px 10px 38px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .obs-search-input:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+        }
+
+        .obs-search-clear {
+            position: absolute;
+            right: 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* Ligne 2 : Onglets 4 Catégories + Horizons */
+        .obs-filter-row-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 16px;
+        }
+
+        .obs-cat-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .obs-cat-tab {
+            background: rgba(7, 11, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .obs-cat-tab:hover {
+            color: #ffffff;
+            border-color: rgba(56, 189, 248, 0.4);
+            background: rgba(14, 165, 233, 0.1);
+        }
+
+        .obs-cat-tab.is-active {
+            color: #ffffff;
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.35), rgba(37, 99, 235, 0.5));
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+        }
+
+        .obs-tab-badge {
+            background: rgba(0, 0, 0, 0.45);
+            padding: 2px 7px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #e0f2fe;
+        }
+
+        .obs-horizon-pills {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            background: rgba(7, 11, 20, 0.7);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .obs-horizon-pill {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            padding: 6px 12px;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .obs-horizon-pill:hover {
+            color: #ffffff;
+        }
+
+        .obs-horizon-pill.is-active {
+            background: var(--bg-card);
+            color: var(--accent-cyan);
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        /* ── COUNTRY QUICK CHIPS BAR ──────────────────────────────────────── */
+        .obs-country-chips-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .obs-country-chip {
+            background: rgba(7, 11, 20, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .obs-country-chip:hover {
+            border-color: var(--accent-cyan);
+            color: #ffffff;
+        }
+
+        .obs-country-chip.is-active {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: var(--accent-cyan);
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        /* ── PHENOMENA EDITORIAL STREAM ───────────────────────────────────── */
+        .obs-stream {
+            max-width: 1360px;
+            margin: 28px auto 60px auto;
+            padding: 0 24px;
+        }
+
+        .obs-stream-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .obs-stream-count {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .obs-stream-count strong {
+            color: #ffffff;
+        }
+
+        .obs-cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .obs-cards-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ── EDITORIAL CARD ──────────────────────────────────────────────── */
+        .obs-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .obs-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.7), 0 0 25px rgba(56, 189, 248, 0.15);
+        }
+
+        .obs-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .obs-card.type-cyclone::before { background: linear-gradient(180deg, #ef4444, #b91c1c); }
+        .obs-card.type-tempete::before { background: linear-gradient(180deg, #06b6d4, #0284c7); }
+        .obs-card.type-inondation::before { background: linear-gradient(180deg, #3b82f6, #1d4ed8); }
+        .obs-card.type-orage::before { background: linear-gradient(180deg, #a855f7, #7e22ce); }
+
+        .obs-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .obs-card-geo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .obs-card-geo .obs-flag {
+            font-size: 18px;
+        }
+
+        .obs-card-geo-coords {
+            font-size: 12px;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        .obs-badge-severity {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .obs-badge-severity.sev-critique {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+        }
+
+        .obs-badge-severity.sev-extreme {
+            background: rgba(249, 115, 22, 0.15);
+            color: #fb923c;
+            border: 1px solid rgba(249, 115, 22, 0.4);
+        }
+
+        .obs-badge-severity.sev-eleve {
+            background: rgba(234, 179, 8, 0.15);
+            color: #facc15;
+            border: 1px solid rgba(234, 179, 8, 0.4);
+        }
+
+        .obs-card-title-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .obs-card-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.3px;
+            line-height: 1.3;
+        }
+
+        .obs-card-subtitle {
+            font-size: 13.5px;
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .obs-card-time {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(7, 11, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #cbd5e1;
+            width: fit-content;
+        }
+
+        .obs-card-time i {
+            color: var(--accent-cyan);
+        }
+
+        .obs-card-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 10px;
+        }
+
+        .obs-metric-box {
+            background: rgba(7, 11, 20, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .obs-metric-val {
+            font-size: 16px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .obs-metric-lbl {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        .obs-card-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 10px 14px;
+            border-radius: 8px;
+            border-left: 3px solid rgba(56, 189, 248, 0.4);
+        }
+
+        .obs-card-action {
+            margin-top: auto;
+            padding-top: 8px;
+        }
+
+        .btn-teleport-map {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.4), rgba(37, 99, 235, 0.6));
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            color: #ffffff;
+            font-size: 13.5px;
+            font-weight: 700;
+            padding: 12px 18px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.2);
+        }
+
+        .btn-teleport-map:hover {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            border-color: #38bdf8;
+            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.45);
+            transform: translateY(-1px);
+        }
+
+        .btn-teleport-map i {
+            transition: transform 0.2s ease;
+        }
+
+        .btn-teleport-map:hover i {
+            transform: translateX(4px);
+        }
+
+        .obs-empty-state {
+            grid-column: 1 / -1;
+            background: var(--bg-card);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-lg);
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .obs-empty-state i {
+            font-size: 40px;
+            color: var(--text-dim);
+            margin-bottom: 14px;
+        }
+
+        .obs-empty-state h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+
+        .obs-footer {
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            padding: 30px 24px;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 13px;
+        }
+
+        .obs-footer a {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        .obs-footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVIGATION BARRE SUPÉRIEURE -->
+    <header class="obs-header">
+        <div class="obs-header-container">
+            <div class="obs-brand">
+                <div class="obs-brand-icon">
+                    <i class="fa-solid fa-earth-americas" style="color: #ffffff;"></i>
+                </div>
+                <div>
+                    <div class="obs-brand-title">OBSERVATOIRE <span>MONDIAL DES EXTRÊMES</span></div>
+                    <div class="obs-brand-tagline">Surveillance des phénomènes météo d'échelle planétaire (J+1 à J+16)</div>
+                </div>
+            </div>
+
+            <div class="obs-header-actions">
+                <div class="obs-live-indicator">
+                    <span class="obs-live-dot"></span>
+                    <span>Modèles GFS &amp; AIFS En Direct</span>
+                </div>
+                <a href="index.html" class="btn-open-interactive-map" title="Retourner sur la carte interactive générale">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    <span>Carte Interactive</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO SECTION & STATS COMPTEURS -->
+    <section class="obs-hero">
+        <div class="obs-hero-card">
+            <div class="obs-hero-top">
+                <div class="obs-hero-intro">
+                    <h1>Surveillance Planétaire des Événements Majeurs</h1>
+                    <p>
+                        Cet observatoire analyse en continu les grilles numériques mondiales (GFS 0.25° et IA ECMWF AIFS) pour détecter de manière anticipée jusqu'à 16 jours les phénomènes de forte intensité : <strong>cyclones tropicaux, tempêtes synoptiques, inondations majeures et orages destructeurs</strong>.
+                    </p>
+                </div>
+                <div class="obs-hero-updated" id="obs-update-time">
+                    <i class="fa-regular fa-clock"></i> <span>Mise à jour : en cours...</span>
+                </div>
+            </div>
+
+            <!-- Grille de 5 Indicateurs Clés -->
+            <div class="obs-stats-grid">
+                <div class="obs-stat-item">
+                    <div class="obs-stat-icon">🌍</div>
+                    <div>
+                        <div class="obs-stat-val" id="stat-total-alerts">0</div>
+                        <div class="obs-stat-lbl">Phénomènes Actifs</div>
+                    </div>
+                </div>
+                <div class="obs-stat-item">
+                    <div class="obs-stat-icon" style="color: #ef4444;">🌀</div>
+                    <div>
+                        <div class="obs-stat-val" id="stat-cyclones">0</div>
+                        <div class="obs-stat-lbl">Cyclones &amp; Typhons</div>
+                    </div>
+                </div>
+                <div class="obs-stat-item">
+                    <div class="obs-stat-icon" style="color: #06b6d4;">💨</div>
+                    <div>
+                        <div class="obs-stat-val" id="stat-tempetes">0</div>
+                        <div class="obs-stat-lbl">Tempêtes Majeures</div>
+                    </div>
+                </div>
+                <div class="obs-stat-item">
+                    <div class="obs-stat-icon" style="color: #3b82f6;">🌧️</div>
+                    <div>
+                        <div class="obs-stat-val" id="stat-inondations">0</div>
+                        <div class="obs-stat-lbl">Inondations &amp; Crues</div>
+                    </div>
+                </div>
+                <div class="obs-stat-item">
+                    <div class="obs-stat-icon" style="color: #a855f7;">⚡</div>
+                    <div>
+                        <div class="obs-stat-val" id="stat-orages">0</div>
+                        <div class="obs-stat-lbl">Orages Violents</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BARRE DE CONTRÔLE & FILTRES PAR PAYS -->
+    <section class="obs-controls">
+        <div class="obs-filter-box">
+            
+            <!-- Ligne 1 : Sélecteur de Pays & Recherche Textuelle -->
+            <div class="obs-filter-row-top">
+                <div class="obs-country-select-wrapper">
+                    <label for="obs-country-select" class="obs-country-label">
+                        <i class="fa-solid fa-flag"></i> Filtrer par Pays / Territoire
+                    </label>
+                    <select id="obs-country-select" class="obs-country-select" aria-label="Filtrer par pays">
+                        <option value="all">🌍 Tous les pays et zones (Tous)</option>
+                    </select>
+                </div>
+
+                <div class="obs-search-wrapper">
+                    <label for="obs-search-input" class="obs-country-label">
+                        <i class="fa-solid fa-magnifying-glass"></i> Recherche rapide
+                    </label>
+                    <div class="obs-search-input-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="obs-search-input" class="obs-search-input" placeholder="Rechercher par pays, ville, mer (ex: France, Cévennes, Philippines, USA)..." autocomplete="off">
+                        <button type="button" id="obs-search-clear" class="obs-search-clear" style="display:none;" aria-label="Effacer">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chips rapides de pays -->
+            <div class="obs-country-chips-bar" id="obs-country-chips-bar">
+                <!-- Rempli dynamiquement -->
+            </div>
+
+            <!-- Ligne 2 : 4 Onglets Thématiques + Horizons Temporels -->
+            <div class="obs-filter-row-bottom">
+                <nav class="obs-cat-tabs" id="obs-cat-tabs" role="tablist" aria-label="Catégories d'extrêmes">
+                    <button type="button" class="obs-cat-tab is-active" data-risk="all" role="tab" aria-selected="true">
+                        <span>Tous</span> <span class="obs-tab-badge" id="badge-all">0</span>
+                    </button>
+                    <button type="button" class="obs-cat-tab" data-risk="cyclone" role="tab" aria-selected="false">
+                        <span>🌀 Cyclones</span> <span class="obs-tab-badge" id="badge-cyclone">0</span>
+                    </button>
+                    <button type="button" class="obs-cat-tab" data-risk="tempete" role="tab" aria-selected="false">
+                        <span>💨 Tempêtes</span> <span class="obs-tab-badge" id="badge-tempete">0</span>
+                    </button>
+                    <button type="button" class="obs-cat-tab" data-risk="inondation" role="tab" aria-selected="false">
+                        <span>🌧️ Inondations</span> <span class="obs-tab-badge" id="badge-inondation">0</span>
+                    </button>
+                    <button type="button" class="obs-cat-tab" data-risk="orage" role="tab" aria-selected="false">
+                        <span>⚡ Orages</span> <span class="obs-tab-badge" id="badge-orage">0</span>
+                    </button>
+                </nav>
+
+                <div class="obs-horizon-pills" id="obs-horizon-pills">
+                    <button type="button" class="obs-horizon-pill is-active" data-horizon="all">Toutes échéances</button>
+                    <button type="button" class="obs-horizon-pill" data-horizon="short" title="J+1 à J+3">Court terme (J+1-3)</button>
+                    <button type="button" class="obs-horizon-pill" data-horizon="medium" title="J+4 à J+7">Moyen terme (J+4-7)</button>
+                    <button type="button" class="obs-horizon-pill" data-horizon="long" title="J+8 à J+16">Long terme (J+8-16)</button>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- FLUX ÉDITORIAL DES PHÉNOMÈNES EXTRÊMES -->
+    <main class="obs-stream">
+        <div class="obs-stream-header">
+            <div class="obs-stream-count">
+                <span id="obs-filtered-count">0</span> phénomène(s) affiché(s)
+            </div>
+        </div>
+
+        <div class="obs-cards-container" id="obs-cards-stream">
+            <!-- Rempli en JavaScript -->
+        </div>
+    </main>
+
+    <!-- FOOTER INSTITUTIONNEL -->
+    <footer class="obs-footer">
+        <div style="max-width: 1360px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+            <div>
+                <strong>Observatoire Mondial des Phénomènes Extrêmes</strong> · Météo Multi-modèles GFS &amp; AIFS.
+            </div>
+            <div>
+                <a href="index.html">🗺️ Accéder à la Carte Météo Interactive</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- LOGIQUE JAVASCRIPT ZERO-TOKEN -->
+    <script>
+        (function() {
+            var rawAlerts = [];
+            var currentRisk = 'all';
+            var currentCountry = 'all';
+            var currentHorizon = 'all';
+            var searchQuery = '';
+
+            function loadAlerts() {
+                var jsonUrl = 'alertes_extremes_monde.json?t=' + Date.now();
+                fetch(jsonUrl)
+                    .then(function(res) {
+                        if (!res.ok) throw new Error('Fichier racine non disponible');
+                        return res.json();
+                    })
+                    .then(function(data) {
+                        initData(data);
+                    })
+                    .catch(function() {
+                        fetch('output/alertes_extremes_monde.json?t=' + Date.now())
+                            .then(function(res2) { return res2.json(); })
+                            .then(function(data2) { initData(data2); })
+                            .catch(function(err) {
+                                console.error('Erreur chargement alertes :', err);
+                                renderEmpty('Impossible de charger les données météorologiques actuelles.');
+                            });
+                    });
+            }
+
+            function initData(data) {
+                if (!data || !data.alerts) {
+                    renderEmpty('Aucune alerte trouvée.');
+                    return;
+                }
+
+                var ALLOWED = ['cyclone', 'tempete', 'inondation', 'orage'];
+                rawAlerts = data.alerts.filter(function(a) {
+                    return ALLOWED.indexOf(a.type) !== -1;
+                });
+
+                if (data.generated_at) {
+                    var d = new Date(data.generated_at);
+                    var el = document.getElementById('obs-update-time');
+                    if (el) {
+                        el.innerHTML = '<i class="fa-regular fa-clock"></i> <span>Dernier cycle : ' + 
+                            d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' à ' + 
+                            d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + ' UTC</span>';
+                    }
+                }
+
+                updateStats(data);
+                populateCountryFilter(rawAlerts);
+                renderStream();
+            }
+
+            function updateStats(data) {
+                var stats = data.stats_by_risk || {};
+                var total = rawAlerts.length;
+
+                document.getElementById('stat-total-alerts').textContent = total;
+                document.getElementById('stat-cyclones').textContent = stats.cyclone || 0;
+                document.getElementById('stat-tempetes').textContent = stats.tempete || 0;
+                document.getElementById('stat-inondations').textContent = stats.inondation || 0;
+                document.getElementById('stat-orages').textContent = stats.orage || 0;
+
+                document.getElementById('badge-all').textContent = total;
+                document.getElementById('badge-cyclone').textContent = stats.cyclone || 0;
+                document.getElementById('badge-tempete').textContent = stats.tempete || 0;
+                document.getElementById('badge-inondation').textContent = stats.inondation || 0;
+                document.getElementById('badge-orage').textContent = stats.orage || 0;
+            }
+
+            function populateCountryFilter(alerts) {
+                var countryMap = {};
+                alerts.forEach(function(a) {
+                    var code = a.country_code || 'AUTRE';
+                    var name = a.country_name || 'International';
+                    var flag = a.country_flag || '🌐';
+                    if (!countryMap[code]) {
+                        countryMap[code] = { code: code, name: name, flag: flag, count: 0 };
+                    }
+                    countryMap[code].count++;
+                });
+
+                var select = document.getElementById('obs-country-select');
+                var chipsBar = document.getElementById('obs-country-chips-bar');
+                select.innerHTML = '<option value="all">🌍 Tous les pays et territoires (' + alerts.length + ')</option>';
+                chipsBar.innerHTML = '<button type="button" class="obs-country-chip is-active" data-country="all">🌍 Tous (' + alerts.length + ')</button>';
+
+                var sortedCountries = Object.values(countryMap).sort(function(a, b) {
+                    return b.count - a.count;
+                });
+
+                sortedCountries.forEach(function(c) {
+                    var opt = document.createElement('option');
+                    opt.value = c.code;
+                    opt.textContent = c.flag + ' ' + c.name + ' (' + c.count + ')';
+                    select.appendChild(opt);
+
+                    var chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'obs-country-chip';
+                    chip.dataset.country = c.code;
+                    chip.innerHTML = '<span>' + c.flag + '</span> <span>' + c.name + '</span> <strong style="opacity:0.8;">' + c.count + '</strong>';
+                    chip.addEventListener('click', function() {
+                        selectCountry(c.code);
+                    });
+                    chipsBar.appendChild(chip);
+                });
+
+                select.addEventListener('change', function() {
+                    selectCountry(this.value);
+                });
+            }
+
+            function selectCountry(code) {
+                currentCountry = code;
+                var select = document.getElementById('obs-country-select');
+                if (select) select.value = code;
+
+                var chips = document.querySelectorAll('.obs-country-chip');
+                chips.forEach(function(ch) {
+                    if (ch.dataset.country === code) ch.classList.add('is-active');
+                    else ch.classList.remove('is-active');
+                });
+
+                renderStream();
+            }
+
+            function renderStream() {
+                var container = document.getElementById('obs-cards-stream');
+                if (!container) return;
+
+                var filtered = rawAlerts.filter(function(item) {
+                    if (currentRisk !== 'all' && item.type !== currentRisk) {
+                        return false;
+                    }
+                    if (currentCountry !== 'all' && item.country_code !== currentCountry) {
+                        return false;
+                    }
+                    if (currentHorizon === 'short' && item.day_offset > 3) {
+                        return false;
+                    }
+                    if (currentHorizon === 'medium' && (item.day_offset < 4 || item.day_offset > 7)) {
+                        return false;
+                    }
+                    if (currentHorizon === 'long' && item.day_offset < 8) {
+                        return false;
+                    }
+                    if (searchQuery) {
+                        var q = searchQuery.toLowerCase();
+                        var haystack = (
+                            (item.title || '') + ' ' +
+                            (item.subtitle || '') + ' ' +
+                            (item.country_name || '') + ' ' +
+                            (item.coords_str || '') + ' ' +
+                            (item.type_label || '') + ' ' +
+                            (item.risk_summary || '')
+                        ).toLowerCase();
+                        if (haystack.indexOf(q) === -1) return false;
+                    }
+                    return true;
+                });
+
+                document.getElementById('obs-filtered-count').textContent = filtered.length;
+
+                if (filtered.length === 0) {
+                    container.innerHTML = 
+                        '<div class="obs-empty-state">' +
+                            '<i class="fa-solid fa-magnifying-glass"></i>' +
+                            '<h3>Aucun phénomène correspondant à vos critères</h3>' +
+                            '<p>Essayez d\'élargir vos filtres de pays, de catégorie ou d\'échéance.</p>' +
+                        '</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                filtered.forEach(function(item) {
+                    var card = document.createElement('article');
+                    card.className = 'obs-card type-' + (item.type || 'cyclone');
+
+                    var sev = (item.severity || 'extreme').toLowerCase();
+                    var sevLabel = sev === 'critique' ? 'Critique' : (sev === 'extreme' ? 'Très Élevé' : 'Élevé');
+                    var sevClass = 'sev-' + sev;
+
+                    var m = item.metrics || {};
+                    var metricsBoxes = '';
+
+                    if (m.vent_max !== undefined) {
+                        metricsBoxes += '<div class="obs-metric-box"><div class="obs-metric-val">' + m.vent_max + ' km/h</div><div class="obs-metric-lbl">Vent Moyen</div></div>';
+                    }
+                    if (m.rafales_max !== undefined) {
+                        metricsBoxes += '<div class="obs-metric-box"><div class="obs-metric-val">' + m.rafales_max + ' km/h</div><div class="obs-metric-lbl">Rafales Max</div></div>';
+                    }
+                    if (m.pression_min !== undefined) {
+                        metricsBoxes += '<div class="obs-metric-box"><div class="obs-metric-val">' + m.pression_min + ' hPa</div><div class="obs-metric-lbl">Pression Min</div></div>';
+                    }
+                    if (m.pluie_max !== undefined) {
+                        metricsBoxes += '<div class="obs-metric-box"><div class="obs-metric-val">' + m.pluie_max + ' mm</div><div class="obs-metric-lbl">Cumul Pluie</div></div>';
+                    }
+                    if (m.cape_max !== undefined) {
+                        metricsBoxes += '<div class="obs-metric-box"><div class="obs-metric-val">' + m.cape_max + ' J/kg</div><div class="obs-metric-lbl">MUCAPE Max</div></div>';
+                    }
+
+                    var mapUrl = 'index.html?' + 
+                        'lat=' + encodeURIComponent(item.lat) +
+                        '&lon=' + encodeURIComponent(item.lon) +
+                        '&zoom=' + (item.type === 'cyclone' ? '6' : '7') +
+                        '&layer=' + encodeURIComponent(item.layer || 'vent') +
+                        '&model=' + encodeURIComponent(item.model || 'gfs') +
+                        '&domain=' + encodeURIComponent(item.domain || 'europe') +
+                        '&lead=' + encodeURIComponent(item.lead_hour) +
+                        '&title=' + encodeURIComponent(item.title || '') +
+                        '&country=' + encodeURIComponent(item.country_name || '') +
+                        '&icon=' + encodeURIComponent(item.icon || '⚠️');
+
+                    card.innerHTML = 
+                        '<div class="obs-card-header">' +
+                            '<div class="obs-card-geo">' +
+                                '<span class="obs-flag">' + (item.country_flag || '🌐') + '</span>' +
+                                '<span>' + (item.country_name || 'International') + '</span>' +
+                                '<span class="obs-card-geo-coords">(' + (item.coords_str || '') + ')</span>' +
+                            '</div>' +
+                            '<span class="obs-badge-severity ' + sevClass + '">' +
+                                '<i class="fa-solid fa-triangle-exclamation"></i> ' + sevLabel +
+                            '</span>' +
+                        '</div>' +
+
+                        '<div class="obs-card-title-block">' +
+                            '<h2 class="obs-card-title">' + (item.title || '') + '</h2>' +
+                            (item.subtitle ? '<div class="obs-card-subtitle">' + item.subtitle + '</div>' : '') +
+                        '</div>' +
+
+                        '<div class="obs-card-time">' +
+                            '<i class="fa-regular fa-calendar-days"></i>' +
+                            '<span>' + (item.time_horizon || ('J+' + item.day_offset)) + ' · Pic à H+' + item.lead_hour + 
+                            (item.time_window ? ' (' + item.time_window + ')' : '') + '</span>' +
+                        '</div>' +
+
+                        (metricsBoxes ? '<div class="obs-card-metrics-grid">' + metricsBoxes + '</div>' : '') +
+
+                        (item.risk_summary ? '<div class="obs-card-desc">' + item.risk_summary + '</div>' : '') +
+
+                        '<div class="obs-card-action">' +
+                            '<a href="' + mapUrl + '" class="btn-teleport-map" title="Atterrir sur la carte interactive à l\'échéance exacte">' +
+                                '<span><i class="fa-solid fa-crosshairs" style="margin-right:6px;"></i> Voir ce phénomène sur la Carte Interactive (H+' + item.lead_hour + ')</span>' +
+                                '<i class="fa-solid fa-arrow-right"></i>' +
+                            '</a>' +
+                        '</div>';
+
+                    container.appendChild(card);
+                });
+            }
+
+            function renderEmpty(msg) {
+                var container = document.getElementById('obs-cards-stream');
+                if (container) {
+                    container.innerHTML = '<div class="obs-empty-state"><i class="fa-solid fa-triangle-exclamation"></i><h3>' + msg + '</h3></div>';
+                }
+            }
+
+            var tabs = document.querySelectorAll('#obs-cat-tabs .obs-cat-tab');
+            tabs.forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(function(t) {
+                        t.classList.remove('is-active');
+                        t.setAttribute('aria-selected', 'false');
+                    });
+                    tab.classList.add('is-active');
+                    tab.setAttribute('aria-selected', 'true');
+                    currentRisk = tab.dataset.risk || 'all';
+                    renderStream();
+                });
+            });
+
+            var pills = document.querySelectorAll('#obs-horizon-pills .obs-horizon-pill');
+            pills.forEach(function(pill) {
+                pill.addEventListener('click', function() {
+                    pills.forEach(function(p) { p.classList.remove('is-active'); });
+                    pill.classList.add('is-active');
+                    currentHorizon = pill.dataset.horizon || 'all';
+                    renderStream();
+                });
+            });
+
+            var searchInput = document.getElementById('obs-search-input');
+            var searchClear = document.getElementById('obs-search-clear');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    searchQuery = this.value.trim();
+                    if (searchClear) searchClear.style.display = searchQuery ? 'block' : 'none';
+                    renderStream();
+                });
+            }
+            if (searchClear) {
+                searchClear.addEventListener('click', function() {
+                    searchInput.value = '';
+                    searchQuery = '';
+                    searchClear.style.display = 'none';
+                    renderStream();
+                });
+            }
+
+            loadAlerts();
+        })();
+    </script>
+</body>
+</html>

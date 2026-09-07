@@ -5460,16 +5460,6 @@
                 if (barTotalCount) {
                     barTotalCount.textContent = total;
                 }
-
-                // 2. Mettre à jour les compteurs sur les 4 Onglets Thématiques
-                var counts = { all: total, cyclone: 0, tempete: 0, inondation: 0, orage: 0 };
-                validAlerts.forEach(function(a) {
-                    if (counts[a.type] !== undefined) counts[a.type]++;
-                });
-                ['all', 'cyclone', 'tempete', 'inondation', 'orage'].forEach(function(k) {
-                    var el = document.getElementById('count-tab-' + k);
-                    if (el) el.textContent = counts[k] || 0;
-                });
             }
 
             fetch('alertes_extremes_monde.json?t=' + Date.now())
@@ -5492,138 +5482,27 @@
                 });
         }
 
-        function toggleWorldAlertsDrawer() {
-            var drawer = document.getElementById('amfm-world-alerts-drawer');
-            if (!drawer) return;
-            if (drawer.style.display === 'flex') {
-                closeWorldAlertsDrawer();
-            } else {
-                openWorldAlertsDrawer();
-            }
-        }
+        // ── 🎯 ATTERRISSAGE SUR LA CARTE DEPUIS L'OBSERVATOIRE DES EXTRÊMES ───
+        function checkUrlDeepLink() {
+            var params = new URLSearchParams(window.location.search);
+            var latStr = params.get('lat');
+            var lonStr = params.get('lon');
+            if (!latStr || !lonStr) return;
 
-        function openWorldAlertsDrawer() {
-            var drawer = document.getElementById('amfm-world-alerts-drawer');
-            if (!drawer) return;
-            renderWorldAlertsDrawer();
-            drawer.style.display = 'flex';
-        }
-
-        function closeWorldAlertsDrawer() {
-            var drawer = document.getElementById('amfm-world-alerts-drawer');
-            if (drawer) drawer.style.display = 'none';
-        }
-
-        function renderWorldAlertsDrawer() {
-            var streamContainer = document.getElementById('world-alerts-cards-stream');
-            if (!streamContainer) return;
-
-            if (!worldAlertsData || !worldAlertsData.alerts || worldAlertsData.alerts.length === 0) {
-                streamContainer.innerHTML = '<div style="padding:24px 16px; text-align:center; color:#94a3b8; font-size:12.5px;">Aucun phénomène météorologique extrême détecté pour les 16 prochains jours.</div>';
-                return;
-            }
-
-            // Filtrage dynamique
-            var filtered = worldAlertsData.alerts.filter(function(item) {
-                if (worldAlertsFilterRisk !== 'all' && item.type !== worldAlertsFilterRisk) {
-                    return false;
-                }
-                if (worldAlertsFilterHorizon === 'short' && item.day_offset > 3) {
-                    return false;
-                }
-                if (worldAlertsFilterHorizon === 'medium' && (item.day_offset < 4 || item.day_offset > 7)) {
-                    return false;
-                }
-                if (worldAlertsFilterHorizon === 'long' && item.day_offset < 8) {
-                    return false;
-                }
-                if (worldAlertsSearchQuery) {
-                    var q = worldAlertsSearchQuery.toLowerCase();
-                    var matchText = (item.title + ' ' + (item.subtitle || '') + ' ' + (item.country_name || '') + ' ' + (item.type_label || '') + ' ' + (item.coords_str || '')).toLowerCase();
-                    if (matchText.indexOf(q) === -1) return false;
-                }
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                streamContainer.innerHTML = '<div style="padding:24px 16px; text-align:center; color:#94a3b8; font-size:12.5px;"><i class="fa-solid fa-magnifying-glass" style="margin-bottom:8px; display:block; font-size:18px;"></i>Aucun phénomène ne correspond à ce filtre.</div>';
-                return;
-            }
-
-            streamContainer.innerHTML = '';
-            filtered.forEach(function(item) {
-                var card = document.createElement('article');
-                card.className = 'amfm-pro-card type-' + (item.type || 'cyclone');
-                card.setAttribute('role', 'button');
-                card.setAttribute('tabindex', '0');
-                card.setAttribute('title', 'Cliquer pour voir directement sur la carte');
-
-                var chipsHtml = '';
-                var m = item.metrics || {};
-                if (m.rafales_max !== undefined) {
-                    chipsHtml += '<span class="amfm-pro-chip">⚡ <strong>' + m.rafales_max + ' km/h</strong></span>';
-                } else if (m.vent_max !== undefined) {
-                    chipsHtml += '<span class="amfm-pro-chip">💨 <strong>' + m.vent_max + ' km/h</strong></span>';
-                }
-                if (m.pression_min !== undefined) {
-                    chipsHtml += '<span class="amfm-pro-chip">🧭 <strong>' + m.pression_min + ' hPa</strong></span>';
-                }
-                if (m.pluie_max !== undefined) {
-                    chipsHtml += '<span class="amfm-pro-chip">🌧️ <strong>' + m.pluie_max + ' mm</strong></span>';
-                }
-                if (m.cape_max !== undefined) {
-                    chipsHtml += '<span class="amfm-pro-chip">⚡ <strong>' + m.cape_max + ' J/kg</strong></span>';
-                }
-
-                var sev = (item.severity || 'extreme').toLowerCase();
-                var sevLabel = sev === 'critique' ? 'Critique' : 'Élevé';
-                var sevClass = 'sev-' + sev;
-
-                card.innerHTML =
-                    '<div class="amfm-pro-card-top">' +
-                        '<div class="amfm-pro-card-geo">' +
-                            '<span>' + (item.country_flag || '🌐') + '</span> ' +
-                            '<span>' + (item.country_name || 'International') + '</span> ' +
-                            '<span class="amfm-pro-card-coords">(' + (item.coords_str || '') + ')</span>' +
-                        '</div>' +
-                        '<span class="amfm-pro-badge-sev ' + sevClass + '">' + sevLabel + '</span>' +
-                    '</div>' +
-                    '<div class="amfm-pro-card-title">' + (item.title || '') + '</div>' +
-                    (item.subtitle ? '<div class="amfm-pro-card-subtitle">' + item.subtitle + '</div>' : '') +
-                    '<div class="amfm-pro-card-time">' +
-                        '<i class="fa-regular fa-clock"></i> ' +
-                        '<span>' + (item.time_horizon || ('J+' + item.day_offset)) + ' · H+' + String(item.lead_hour).padStart(2, '0') + (item.time_window ? ' (' + item.time_window + ')' : '') + '</span>' +
-                    '</div>' +
-                    (chipsHtml ? '<div class="amfm-pro-card-chips">' + chipsHtml + '</div>' : '') +
-                    (item.risk_summary ? '<div class="amfm-pro-card-desc">' + item.risk_summary + '</div>' : '') +
-                    '<div class="amfm-pro-card-btn">' +
-                        '<i class="fa-solid fa-location-crosshairs"></i> <span>Voir sur la carte (H+' + item.lead_hour + ')</span>' +
-                    '</div>';
-
-                card.addEventListener('click', function() {
-                    teleportToAlert(item);
-                });
-                card.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        teleportToAlert(item);
-                    }
-                });
-
-                streamContainer.appendChild(card);
-            });
-        }
-
-        function teleportToAlert(alertItem) {
-            if (!alertItem) return;
-
-            var lat = Number(alertItem.lat);
-            var lon = Number(alertItem.lon);
+            var lat = parseFloat(latStr);
+            var lon = parseFloat(lonStr);
             if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
-            // 1. Basculer sur le calque météorologique pertinent
-            var targetLayer = alertItem.layer || 'temperature';
-            if (targetLayer && currentLayer !== targetLayer) {
+            var targetModel = params.get('model') || 'gfs';
+            var targetDomain = params.get('domain') || 'europe';
+            var targetLayer = params.get('layer');
+            var leadHour = parseInt(params.get('lead'), 10);
+            var title = params.get('title') || 'Phénomène Extrême';
+            var country = params.get('country') || '';
+            var icon = params.get('icon') || '⚠️';
+
+            // 1. Calque météorologique adéquat
+            if (targetLayer) {
                 currentLayer = targetLayer;
                 var dSel = document.getElementById('direct-layer-select');
                 if (dSel && dSel.querySelector('option[value="' + targetLayer + '"]')) {
@@ -5631,108 +5510,56 @@
                 }
             }
 
-            // 2. Déterminer le modèle et le domaine adéquat
-            var targetModel = alertItem.model || 'gfs';
-            var targetRegion = alertItem.domain || 'europe';
-
-            var selectRegion = document.getElementById('select-region');
-            if (selectRegion && targetRegion && selectRegion.querySelector('option[value="' + targetRegion + '"]')) {
-                selectRegion.value = targetRegion;
-            }
-
-            var selectModel = document.getElementById('select-model');
-            if (selectModel && selectModel.querySelector('option[value="' + targetModel + '"]')) {
-                selectModel.value = targetModel;
-            }
-
+            // 2. Coordonnées de ciblage
             var focus = {
                 latitude: lat,
                 longitude: lon,
-                scale: 3.2,
+                scale: 3.4,
                 isCyclone: true,
-                searchLabel: (alertItem.icon || '⚠️') + ' ' + alertItem.title
+                searchLabel: icon + ' ' + title + (country ? ' (' + country + ')' : '')
             };
 
-            // 3. Bascule de modèle ou saut direct sur la timeline
+            // 3. Bascule de modèle et positionnement sur le pas horaire
             if (currentModel !== targetModel) {
                 pendingFocus = focus;
-                pendingStepLead = alertItem.lead_hour;
+                if (Number.isFinite(leadHour)) {
+                    pendingStepLead = leadHour;
+                }
+                var selModel = document.getElementById('select-model');
+                if (selModel && selModel.querySelector('option[value="' + targetModel + '"]')) {
+                    selModel.value = targetModel;
+                }
                 switchModel(targetModel);
             } else {
-                var steps = availableSteps();
-                if (steps && steps.length > 0) {
-                    var bestIdx = 0;
-                    var bestDiff = 999999;
-                    for (var si = 0; si < steps.length; si++) {
-                        var diff = Math.abs((steps[si].lead_hour || 0) - alertItem.lead_hour);
-                        if (diff < bestDiff) {
-                            bestDiff = diff;
-                            bestIdx = si;
+                if (Number.isFinite(leadHour)) {
+                    var steps = availableSteps();
+                    if (steps && steps.length > 0) {
+                        var bestIdx = 0;
+                        var bestDiff = 999999;
+                        for (var si = 0; si < steps.length; si++) {
+                            var diff = Math.abs((steps[si].lead_hour || 0) - leadHour);
+                            if (diff < bestDiff) {
+                                bestDiff = diff;
+                                bestIdx = si;
+                            }
                         }
+                        renderStep(bestIdx);
                     }
-                    renderStep(bestIdx);
                 }
                 focusLocation(focus);
+                if (typeof dropSearchPin === 'function') {
+                    dropSearchPin(lat, lon, icon + ' ' + title);
+                }
             }
 
-            // 4. Notification / Toast
+            // 4. Notification explicite à l'utilisateur
             if (typeof setToolHint === 'function') {
-                setToolHint('🌍 ' + (alertItem.icon || '') + ' ' + alertItem.title + ' (' + alertItem.country_name + ') — H+' + alertItem.lead_hour);
+                setToolHint('🎯 ' + icon + ' ' + title + (country ? ' · ' + country : '') + (Number.isFinite(leadHour) ? ' (Échéance H+' + leadHour + ')' : ''));
             }
         }
 
         initWorldAlerts();
-        var worldAlertsBtn = document.getElementById('amfm-btn-world-alerts');
-        if (worldAlertsBtn) worldAlertsBtn.onclick = toggleWorldAlertsDrawer;
-        var barAlertsBtn = document.getElementById('btn-open-world-alerts-bar');
-        if (barAlertsBtn) barAlertsBtn.onclick = toggleWorldAlertsDrawer;
-        var drawerCloseBtn = document.getElementById('world-alerts-drawer-close');
-        if (drawerCloseBtn) drawerCloseBtn.onclick = closeWorldAlertsDrawer;
-
-        // Gestion des 4 Onglets Thématiques Principaux
-        var drawerTabs = document.querySelectorAll('#world-alerts-tabs-nav .amfm-drawer-tab');
-        drawerTabs.forEach(function(tab) {
-            tab.addEventListener('click', function() {
-                drawerTabs.forEach(function(t) {
-                    t.classList.remove('is-active');
-                    t.setAttribute('aria-selected', 'false');
-                });
-                tab.classList.add('is-active');
-                tab.setAttribute('aria-selected', 'true');
-                worldAlertsFilterRisk = tab.dataset.risk || 'all';
-                renderWorldAlertsDrawer();
-            });
-        });
-
-        // Gestion des Horizons Temporels
-        var horizonPills = document.querySelectorAll('#world-alerts-horizon-pills .amfm-horizon-pill');
-        horizonPills.forEach(function(pill) {
-            pill.addEventListener('click', function() {
-                horizonPills.forEach(function(p) { p.classList.remove('is-active'); });
-                pill.classList.add('is-active');
-                worldAlertsFilterHorizon = pill.dataset.horizon || 'all';
-                renderWorldAlertsDrawer();
-            });
-        });
-
-        // Recherche textuelle instantanée
-        var wSearchInput = document.getElementById('world-alerts-search');
-        var wSearchClear = document.getElementById('world-alerts-search-clear');
-        if (wSearchInput) {
-            wSearchInput.addEventListener('input', function() {
-                worldAlertsSearchQuery = (wSearchInput.value || '').trim();
-                if (wSearchClear) wSearchClear.style.display = worldAlertsSearchQuery ? 'block' : 'none';
-                renderWorldAlertsDrawer();
-            });
-        }
-        if (wSearchClear && wSearchInput) {
-            wSearchClear.onclick = function() {
-                wSearchInput.value = '';
-                worldAlertsSearchQuery = '';
-                wSearchClear.style.display = 'none';
-                renderWorldAlertsDrawer();
-            };
-        }
+        setTimeout(checkUrlDeepLink, 300);
 
         // ── 🔍 MODULE DE RECHERCHE MONDIALE (Adresse, Ville, Pays) ───────────────
         function dropSearchPin(lat, lon, label) {

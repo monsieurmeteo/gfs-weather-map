@@ -2505,9 +2505,9 @@
                         <i class="fa-solid fa-hurricane"></i>
                     </button>
 
-                    <button type="button" id="amfm-btn-world-alerts" class="amfm-btn amfm-btn-world-alerts" aria-label="Surveillance Mondiale des Extrêmes J+16" title="🌍 Surveillance Mondiale des Extrêmes J+16 (Cyclones, Tempêtes, Inondations, Orages, Canicules, Froid)">
+                    <a href="extremes.html" target="_blank" id="amfm-btn-world-alerts" class="amfm-btn amfm-btn-world-alerts" aria-label="Observatoire Mondial des Extrêmes J+16 (Nouvel onglet)" title="🌍 Observatoire Mondial des Extrêmes J+16 (Ouvre le site complet dans un nouvel onglet)">
                         <i class="fa-solid fa-earth-americas" style="color: #38bdf8;"></i> <span>Extrêmes J+16</span> <span class="amfm-badge" id="world-alerts-count" style="background:#ef4444; color:#fff !important; display:none;">0</span>
-                    </button>
+                    </a>
 
                     <button type="button" class="amfm-btn amfm-btn-icon" data-amfm-toggle-tv aria-label="Mode Présentation TV (Touche Z)" title="📺 Mode Présentation TV / Zen (Touche Z ou T)">
                         <i class="fa-solid fa-tv" aria-hidden="true"></i>
@@ -2533,9 +2533,9 @@
                 <button type="button" id="btn-open-cyclones-modal" class="cyclone-all-btn" title="Voir la liste complète des phénomènes et INVESTs actifs">
                     <i class="fa-solid fa-list-check"></i> Tous les phénomènes (<span id="cyclone-total-count">0</span>)
                 </button>
-                <button type="button" id="btn-open-world-alerts-bar" class="cyclone-all-btn amfm-bar-extremes-btn" title="Voir les phénomènes extrêmes mondiaux détectés sur les modèles (J+1 à J+16)">
+                <a href="extremes.html" target="_blank" id="btn-open-world-alerts-bar" class="cyclone-all-btn amfm-bar-extremes-btn" title="Ouvrir l'Observatoire Mondial des Extrêmes (J+1 à J+16) dans un nouvel onglet">
                     <i class="fa-solid fa-earth-americas" style="color: #38bdf8;"></i> <span>Extrêmes J+16</span> (<span id="world-alerts-total-count">0</span>)
-                </button>
+                </a>
                 <div class="cyclone-toggles-group" id="cyclone-toggles-group">
                     <button type="button" id="btn-toggle-cyclone-cone" class="cyclone-opt-btn is-active" title="Afficher / Masquer le Cône d'incertitude NHC/JTWC">Cône</button>
                     <button type="button" id="btn-toggle-cyclone-tracks" class="cyclone-opt-btn is-active" title="Afficher / Masquer les trajectoires passées et prévisionnelles">Trajectoires</button>
@@ -2739,59 +2739,7 @@
         </div>
     </div>
 
-    <!-- 🌍 ONGLET / VOLET SURVEILLANCE MONDIALE DES PHÉNOMÈNES EXTRÊMES (J+1 À J+16) -->
-    <aside id="amfm-world-alerts-drawer" class="amfm-world-drawer" style="display:none;" aria-label="Surveillance Mondiale des Phénomènes Extrêmes" role="region">
-        <div class="amfm-drawer-header">
-            <div class="amfm-drawer-title-group">
-                <div class="amfm-drawer-title">
-                    <i class="fa-solid fa-earth-americas" style="color: #38bdf8;"></i> <span>Extrêmes J+16</span>
-                </div>
-                <div class="amfm-drawer-subtitle">
-                    <span class="amfm-pulse-live"></span> Surveillance des modèles GFS &amp; ARPEGE
-                </div>
-            </div>
-            <button type="button" id="world-alerts-drawer-close" class="amfm-drawer-close-btn" aria-label="Fermer le volet">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
 
-        <!-- 4 ONGLETS THÉMATIQUES PRINCIPAUX (Cyclones, Tempêtes, Inondations, Orages) -->
-        <nav class="amfm-drawer-tabs" id="world-alerts-tabs-nav" role="tablist" aria-label="Catégories d'extrêmes">
-            <button type="button" class="amfm-drawer-tab is-active" data-risk="all" role="tab" aria-selected="true">
-                <span>Tous</span> <span class="amfm-tab-count" id="count-tab-all">0</span>
-            </button>
-            <button type="button" class="amfm-drawer-tab" data-risk="cyclone" role="tab" aria-selected="false">
-                <span>🌀 Cyclones</span> <span class="amfm-tab-count" id="count-tab-cyclone">0</span>
-            </button>
-            <button type="button" class="amfm-drawer-tab" data-risk="tempete" role="tab" aria-selected="false">
-                <span>💨 Tempêtes</span> <span class="amfm-tab-count" id="count-tab-tempete">0</span>
-            </button>
-            <button type="button" class="amfm-drawer-tab" data-risk="inondation" role="tab" aria-selected="false">
-                <span>🌧️ Inondations</span> <span class="amfm-tab-count" id="count-tab-inondation">0</span>
-            </button>
-            <button type="button" class="amfm-drawer-tab" data-risk="orage" role="tab" aria-selected="false">
-                <span>⚡ Orages</span> <span class="amfm-tab-count" id="count-tab-orage">0</span>
-            </button>
-        </nav>
-
-        <!-- BARRE D'OUTILS : RECHERCHE + HORIZONS -->
-        <div class="amfm-drawer-toolbar">
-            <div class="amfm-drawer-search">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="world-alerts-search" placeholder="Rechercher un pays, zone ou territoire..." autocomplete="off">
-                <button type="button" id="world-alerts-search-clear" style="display:none;" aria-label="Effacer">✕</button>
-            </div>
-            <div class="amfm-drawer-horizons" id="world-alerts-horizon-pills">
-                <button type="button" class="amfm-horizon-pill is-active" data-horizon="all">Tous les horizons</button>
-                <button type="button" class="amfm-horizon-pill" data-horizon="short" title="J+1 à J+3">Court (J+1-3)</button>
-                <button type="button" class="amfm-horizon-pill" data-horizon="medium" title="J+4 à J+7">Moyen (J+4-7)</button>
-                <button type="button" class="amfm-horizon-pill" data-horizon="long" title="J+8 à J+16">Long (J+8-16)</button>
-            </div>
-        </div>
-
-        <!-- FLUX DES PHÉNOMÈNES (ZÉRO TABLEAU - CARTES HAUTE FIDÉLITÉ) -->
-        <div id="world-alerts-cards-stream" class="amfm-drawer-stream" role="feed"></div>
-    </aside>
 
     <!-- 🔒 OVERLAY AUTHENTIFICATION ACCÈS PRIVÉ -->
     <div id="auth-overlay" class="amfm-auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">

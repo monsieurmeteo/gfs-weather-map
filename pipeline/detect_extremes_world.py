@@ -637,50 +637,211 @@ def scan_model_extremes(model_key, domain_name, base_dir=BASE_DIR):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4. Déduplication et Synthèse Globale
-# ─────────────────────────────────────────────────────────────────────────────
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """Calcule la distance géodésique en kilomètres entre deux points GPS."""
+    R = 6371.0
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi / 2.0)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0)**2
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return R * c
+
 
 def deduplicate_and_rank_alerts(alerts):
     """
-    Regroupe les alertes géographiquement proches pour éviter de répéter le
-    même cyclone ou tempête sur 15 pas d'échéance successifs.
+    Déduplication physique intelligente sans aucun doublon :
+    1. Cyclones : regroupement par bassin océanique et vitesse de propagation réaliste.
+    2. Tempêtes : regroupement par dépression synoptique (rayon <= 1200 km, delta_t <= 48h).
+    3. Inondations : regroupement par pays/épisode pluvieux (rayon <= 600 km, delta_t <= 72h).
+    4. Orages : regroupement par région/dégradation convective (rayon <= 600 km, delta_t <= 36h).
+    Chaque groupe produit UN SEUL événement au pic d'intensité avec sa fenêtre temporelle complète.
     """
     if not alerts:
         return []
 
-    groups = {}
-    for a in alerts:
-        k_lat = round(a["lat"] / 3.5) * 3.5
-        k_lon = round(a["lon"] / 3.5) * 3.5
-        key = (a["type"], k_lat, k_lon)
-        groups.setdefault(key, []).append(a)
+    ALLOWED_TYPES = {"cyclone", "tempete", "inondation", "orage"}
+    valid_alerts = [a for a in alerts if a.get("type") in ALLOWED_TYPES]
+    if not valid_alerts:
+        return []
+
+    by_type = {t: [] for t in ALLOWED_TYPES}
+    for a in valid_alerts:
+        by_type[a["type"]].append(a)
 
     consolidated = []
-    for key, items in groups.items():
-        def intensity(it):
-            m = it.get("metrics", {})
-            return (
-                m.get("rafales_max", 0) +
-                m.get("pluie_max", 0) +
-                m.get("cape_max", 0) / 30.0 +
-                abs(m.get("temp_min", 0)) +
-                m.get("temp_max", 0)
-            )
 
-        items.sort(key=intensity, reverse=True)
-        peak_item = items[0]
+    # A. Cyclones & Typhons : Suivi de trajectoire dans le bassin
+    cyclone_alerts = sorted(by_type["cyclone"], key=lambda x: x.get("lead_hour", 0))
+    cyclone_tracks = []
 
-        all_leads = sorted([it["lead_hour"] for it in items])
-        if len(all_leads) > 1 and all_leads[-1] != all_leads[0]:
-            peak_item["time_window"] = f"H+{all_leads[0]:02d} → H+{all_leads[-1]:02d}"
+    for ca in cyclone_alerts:
+        matched = False
+        for track in cyclone_tracks:
+            last = track[-1]
+            dt = abs(ca.get("lead_hour", 0) - last.get("lead_hour", 0))
+            dist = haversine_distance(ca["lat"], ca["lon"], last["lat"], last["lon"])
+            max_dist = max(800.0, 45.0 * dt)
+            if (ca.get("domain") == last.get("domain") and dt <= 120 and dist <= max_dist) or (dist <= 600.0 and dt <= 72):
+                track.append(ca)
+                matched = True
+                break
+        if not matched:
+            cyclone_tracks.append([ca])
+
+    for track in cyclone_tracks:
+        def cyclone_intensity(x):
+            m = x.get("metrics", {})
+            p_score = (1020.0 - m.get("pression_min", 1000.0)) * 2.0
+            w_score = m.get("vent_max", 0) + m.get("rafales_max", 0)
+            return p_score + w_score
+
+        track.sort(key=cyclone_intensity, reverse=True)
+        peak = dict(track[0])
+
+        all_leads = sorted([x["lead_hour"] for x in track])
+        min_lead, max_lead = all_leads[0], all_leads[-1]
+        if min_lead != max_lead:
+            peak["time_window"] = f"H+{min_lead:02d} → H+{max_lead:02d}"
         else:
-            peak_item["time_window"] = f"H+{peak_item['lead_hour']:02d}"
+            peak["time_window"] = f"H+{peak['lead_hour']:02d}"
 
-        consolidated.append(peak_item)
+        max_v = max([x.get("metrics", {}).get("vent_max", 0) for x in track])
+        max_r = max([x.get("metrics", {}).get("rafales_max", 0) for x in track])
+        min_p = min([x.get("metrics", {}).get("pression_min", 9999) for x in track if "pression_min" in x.get("metrics", {})], default=None)
 
+        if max_v > 0: peak.setdefault("metrics", {})["vent_max"] = max_v
+        if max_r > 0: peak.setdefault("metrics", {})["rafales_max"] = max_r
+        if min_p is not None and min_p < 9999: peak.setdefault("metrics", {})["pression_min"] = min_p
+
+        for x in track:
+            if x.get("zone_type") == "country" and peak.get("zone_type") != "country":
+                peak["country_code"] = x["country_code"]
+                peak["country_name"] = x["country_name"]
+                peak["country_flag"] = x["country_flag"]
+                peak["zone_type"] = "country"
+                break
+
+        consolidated.append(peak)
+
+    # B. Tempêtes & Bombes Météorologiques
+    storm_alerts = sorted(by_type["tempete"], key=lambda x: x.get("lead_hour", 0))
+    storm_clusters = []
+
+    for sa in storm_alerts:
+        matched = False
+        for cluster in storm_clusters:
+            last = cluster[-1]
+            dt = abs(sa.get("lead_hour", 0) - last.get("lead_hour", 0))
+            dist = haversine_distance(sa["lat"], sa["lon"], last["lat"], last["lon"])
+            if dt <= 48 and dist <= 1200.0:
+                cluster.append(sa)
+                matched = True
+                break
+        if not matched:
+            storm_clusters.append([sa])
+
+    for cluster in storm_clusters:
+        def storm_intensity(x):
+            m = x.get("metrics", {})
+            return m.get("rafales_max", 0) + (1020.0 - m.get("pression_min", 1000.0))
+
+        cluster.sort(key=storm_intensity, reverse=True)
+        peak = dict(cluster[0])
+
+        all_leads = sorted([x["lead_hour"] for x in cluster])
+        if all_leads[0] != all_leads[-1]:
+            peak["time_window"] = f"H+{all_leads[0]:02d} → H+{all_leads[-1]:02d}"
+        else:
+            peak["time_window"] = f"H+{peak['lead_hour']:02d}"
+
+        max_r = max([x.get("metrics", {}).get("rafales_max", 0) for x in cluster])
+        min_p = min([x.get("metrics", {}).get("pression_min", 9999) for x in cluster if "pression_min" in x.get("metrics", {})], default=None)
+        if max_r > 0: peak.setdefault("metrics", {})["rafales_max"] = max_r
+        if min_p is not None and min_p < 9999: peak.setdefault("metrics", {})["pression_min"] = min_p
+
+        consolidated.append(peak)
+
+    # C. Inondations & Pluies Diluviennes
+    rain_alerts = sorted(by_type["inondation"], key=lambda x: x.get("lead_hour", 0))
+    rain_clusters = []
+
+    for ra in rain_alerts:
+        matched = False
+        for cluster in rain_clusters:
+            last = cluster[-1]
+            dt = abs(ra.get("lead_hour", 0) - last.get("lead_hour", 0))
+            dist = haversine_distance(ra["lat"], ra["lon"], last["lat"], last["lon"])
+            same_country = (ra.get("country_code") == last.get("country_code")) and ra.get("country_code") != "UNKNOWN"
+            if dt <= 72 and (dist <= 600.0 or same_country):
+                cluster.append(ra)
+                matched = True
+                break
+        if not matched:
+            rain_clusters.append([ra])
+
+    for cluster in rain_clusters:
+        cluster.sort(key=lambda x: x.get("metrics", {}).get("pluie_max", 0), reverse=True)
+        peak = dict(cluster[0])
+
+        all_leads = sorted([x["lead_hour"] for x in cluster])
+        if all_leads[0] != all_leads[-1]:
+            peak["time_window"] = f"H+{all_leads[0]:02d} → H+{all_leads[-1]:02d}"
+        else:
+            peak["time_window"] = f"H+{peak['lead_hour']:02d}"
+
+        max_pluie = max([x.get("metrics", {}).get("pluie_max", 0) for x in cluster])
+        if max_pluie > 0: peak.setdefault("metrics", {})["pluie_max"] = max_pluie
+
+        consolidated.append(peak)
+
+    # D. Orages Violents & Supercellules
+    storm_cape_alerts = sorted(by_type["orage"], key=lambda x: x.get("lead_hour", 0))
+    orage_clusters = []
+
+    for oa in storm_cape_alerts:
+        matched = False
+        for cluster in orage_clusters:
+            last = cluster[-1]
+            dt = abs(oa.get("lead_hour", 0) - last.get("lead_hour", 0))
+            dist = haversine_distance(oa["lat"], oa["lon"], last["lat"], last["lon"])
+            same_country = (oa.get("country_code") == last.get("country_code")) and oa.get("country_code") != "UNKNOWN"
+            if dt <= 36 and (dist <= 600.0 or same_country):
+                cluster.append(oa)
+                matched = True
+                break
+        if not matched:
+            orage_clusters.append([oa])
+
+    for cluster in orage_clusters:
+        cluster.sort(key=lambda x: x.get("metrics", {}).get("cape_max", 0), reverse=True)
+        peak = dict(cluster[0])
+
+        all_leads = sorted([x["lead_hour"] for x in cluster])
+        if all_leads[0] != all_leads[-1]:
+            peak["time_window"] = f"H+{all_leads[0]:02d} → H+{all_leads[-1]:02d}"
+        else:
+            peak["time_window"] = f"H+{peak['lead_hour']:02d}"
+
+        max_cape = max([x.get("metrics", {}).get("cape_max", 0) for x in cluster])
+        if max_cape > 0: peak.setdefault("metrics", {})["cape_max"] = max_cape
+
+        consolidated.append(peak)
+
+    # Tri Final par Sévérité et Plafonnement Grand Public
     sev_rank = {"critique": 0, "extreme": 1, "eleve": 2, "modere": 3}
-    consolidated.sort(key=lambda x: (sev_rank.get(x["severity"], 9), x["lead_hour"]))
-    return consolidated
+    consolidated.sort(key=lambda x: (sev_rank.get(x.get("severity", "modere"), 9), x.get("lead_hour", 0)))
+
+    final_curated = []
+    type_counts = {t: 0 for t in ALLOWED_TYPES}
+    for item in consolidated:
+        t = item.get("type")
+        if type_counts.get(t, 0) < 4:
+            final_curated.append(item)
+            type_counts[t] += 1
+
+    return final_curated
 
 
 def generate_baseline_fallback_alerts():
