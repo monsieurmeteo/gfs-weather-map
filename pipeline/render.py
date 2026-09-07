@@ -604,7 +604,7 @@ def render_vagues_with_wind_arrows(swh_grid, dirpw_grid, u_grid, v_grid, output_
 
     if is_land is not None:
         base_img[is_land, 3] = 0
-    elif np.isnan(swh_grid).any():
+    if np.isnan(swh_grid).any():
         base_img[np.isnan(swh_grid), 3] = 0
 
     fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
@@ -650,7 +650,7 @@ def render_vagues_with_wind_arrows(swh_grid, dirpw_grid, u_grid, v_grid, output_
                 v_rot = sub_v
 
             spd = np.hypot(u_rot, v_rot)
-            valid = (~sub_land) & (spd > 0.01) & (sub_swh > 0.1) & np.isfinite(spd)
+            valid = (~sub_land) & (~np.isnan(sub_swh)) & (spd > 0.01) & (sub_swh > 0.1) & np.isfinite(spd)
 
             if np.any(valid):
                 u_norm = np.zeros_like(sub_u)
@@ -684,7 +684,7 @@ def render_periode_vagues_with_swell_arrows(perpw_grid, dirpw_grid, output_path,
 
     if is_land is not None:
         base_img[is_land, 3] = 0
-    elif np.isnan(perpw_grid).any():
+    if np.isnan(perpw_grid).any():
         base_img[np.isnan(perpw_grid), 3] = 0
 
     ensure_dir(os.path.dirname(output_path))

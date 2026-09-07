@@ -246,9 +246,9 @@ def download_wave_lead(run_dt, lead):
     return None
 
 
-def infill_coastal_nans(grid_2d):
+def infill_coastal_nans(grid_2d, max_dist=4):
     """Extrapolation côtière morphologique : propage les valeurs marines sur les NaN littoraux.
-    Permet à la houle et aux vagues d'épouser le trait de côte réel sans trous ni escaliers.
+    Limite l'extension à max_dist mailles (~100 km) pour ne JAMAIS envahir l'intérieur des terres.
     """
     if grid_2d is None:
         return None
@@ -257,8 +257,98 @@ def infill_coastal_nans(grid_2d):
     if not np.any(mask) or np.all(mask):
         return grid_2d
     from scipy.ndimage import distance_transform_edt
-    indices = distance_transform_edt(mask, return_distances=False, return_indices=True)
-    return grid_2d[tuple(indices)]
+    dists, indices = distance_transform_edt(mask, return_distances=True, return_indices=True)
+    coastal_strip = mask & (dists <= max_dist)
+    res = grid_2d.copy()
+    res[coastal_strip] = grid_2d[tuple(indices)][coastal_strip]
+    return res
+
+
+_LAND_MASK_CACHE = {}
+
+
+def get_domain_land_mask(domain, out_dir=None):
+    """Retourne un masque booléen (True sur terre, False sur mer) pour le domaine.
+    Garantit une frontière terre/mer au pixel près sans jamais laisser déborder la houle sur terre.
+    """
+    dom_key = getattr(domain, "name", str(domain))
+    if dom_key in _LAND_MASK_CACHE:
+        return _LAND_MASK_CACHE[dom_key]
+
+    candidates = []
+    if out_dir:
+        candidates.extend([
+            os.path.join(out_dir, "mask_france.png"),
+            os.path.join(os.path.dirname(out_dir), "maps", "mask_france.png"),
+        ])
+    base_output = os.path.join(BASE_DIR, "output")
+    for sub in ("gfs_france", "arpege_france", "gfs", "arpege"):
+        candidates.append(os.path.join(base_output, sub, "maps", "mask_france.png"))
+
+    from PIL import Image, ImageDraw
+    for p in candidates:
+        if os.path.exists(p):
+            try:
+                im = np.asarray(Image.open(p).convert("L"))
+                if im.shape == (domain.height, domain.width):
+                    mask = (im > 128)
+                    _LAND_MASK_CACHE[dom_key] = mask
+                    return mask
+            except Exception:
+                pass
+
+    # Génération autonome et rapide depuis countries-50m.geojson
+    countries_file = os.path.join(BASE_DIR, "config", "countries-50m.geojson")
+    if os.path.exists(countries_file):
+        try:
+            W, H = domain.width, domain.height
+            mask_img = Image.new("L", (W, H), 0)
+            mask_draw = ImageDraw.Draw(mask_img)
+            with open(countries_file, encoding="utf-8") as f:
+                data = json.load(f)
+            for feat in data.get("features", []):
+                geom = feat.get("geometry")
+                if not geom:
+                    continue
+                gtype = geom.get("type")
+                coords = geom.get("coordinates", [])
+                rings = []
+                if gtype == "Polygon":
+                    rings = coords
+                elif gtype == "MultiPolygon":
+                    for poly in coords:
+                        rings.extend(poly)
+                for ring in rings:
+                    pts = [domain.project(pt[0], pt[1]) for pt in ring]
+                    if len(pts) >= 3:
+                        mask_draw.polygon(pts, fill=255)
+
+            lakes_file = os.path.join(BASE_DIR, "config", "lakes-50m.geojson")
+            if os.path.exists(lakes_file):
+                try:
+                    with open(lakes_file, encoding="utf-8") as lf:
+                        lakes_data = json.load(lf)
+                    for feat in lakes_data.get("features", []):
+                        geom = feat.get("geometry")
+                        if not geom:
+                            continue
+                        gtype = geom.get("type")
+                        coords = geom.get("coordinates", [])
+                        rings = coords if gtype == "Polygon" else [r for poly in coords for r in poly]
+                        for ring in rings:
+                            pts = [domain.project(pt[0], pt[1]) for pt in ring]
+                            if len(pts) >= 3:
+                                mask_draw.polygon(pts, fill=0)
+                except Exception:
+                    pass
+
+            mask = (np.asarray(mask_img) > 128)
+            _LAND_MASK_CACHE[dom_key] = mask
+            return mask
+        except Exception as e:
+            log("WARNING: masque terre non généré pour %s (%s)" % (dom_key, e))
+
+    return None
 
 
 def decode_wave_grib(grib_bytes):
@@ -474,17 +564,7 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
     # Vagues & Vents marins (Style Météociel HD avec infill littoral et flèches fines)
     wave_data = get_wave_data(run_dt, lead)
     if wave_data is not None and "swh" in wave_data:
-        mask_path = os.path.join(out_dir, "mask_france.png")
-        if not os.path.exists(mask_path):
-            mask_path = os.path.join(os.path.dirname(out_dir), "maps", "mask_france.png")
-        is_land = None
-        if os.path.exists(mask_path):
-            try:
-                from PIL import Image
-                mask_im = np.asarray(Image.open(mask_path).convert("L"))
-                is_land = (mask_im > 128)
-            except Exception:
-                pass
+        is_land = get_domain_land_mask(domain, out_dir)
 
         try:
             swh_f = wave_data["swh"]
