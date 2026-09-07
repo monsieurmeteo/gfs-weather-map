@@ -226,7 +226,13 @@
         })();
         var cycloneLabelsVisible = (cycloneLabelMode !== 'none');
         var activeCyclonesData = [];
-        var seaMode = 'none'; // 'none' (partout mer comprise par défaut), 'land' (terres seules), 'coast' (terres + littoral)
+        // seaMode: 'land' par défaut (mer bleue masquée), 'none' (terres & mer partout), 'coast' (terres + littoral)
+        var seaMode = (function () {
+            var s = (urlInitParams.get('sea') || urlInitParams.get('sea_mode') || '').toLowerCase();
+            if (s === 'all' || s === 'none' || s === 'mer' || s === 'both') return 'none';
+            if (s === 'coast' || s === 'littoral' || s === 'bord_de_mer') return 'coast';
+            return 'land';
+        })();
         var vectorDefinition = null;
         var currentWeatherImage = null;
         var logoImage = new Image();
@@ -274,7 +280,7 @@
                 var imgData = maskSamplerContext.getImageData(0, 0, c.width, c.height);
                 var d = imgData.data;
                 for (var i = 0; i < d.length; i += 4) {
-                    d[3] = d[0]; // luminance -> alpha (255 terre, 0 mer)
+                    d[i + 3] = d[i]; // luminance -> alpha (255 terre, 0 mer)
                 }
                 ctx.putImageData(imgData, 0, 0);
                 alphaMaskCanvas = c;
@@ -950,6 +956,8 @@
                 return null;
             }
 
+            var isWorld = isWorldDomain();
+            var natH = isWorld ? 1320.0 : 1640.0;
             var outW, outH, hScale, vScale, offX, offY;
 
             if (isScreen) {
@@ -958,28 +966,15 @@
                 outW = Math.round(vw * ratio);
                 outH = Math.round(vh * ratio);
                 var mapRect = computeMapRect(vw, vh);
-                var natH_sc = isWorldDomain() ? 1320.0 : 1640.0;
                 hScale = (mapRect.w / 2200.0) * ratio;
-                vScale = (mapRect.h / natH_sc) * ratio;
+                vScale = (mapRect.h / natH) * ratio;
                 offX = mapRect.x * ratio;
                 offY = mapRect.y * ratio;
             } else {
                 var isEuropeExport = isEuropeDomain();
-                var isWorld = isWorldDomain();
                 var isFranceExport = !isEuropeExport && !isWorld;
-                var natH = isWorld ? 1320.0 : 1640.0;
 
-                if (isScreen) {
-                    // Capture d'écran HD EXACTE : reproduction au pixel près de la vue affichée à l'écran (x2 pour netteté Retina/4K)
-                    var ratio = 2.0;
-                    outW = Math.round(vw * ratio);
-                    outH = Math.round(vh * ratio);
-                    var mapRect = computeMapRect(vw, vh);
-                    hScale = (mapRect.w / 2200.0) * ratio;
-                    vScale = (mapRect.h / natH) * ratio;
-                    offX = mapRect.x * ratio;
-                    offY = mapRect.y * ratio;
-                } else if (transform.scale > 1.08) {
+                if (transform.scale > 1.08) {
                     // 🌟 Vue zoomée (qu'on soit en France, en Europe ou sur un domaine mondial : reproduction HD exacte du cadrage actif)
                     outW = 2200;
                     outH = Math.round(natH);
