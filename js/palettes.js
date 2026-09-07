@@ -615,6 +615,42 @@
                 { value: 17.0, color: '#ffffff' },
             ]
         },
+        periode_vagues: {
+            label: 'Période des vagues / Houle', unit: 's', decimals: 1, transparent_below: null,
+            stops: [
+                { value: 0, color: '#ffffff' },
+                { value: 2.0, color: '#1e3c6e' },
+                { value: 4.0, color: '#2878b9' },
+                { value: 6.0, color: '#32b4e1' },
+                { value: 8.0, color: '#3cd7b4' },
+                { value: 10.0, color: '#5ad750' },
+                { value: 12.0, color: '#b9e128' },
+                { value: 14.0, color: '#f5cd14' },
+                { value: 16.0, color: '#ff8c00' },
+                { value: 18.0, color: '#f0321e' },
+                { value: 20.0, color: '#be0050' },
+                { value: 22.0, color: '#f000dc' },
+                { value: 25.0, color: '#ffffff' },
+            ]
+        },
+        periode: {
+            label: 'Période des vagues / Houle', unit: 's', decimals: 1, transparent_below: null,
+            stops: [
+                { value: 0, color: '#ffffff' },
+                { value: 2.0, color: '#1e3c6e' },
+                { value: 4.0, color: '#2878b9' },
+                { value: 6.0, color: '#32b4e1' },
+                { value: 8.0, color: '#3cd7b4' },
+                { value: 10.0, color: '#5ad750' },
+                { value: 12.0, color: '#b9e128' },
+                { value: 14.0, color: '#f5cd14' },
+                { value: 16.0, color: '#ff8c00' },
+                { value: 18.0, color: '#f0321e' },
+                { value: 20.0, color: '#be0050' },
+                { value: 22.0, color: '#f000dc' },
+                { value: 25.0, color: '#ffffff' },
+            ]
+        },
         pression_surface: {
             label: 'Pression au sol', unit: 'hPa', decimals: 0, transparent_below: null,
             stops: [
@@ -742,6 +778,9 @@
         }
         if (key === 'vagues' || key === 'houle') {
             return [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16];
+        }
+        if (key === 'periode_vagues' || key === 'periode') {
+            return [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
         }
         var ticks = [];
         for (var i = 0; i < 5; i += 1) ticks.push(formatTickValue(low + (max - low) * i / 4));

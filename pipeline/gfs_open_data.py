@@ -37,6 +37,7 @@ from render import (  # noqa: E402
     render_z500_with_isobars, render_pression_with_isobars,
     render_temperature850_with_isotherms,
     render_vagues_with_wind_arrows,
+    render_periode_vagues_with_swell_arrows,
     wind_chill_c, heat_index_c, humidex_c,
 )
 
@@ -228,6 +229,8 @@ def download_wave_lead(run_dt, lead):
         "dir": "/gfs.%s/%s/wave/gridded" % (day, hh),
         "file": "gfswave.t%sz.global.0p25.f%03d.grib2" % (hh, lead),
         "var_HTSGW": "on",
+        "var_PERPW": "on",
+        "var_DIRPW": "on",
         "var_UGRD": "on",
         "var_VGRD": "on",
         "lev_surface": "on",
@@ -244,7 +247,7 @@ def download_wave_lead(run_dt, lead):
 
 
 def decode_wave_grib(grib_bytes):
-    """Décode les champs GFS Wave (swh, u, v) avec eccodes."""
+    """Décode les champs GFS Wave (swh, perpw, dirpw, u, v) avec eccodes."""
     if not grib_bytes:
         return None
     from eccodes import (codes_grib_new_from_file, codes_get,
@@ -261,7 +264,7 @@ def decode_wave_grib(grib_bytes):
                     break
                 try:
                     short = codes_get(gid, "shortName").lower()
-                    if short not in ("swh", "u", "v"):
+                    if short not in ("swh", "u", "v", "perpw", "dirpw"):
                         continue
                     ni = int(codes_get(gid, "Ni"))
                     nj = int(codes_get(gid, "Nj"))
@@ -465,6 +468,22 @@ def render_lead(cached, lead, run_dt, domain, out_dir, steps, state):
                 state["counts"]["vagues"] = state["counts"].get("vagues", 0) + 1
         except Exception as e:
             log("  H+%03d rendu vagues échoué : %s" % (lead, e))
+
+        try:
+            if "perpw" in wave_data:
+                perpw_f = wave_data["perpw"]
+                dirpw_f = wave_data.get("dirpw")
+                perpw_g = domain.regrid(perpw_f[0], perpw_f[1], perpw_f[2])
+                dirpw_g = domain.regrid(dirpw_f[0], dirpw_f[1], dirpw_f[2]) if dirpw_f else None
+                if perpw_g is not None and not np.all(np.isnan(perpw_g)):
+                    dst_p = os.path.join(out_dir, "periode_vagues", "%03d.webp" % lead)
+                    render_periode_vagues_with_swell_arrows(perpw_g, dirpw_g, dst_p, domain=domain)
+                    step["files"]["periode_vagues"] = "maps/periode_vagues/%03d.webp" % lead
+                    write_hkv(perpw_g, os.path.join(out_dir, "values", "periode_vagues", "%03d.hkv.gz" % lead))
+                    step["probes"]["periode_vagues"] = "maps/values/periode_vagues/%03d.hkv.gz" % lead
+                    state["counts"]["periode_vagues"] = state["counts"].get("periode_vagues", 0) + 1
+        except Exception as e:
+            log("  H+%03d rendu période vagues échoué : %s" % (lead, e))
 
     return step
 

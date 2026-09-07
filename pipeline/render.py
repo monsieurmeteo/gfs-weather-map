@@ -43,13 +43,14 @@ LAYER_META = {
     "pluie_cumul":           ("Précipitations cumulées",       "mm",   1, "Précipitations"),
     "neige_au_sol":          ("Épaisseur de neige au sol",     "cm",   1, "Autres"),
     "vagues":                ("Hauteur des vagues & Vents",    "m",    1, "Mer & Vagues"),
+    "periode_vagues":        ("Période des vagues & Direction", "s",   1, "Mer & Vagues"),
 }
 
 # Ordre d'affichage des couches dans le sélecteur
 LAYER_ORDER = [
     "geopotentiel_500", "temperature_850", "pression", "pression_surface",
     "temperature", "temperature_min_24h", "temperature_max_24h", "temperature_ressentie", "point_rosee", "humidex",
-    "vent", "rafales", "rafales_cumul", "vagues",
+    "vent", "rafales", "rafales_cumul", "vagues", "periode_vagues",
     "nebulosite", "nuages_bas", "nuages_moyens", "nuages_eleves",
     "humidite", "mucape",
     "pluie_1h", "pluie_cumul", "neige_au_sol",
@@ -662,6 +663,85 @@ def render_vagues_with_wind_arrows(swh_grid, u_grid, v_grid, output_path, domain
         plt.close(fig)
 
     # Garantie dimension exacte w, h
+    with Image.open(output_path) as im:
+        if im.size != (w, h):
+            im.resize((w, h)).save(output_path, format="WEBP", quality=85)
+
+
+def render_periode_vagues_with_swell_arrows(perpw_grid, dirpw_grid, output_path, domain=None):
+    """Rendu cartographique de la période des vagues (s) avec flèches de propagation de la houle.
+    - perpw_grid : période moyenne en secondes (0..25s).
+    - dirpw_grid : direction d'où viennent les vagues (0..360° en convention météo).
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    pal = PALETTES.get("periode_vagues")
+    base_img = apply_palette(np.nan_to_num(perpw_grid, nan=np.nan), pal, discrete=False)
+    if np.isnan(perpw_grid).any():
+        base_img[np.isnan(perpw_grid), 3] = 0
+
+    h, w = perpw_grid.shape
+    fig = plt.figure(figsize=(w / 100.0, h / 100.0), dpi=100)
+    try:
+        fig.patch.set_alpha(0)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis("off")
+        ax.set_facecolor((0, 0, 0, 0))
+        ax.imshow(base_img, origin="upper", extent=[0, w, h, 0])
+
+        if dirpw_grid is not None:
+            step = 55 if (domain and getattr(domain, "projection", "") == "lambert") else 45
+            y_idx = np.arange(step // 2, h, step)
+            x_idx = np.arange(step // 2, w, step)
+
+            sub_perpw = perpw_grid[y_idx[:, None], x_idx]
+            sub_dirpw = dirpw_grid[y_idx[:, None], x_idx]
+
+            valid = ~np.isnan(sub_perpw) & ~np.isnan(sub_dirpw) & (sub_perpw > 1.5)
+
+            if np.any(valid):
+                X, Y = np.meshgrid(x_idx, y_idx)
+
+                # Conversion dirpw (direction d'origine) en vecteur de déplacement (vers où va la vague)
+                rad = np.radians(sub_dirpw)
+                u_swell = -np.sin(rad)
+                v_swell = -np.cos(rad)
+
+                # Correction d'angle pour la projection conique Lambert (Europe)
+                if domain and getattr(domain, "projection", "") == "lambert":
+                    sub_lons = domain.lons[y_idx[:, None], x_idx]
+                    n_lambert = getattr(domain, "n", 0.71556)
+                    lon0 = getattr(domain, "lon0", -5.0)
+                    theta = n_lambert * np.radians(sub_lons - lon0)
+                    u_rot = u_swell * np.cos(theta) + v_swell * np.sin(theta)
+                    v_rot = -u_swell * np.sin(theta) + v_swell * np.cos(theta)
+                else:
+                    u_rot = u_swell
+                    v_rot = v_swell
+
+                u_norm = np.zeros_like(sub_perpw)
+                v_norm = np.zeros_like(sub_perpw)
+                u_norm[valid] = u_rot[valid]
+                v_norm[valid] = -v_rot[valid]
+
+                # Halo sombre sous les flèches de houle
+                ax.quiver(X[valid], Y[valid], u_norm[valid], v_norm[valid],
+                          color="#0a1526", scale=36, scale_units="width", width=0.0036,
+                          headwidth=3.6, headlength=4.2, headaxislength=3.8, pivot="middle",
+                          alpha=0.7)
+                # Flèches blanches profilées
+                ax.quiver(X[valid], Y[valid], u_norm[valid], v_norm[valid],
+                          color="#ffffff", scale=38, scale_units="width", width=0.0022,
+                          headwidth=3.2, headlength=3.8, headaxislength=3.5, pivot="middle",
+                          alpha=0.95)
+
+        ensure_dir(os.path.dirname(output_path))
+        fig.savefig(output_path, format="webp", dpi=100, transparent=True, pil_kwargs={"quality": 85})
+    finally:
+        plt.close(fig)
+
     with Image.open(output_path) as im:
         if im.size != (w, h):
             im.resize((w, h)).save(output_path, format="WEBP", quality=85)

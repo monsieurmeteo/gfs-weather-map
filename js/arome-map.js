@@ -4272,6 +4272,12 @@
                 if (val >= 3) return '#ffea00'; // Forte mer
                 return '#70d6ff';
             }
+            if (layerKey === 'periode_vagues' || layerKey === 'periode') {
+                if (val >= 16) return '#ff2a6d'; // Houle très longue / énergétique
+                if (val >= 12) return '#ff7b00'; // Longue houle
+                if (val >= 8)  return '#ffea00'; // Houle moyenne
+                return '#70d6ff';
+            }
             return '#ffffff';
         }
 
