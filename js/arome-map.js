@@ -2058,6 +2058,7 @@
                 'Températures',
                 'Précipitations',
                 'Vent',
+                'Mer & Vagues',
                 'Nuages et humidité',
                 'Pression et géopotentiel',
                 'Instabilité',
@@ -2087,6 +2088,12 @@
             if (!manifest.layers[currentLayer]) {
                 currentLayer = Object.keys(manifest.layers || {})[0] || '';
             }
+            // S'assurer que tout groupe présent dans grouped est bien inclus
+            Object.keys(grouped).forEach(function (g) {
+                if (groupOrder.indexOf(g) === -1) {
+                    groupOrder.push(g);
+                }
+            });
             groupOrder.forEach(function (group) {
                 if (!grouped[group] || !grouped[group].length) {
                     return;
@@ -2668,7 +2675,11 @@
                         }
                     }
 
-                    if (!manifest.layers[currentLayer]) {
+                    if (pendingLayer && manifest.layers && manifest.layers[pendingLayer]) {
+                        currentLayer = pendingLayer;
+                        pendingLayer = null;
+                        if (dSel) dSel.value = currentLayer;
+                    } else if (!manifest.layers[currentLayer]) {
                         currentLayer = manifest.layers['geopotentiel_500'] ? 'geopotentiel_500' : (Object.keys(manifest.layers)[0] || 'temperature');
                         if (dSel) dSel.value = currentLayer;
                     }
@@ -2793,9 +2804,22 @@
         }
 
         // ponytail: duplicate regionSelect removed (handled above via focusOnPoint)
+        var pendingLayer = null;
 
         function setLayer(layer) {
             if (!manifest || !manifest.layers[layer]) {
+                if (layer === 'vagues' || layer === 'periode_vagues') {
+                    // Les vagues sont issues du couplage mondial GFS Wave (NWW3) :
+                    // Basculer automatiquement sur GFS France ou GFS Europe
+                    var targetModel = (currentModel.indexOf('_france') !== -1) ? 'gfs_france' : 'gfs';
+                    if (currentModel !== targetModel) {
+                        pendingLayer = layer;
+                        var modelSel = document.getElementById('select-model');
+                        if (modelSel) modelSel.value = targetModel;
+                        switchModel(targetModel);
+                        return;
+                    }
+                }
                 return;
             }
             currentLayer = layer;
