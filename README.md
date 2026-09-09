@@ -1,4 +1,4 @@
-# ⚡ Cartes Météo GFS & ARPEGE — Europe & France
+﻿# ⚡ Cartes Météo GFS & ARPEGE — Europe & France
 
 Plateforme cartographique HD (2200×1640, projection Mercator unique) des modèles
 **GFS 0,25° (NOAA)** et **ARPEGE Europe 0,1° (Météo-France, open data)** —
@@ -10,7 +10,7 @@ automatisée 24/7 via GitHub Actions et publiée sur GitHub Pages.
 | **GFS France** | 0,25° (~25 km) | France métropolitaine + Corse | H+00 → H+120 (3 h) | NOAA NOMADS (open data) |
 | **ARPEGE Europe** | 0,1° (~11 km) | Europe | H+00 → H+102 (3 h) | Météo-France open data (data.gouv.fr) |
 
-> 🖥️ **Site en ligne** : <https://monsieurmeteo.github.io/gfs-weather-map/>
+> 🖥️ **Site en ligne** : <https://mto-user84925.github.io/gfs-weather-map/>
 
 ---
 
@@ -83,3 +83,4 @@ python -u pipeline/run_all.py --max-hours 24 --models gfs,arpege   # pipeline co
 - Le dépôt **arome-weather-map** (AROME HD 1,3 km) reste séparé et inchangé.
 - Dépôt public → minutes GitHub Actions gratuites ; artefact Pages < 1 Go.
 - Après modification du code, **Ctrl+F5** (le manifeste porte sa date de génération).
+

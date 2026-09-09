@@ -61,7 +61,7 @@ GFS_LEVS = {
 
 # Alias cfgrib GFS → clés canoniques
 ALIASES = {
-    "t2m": "T2M", "2t": "T2M", "t": "T2M", "tmp": "T2M",
+    "t2m": "T2M", "2t": "T2M",
     "d2m": "DPT", "2d": "DPT",
     "r2": "RH", "2r": "RH",
     "u10": "U10", "10u": "U10",
@@ -174,9 +174,15 @@ def decode_grib(grib_bytes):
                     break
                 try:
                     short = codes_get(gid, "shortName").lower()
-                    key = ALIASES.get(short)
-                    if key is None:
-                        continue
+                    try:
+                        levType = codes_get(gid, "typeOfLevel")
+                    except Exception:
+                        levType = ""
+                    try:
+                        level = int(codes_get(gid, "level"))
+                    except Exception:
+                        level = 0
+
                     ni = int(codes_get(gid, "Ni"))
                     nj = int(codes_get(gid, "Nj"))
                     vals = np.asarray(codes_get_array(gid, "values"), dtype=np.float32)
@@ -185,20 +191,33 @@ def decode_grib(grib_bytes):
                     lat = lat2[:, 0]
                     lon = lon2[0, :]
 
-                    # Traitement des niveaux isobariques (HGT Z500, TMP T850)
-                    try:
-                        levType = codes_get(gid, "typeOfLevel")
-                        if levType == "isobaricInhPa":
-                            lev = int(codes_get(gid, "level"))
-                            if key == "HGT" and lev == 500:
-                                cached["HGT"] = (vals.reshape(nj, ni), lat, lon)
-                            elif key == "T2M" and lev == 850:
-                                cached["T850"] = (vals.reshape(nj, ni), lat, lon)
-                            continue
-                    except Exception:
-                        pass
+                    # Température : discrimination stricte 2m / 850 hPa / surface
+                    if short in ("t", "tmp"):
+                        if levType == "isobaricInhPa" and level == 850:
+                            cached["T850"] = (vals.reshape(nj, ni), lat, lon)
+                        elif levType == "heightAboveGround" and level == 2:
+                            cached["T2M"] = (vals.reshape(nj, ni), lat, lon)
+                        elif levType == "surface":
+                            cached["TSFC"] = (vals.reshape(nj, ni), lat, lon)
+                        continue
+                    elif short in ("2t", "t2m"):
+                        cached["T2M"] = (vals.reshape(nj, ni), lat, lon)
+                        continue
 
-                    if key not in cached:
+                    # Géopotentiel Z500
+                    if short in ("gh", "hgt", "z", "gp"):
+                        if levType == "isobaricInhPa" and level == 500:
+                            cached["HGT"] = (vals.reshape(nj, ni), lat, lon)
+                        continue
+
+                    # Nébulosité totale (colonne entière)
+                    if short == "tcc":
+                        if levType in ("atmosphere", "entireAtmosphere"):
+                            cached["TCDC"] = (vals.reshape(nj, ni), lat, lon)
+                        continue
+
+                    key = ALIASES.get(short)
+                    if key and key not in cached:
                         cached[key] = (vals.reshape(nj, ni), lat, lon)
                 except Exception:
                     pass
