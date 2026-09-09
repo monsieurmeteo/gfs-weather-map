@@ -1,4 +1,4 @@
-name: "Météo Multi-modèles GFS & ARPEGE — Build & Deploy"
+﻿name: "Météo Multi-modèles GFS & ARPEGE — Build & Deploy"
 
 on:
   workflow_dispatch:
@@ -495,11 +495,11 @@ jobs:
           set -e
           mkdir -p /tmp/base /tmp/base/restored
           RESTORED=""
-          for RUN_ID in $(gh run list --repo monsieurmeteo/gfs-weather-map \
+          for RUN_ID in $(gh run list --repo mto-user84925/gfs-weather-map \
                 --status success --limit 5 --json databaseId,workflowName --jq \
                 '.[] | select(.workflowName | test("Build & Deploy")) | .databaseId' 2>/dev/null || true); do
             echo "Tentative de restauration depuis le run $RUN_ID..."
-            if gh run download "$RUN_ID" --repo monsieurmeteo/gfs-weather-map \
+            if gh run download "$RUN_ID" --repo mto-user84925/gfs-weather-map \
                  -n github-pages -D /tmp/base >/dev/null 2>&1; then
               RESTORED="$RUN_ID"
               break
@@ -562,3 +562,4 @@ jobs:
       - name: Déploiement sur GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
