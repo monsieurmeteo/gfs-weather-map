@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 pipeline/cyclone_tracker.py — Tracker mondial officiel : Cyclones, Typhons ET INVESTs en temps réel.
@@ -24,7 +24,7 @@ import zipfile
 from datetime import datetime, timezone
 
 HEADERS = {
-    "User-Agent": "MonsieurMeteo-CycloneTracker/2.0 (+https://monsieurmeteo.github.io/gfs-weather-map/)"
+    "User-Agent": "MonsieurMeteo-CycloneTracker/2.0 (+https://mto-user84925.github.io/gfs-weather-map/)"
 }
 
 
@@ -453,3 +453,4 @@ def update_active_cyclones(out_file="cyclones_actifs.json"):
 
 if __name__ == "__main__":
     update_active_cyclones()
+
